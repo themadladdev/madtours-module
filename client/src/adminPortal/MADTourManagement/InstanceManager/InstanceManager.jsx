@@ -158,6 +158,15 @@ const InstanceManager = () => {
   };
   // === END NEW LOGIC ===
   
+  // === NEW: Success handler for Blackout Modal ===
+  const handleBlackoutSuccess = (result) => {
+    console.log('Blackout success, refreshing instances:', result);
+    setIsBlackoutModalOpen(false); // Close the modal
+    loadInstances(); // Refresh the grid
+    // The UI refresh is the confirmation.
+  };
+  // === END NEW HANDLER ===
+  
   const selectedTour = tours.find(t => t.id === parseInt(selectedTourId));
 
   return (
@@ -210,7 +219,7 @@ const InstanceManager = () => {
             type="date"
             className={sharedStyles.input}
             value={filters.startDate}
-            onChange={(e) => setFilters({ ...filters, startDate: e.get.value, endDate: e.target.value })}
+            onChange={(e) => setFilters({ ...filters, startDate: e.target.value, endDate: e.target.value })}
           />
         </div>
         <div className={sharedStyles.filterGroup}>
@@ -365,9 +374,11 @@ const InstanceManager = () => {
       >
       </ConfirmationDialog>
       
+      {/* --- FIX: Pass the onSuccess handler --- */}
       <BlackoutManagerModal
         isOpen={isBlackoutModalOpen}
         onClose={() => setIsBlackoutModalOpen(false)}
+        onSuccess={handleBlackoutSuccess}
         tour={selectedTour}
       />
       

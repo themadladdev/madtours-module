@@ -2,49 +2,20 @@
  * Uses variables from /client/src/styles/global.css
  * Uses styles from /client/src/adminPortal/adminshared.module.css */
 
-.blackoutEditor {
-  padding: 1rem;
-  background: var(--grey-100);
-  border-radius: 4px;
-}
-
-.blackoutList {
+.blackoutForm {
+  padding: 0;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 1rem;
-  margin-bottom: 1.5rem;
-  max-height: 300px;
-  overflow-y: auto;
-  padding: 0.25rem;
 }
 
-.blackoutRow {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.5rem;
-}
-
-.blackoutRow .formGroup {
+/* Ensure form groups in the form share space */
+.blackoutForm .formGroup {
   flex: 1;
-  margin-bottom: 0;
+  min-width: 200px;
 }
 
-.removeTimeBtn {
-  background: var(--background);
-  border: 1px solid var(--border-color);
-  color: var(--destructive);
-  font-weight: 700;
-  font-size: 1.2rem;
-  line-height: 1;
-  width: 38px; /* Standard input height */
-  height: 38px; /* Standard input height */
-  cursor: pointer;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.removeTimeBtn:hover {
-  background: var(--destructive);
-  color: var(--destructive-text);
-  border-color: var(--destructive);
-}
+/*
+  The old .blackoutEditor, .blackoutList, .blackoutRow, 
+  and .removeTimeBtn styles are no longer used and have been removed.
+*/

@@ -390,3 +390,188 @@ export const reInstateInstance = async ({ tourId, date, time, adminId }) => {
     client.release();
   }
 };
+
+// === NEW BATCH BLACKOUT/CANCELLATION FUNCTION ===
+/**
+ * Applies a blackout range, updating the schedule and operationally
+ * cancelling all affected tours and bookings in a single transaction.
+ */
+export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, adminId }) => {
+  console.log(`[Service] Starting batch-cancel transaction for Tour ${tourId}...`);
+  const client = await pool.connect();
+  let updated_schedule_id = null;
+  let cancelled_instances_count = 0;
+  let affected_bookings_count = 0;
+
+  try {
+    await client.query('BEGIN');
+
+    // --- Step 1: Get Tour Rules (Schedule and default capacity) ---
+    const tourRulesResult = await client.query(
+      `SELECT 
+         t.capacity AS default_capacity,
+         ts.id AS schedule_id,
+         ts.schedule_config
+       FROM tours t
+       JOIN tour_schedules ts ON t.id = ts.tour_id
+       WHERE t.id = $1 AND ts.active = true
+       LIMIT 1`,
+      [tourId]
+    );
+
+    if (tourRulesResult.rows.length === 0) {
+      throw new Error(`No active tour or schedule found for Tour ID ${tourId}.`);
+    }
+
+    const { default_capacity, schedule_id, schedule_config } = tourRulesResult.rows[0];
+    const scheduleRules = schedule_config.schedule;
+
+    if (!scheduleRules || !scheduleRules.times || !scheduleRules.days_of_week) {
+      throw new Error(`Tour ${tourId} has invalid or missing schedule config.`);
+    }
+
+    // --- Step 2: Update the Tour Schedule Config (Add Blackout Range) ---
+    let newConfig = { ...schedule_config };
+    if (!newConfig.schedule) newConfig.schedule = {};
+    if (!newConfig.schedule.blackout_ranges) newConfig.schedule.blackout_ranges = [];
+    
+    newConfig.schedule.blackout_ranges.push({ from: startDate, to: endDate, reason: reason });
+    
+    await client.query(
+      `UPDATE tour_schedules SET schedule_config = $1, updated_at = NOW()
+       WHERE id = $2`,
+      [newConfig, schedule_id]
+    );
+    updated_schedule_id = schedule_id;
+    console.log(`[Service] Updated schedule ${schedule_id} with new blackout range.`);
+
+    // --- Step 3: Generate list of all virtual tours to be cancelled ---
+    const toursToCancel = [];
+    const start = new Date(`${startDate}T00:00:00Z`); // Explicitly UTC
+    const end = new Date(`${endDate}T00:00:00Z`);   // Explicitly UTC
+
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+      const dayOfWeek = d.getUTCDay(); // 0 = Sunday
+      const dateString = d.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      // Check if this day is a scheduled day
+      if (scheduleRules.days_of_week.includes(dayOfWeek)) {
+        // Add all times for this day
+        for (const time of scheduleRules.times) {
+          toursToCancel.push({
+            date: dateString,
+            time: `${time}:00`
+          });
+        }
+      }
+    }
+    
+    if (toursToCancel.length === 0) {
+       console.log(`[Service] No virtual tours scheduled in this range. Only updating schedule.`);
+    }
+
+    // --- Step 4: Call operationalCancelInstance for EACH virtual tour ---
+    // This reuses our robust UPSERT and Triage logic in a loop.
+    console.log(`[Service] Found ${toursToCancel.length} virtual tours to cancel...`);
+    
+    for (const tour of toursToCancel) {
+      const { date, time } = tour;
+      
+      // We pass 'client' to 'operationalCancelInstance' to keep it in the
+      // same transaction. This requires refactoring operationalCancelInstance
+      // to accept an optional client.
+      //
+      // FOR NOW: Let's just call the standalone function. This is *less*
+      // atomic (if one fails, the others won't roll back) but much simpler
+      // to implement without refactoring a working function.
+      //
+      // --- CORRECTED ATOMIC APPROACH ---
+      // We must refactor operationalCancelInstance to accept a client
+      // or duplicate its core logic here. Let's duplicate the logic
+      // for a true atomic batch operation.
+      
+      const instanceResult = await client.query(
+        `INSERT INTO tour_instances 
+          (tour_id, date, "time", capacity, booked_seats, status, 
+           cancellation_reason, cancelled_at, cancelled_by, updated_at, created_at)
+        VALUES 
+          ($1, $2, $3, $4, 0, 'cancelled', $5, NOW(), $6, NOW(), NOW())
+        ON CONFLICT (tour_id, date, "time") 
+        DO UPDATE SET
+          status = 'cancelled',
+          cancellation_reason = $5,
+          cancelled_at = NOW(),
+          cancelled_by = $6,
+          updated_at = NOW()
+        WHERE
+          tour_instances.status <> 'cancelled'
+        RETURNING id`,
+        [tourId, date, time, default_capacity, reason, adminId]
+      );
+      
+      if (instanceResult.rows.length > 0) {
+        cancelled_instances_count++;
+        const instanceId = instanceResult.rows[0].id;
+        
+        // Now find bookings for this instance and move to triage
+        const bookingsResult = await client.query(
+          `UPDATE tour_bookings
+           SET status = 'pending_triage',
+               cancellation_reason = $1,
+               cancelled_at = NOW(),
+               updated_at = NOW()
+           WHERE tour_instance_id = $2
+             AND status = 'confirmed'
+           RETURNING *`,
+          [reason, instanceId]
+        );
+
+        const affectedBookings = bookingsResult.rows;
+        affected_bookings_count += affectedBookings.length;
+        
+        // Get data for emails
+        const tourNameResult = await client.query('SELECT name FROM tours WHERE id = $1', [tourId]);
+        const tourName = tourNameResult.rows[0]?.name || 'Tour';
+        
+        // Log history and send emails
+        for (const booking of affectedBookings) {
+          await client.query(
+            `INSERT INTO tour_booking_history 
+             (booking_id, previous_status, new_status, changed_by_admin, reason)
+             VALUES ($1, 'confirmed', 'pending_triage', $2, $3)`,
+            [booking.id, adminId, `Batch cancellation: ${reason}`]
+          );
+
+          const custResult = await client.query('SELECT * FROM tour_customers WHERE id = $1', [booking.customer_id]);
+          const customer = custResult.rows[0];
+          
+          if (customer) {
+            sendTourCancellationTriageNotice(
+              customer,
+              booking,
+              { name: tourName, date, time },
+              reason
+            ).catch(err => console.error(`[Service] Failed to send triage email to ${customer.email}:`, err));
+          }
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`[Service] Batch-cancel transaction committed.`);
+
+    return {
+      updated_schedule_id: updated_schedule_id,
+      cancelled_instances: cancelled_instances_count,
+      affected_bookings: affected_bookings_count,
+    };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('[Service] Error in batchCancelBlackout:', error);
+    throw new Error(`Failed to apply blackout: ${error.message}`);
+  } finally {
+    client.release();
+  }
+};
+// === END NEW FUNCTION ===

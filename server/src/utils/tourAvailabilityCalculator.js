@@ -4,7 +4,7 @@ import { pool } from '../db/db.js';
 /**
  * Generates a consistent map key from a date object and time string.
  * @param {Date} date - The date object. (MUST be a UTC date object)
- * @param {string} time - The time string (e.g., "09:00:00").
+ *@param {string} time - The time string (e.g., "09:00:00").
  * @returns {string} - A key in "YYYY-MM-DD:HH:MM" format.
  */
 const generateDateTimeKey = (date, time) => {
@@ -71,6 +71,9 @@ export const getAdminTourInstances = async ({ tourId, startDate, endDate, status
     console.error(`Tour ${tourId} has invalid or missing schedule config.`);
     return [];
   }
+  
+  // --- We do NOT check for blackout_ranges in the ADMIN function ---
+  // The admin needs to see all exceptions, even on blacked-out days.
 
   // === 2. Fetch the "Exceptions" (Booked/Cancelled Instances) ===
   const exceptionsResult = await pool.query(
@@ -116,6 +119,11 @@ export const getAdminTourInstances = async ({ tourId, startDate, endDate, status
     
     const dayOfWeek = d.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
     const dateString = d.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // --- START BUG FIX: Removed blackout_ranges check ---
+    // The admin panel MUST loop through blacked-out days
+    // to find the 'cancelled' exceptions.
+    // --- END BUG FIX ---
 
     // === FIX: Use scheduleRules ===
     // Rule: Check if tour runs on this day of the week
@@ -128,8 +136,6 @@ export const getAdminTourInstances = async ({ tourId, startDate, endDate, status
       continue;
     }
     
-    // TODO: Add logic for scheduleRules.blackout_ranges
-
     // This is a valid day for tours. Now, loop through the scheduled times.
     // === FIX: Use scheduleRules ===
     for (const time of scheduleRules.times) {
@@ -235,6 +241,14 @@ export const getAvailableTimes = async ({ tourId, startDate, endDate, seats = 1 
     console.error(`Tour ${tourId} has invalid or missing schedule config.`);
     return [];
   }
+  
+  // --- NEW: Pre-parse blackout ranges for efficient lookup ---
+  // --- THIS CHECK REMAINS for the public function ---
+  const blackoutRanges = (scheduleRules.blackout_ranges || []).map(range => ({
+    from: new Date(`${range.from}T00:00:00Z`),
+    to: new Date(`${range.to}T00:00:00Z`)
+  }));
+  // ---
 
   // === 2. Fetch the "Exceptions" (Booked/Cancelled Instances) ===
   const exceptionsResult = await pool.query(
@@ -281,6 +295,20 @@ export const getAvailableTimes = async ({ tourId, startDate, endDate, seats = 1 
     if (d < today || d > maxBookableDate) {
       continue;
     }
+    
+    // --- NEW: Rule: Check for blackout_ranges (Rule-Level Exception) ---
+    // --- THIS CHECK REMAINS for the public function ---
+    let isBlackedOut = false;
+    for (const range of blackoutRanges) {
+      if (d >= range.from && d <= range.to) {
+        isBlackedOut = true;
+        break;
+      }
+    }
+    if (isBlackedOut) {
+      continue; // Skip this entire day
+    }
+    // ---
 
     const dayOfWeek = d.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
     const dateString = d.toISOString().split('T')[0]; // YYYY-MM-DD

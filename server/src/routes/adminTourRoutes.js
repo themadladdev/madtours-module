@@ -20,7 +20,10 @@ router.get('/instances/:id/manifest', adminTourController.getManifest);
 // === NEW CANCELLATION & RE-INSTATEMENT ROUTES ===
 router.post('/instances/cancel-operationally', adminTourController.operationalCancelInstance);
 router.post('/instances/re-instate', adminTourController.reInstateInstance);
-// === END NEW ROUTES ===
+
+// === NEW BATCH BLACKOUT/CANCELLATION ROUTE ===
+router.post('/instances/batch-cancel-blackout', adminTourController.batchCancelBlackout);
+// === END NEW ROUTE ===
 
 
 // === Tour Schedules ===

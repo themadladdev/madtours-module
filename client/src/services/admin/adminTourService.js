@@ -96,3 +96,20 @@ export const reInstateInstance = async (reInstateData) => {
   });
 };
 // === END NEW FUNCTION ===
+
+// === NEW BATCH BLACKOUT/CANCELLATION FUNCTION ===
+/**
+ * Applies a blackout range to a tour.
+ * This does two things:
+ * 1. Updates the tour's schedule_config to prevent new bookings.
+ * 2. Operationally cancels all existing 'scheduled' instances in that range.
+ * @param {object} blackoutData - { tourId, startDate, endDate, reason }
+ */
+export const applyBlackout = async (blackoutData) => {
+  console.log('[applyBlackout service] Sending blackout data:', blackoutData);
+  return await adminApiFetch(`${API_PREFIX}/instances/batch-cancel-blackout`, {
+    method: 'POST',
+    body: JSON.stringify(blackoutData)
+  });
+};
+// === END NEW FUNCTION ===
