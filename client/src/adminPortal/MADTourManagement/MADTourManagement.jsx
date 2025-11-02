@@ -7,7 +7,7 @@ import sharedStyles from '../adminshared.module.css';
 import TourDashboard from './Dashboard/TourDashboard.jsx';
 import BookingManager from './BookingManager/BookingManager.jsx';
 import InstanceManager from './InstanceManager/InstanceManager.jsx';
-import TourManager from './TourManager/TourManager.jsx'; // === NEW IMPORT ===
+import TourManager from './TourManager/TourManager.jsx';
 
 // Placeholder Icon
 const IconPlaceholder = () => <span style={{ marginRight: '8px' }}>•</span>;
@@ -19,11 +19,12 @@ const MADTourManagement = () => {
     // Read the path to set the initial tab
     useEffect(() => {
         const path = window.location.pathname;
-        if (path.includes('/calendar')) {
-            setActiveSubTab('calendar');
+        // --- UPDATED to 'operations' ---
+        if (path.includes('/operations')) {
+            setActiveSubTab('operations');
         } else if (path.includes('/bookings')) {
             setActiveSubTab('bookings');
-        } else if (path.includes('/manage')) { // === NEW ROUTE ===
+        } else if (path.includes('/manage')) {
             setActiveSubTab('tours');
         } else {
             setActiveSubTab('dashboard');
@@ -51,7 +52,6 @@ const MADTourManagement = () => {
             icon: <IconPlaceholder />,
             component: <TourDashboard /> 
         },
-        // === NEW TAB ===
         { 
             id: 'tours', 
             label: 'Tours', 
@@ -59,10 +59,11 @@ const MADTourManagement = () => {
             icon: <IconPlaceholder />,
             component: <TourManager /> 
         },
+        // --- UPDATED to 'Operations Hub' ---
         { 
-            id: 'calendar', 
-            label: 'Calendar', 
-            path: '/admin/tours/calendar',
+            id: 'operations', 
+            label: 'Operations Hub', 
+            path: '/admin/tours/operations',
             icon: <IconPlaceholder />, 
             component: <InstanceManager />
         },

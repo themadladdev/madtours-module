@@ -1,0 +1,7 @@
+/* client/src/adminPortal/MADTourManagement/InstanceManager/PriceManagerModal.module.css */
+
+.priceEditor {
+  padding: 1rem;
+  background: var(--grey-100);
+  border-radius: 4px;
+}

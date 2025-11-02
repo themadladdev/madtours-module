@@ -4,30 +4,46 @@
 // ========================================== */
 
 .instanceManager {
-  /* Padding removed, handled by wrapper */
   max-width: 1400px;
   margin: 0 auto;
 }
 
-/* --- NEW: Styles for the enhanced filter bar --- */
 .filterBar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end; /* Align items to the bottom */
+  align-items: flex-end;
   gap: 1rem;
 }
 
 .filterBar > .filterGroup {
-  margin-bottom: 0; /* Remove default margin from shared style */
+  margin-bottom: 0; 
   flex-grow: 1;
   flex-basis: 150px;
 }
 
-/* --- REMOVED: All .instancesList and .instanceCard styles --- */
+/* --- NEW: Style for the top macro bar --- */
+.macroBar {
+  align-items: flex-end;
+  padding: 1rem 1.5rem;
+  background: var(--grey-100); /* Highlight as a main control bar */
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 4px 4px 0 0;
+}
 
-/* --- NEW: Styles for table content --- */
+/* Style the second filter bar */
+.filterBar:nth-of-type(2) {
+  border-radius: 0 0 4px 4px;
+  margin-bottom: 2rem;
+}
+
+.macroBar .filterGroup {
+  flex-basis: 200px;
+}
+
 .actionsCell {
   text-align: right;
+  white-space: nowrap;
 }
 
 .status {
@@ -54,20 +70,6 @@
   background: var(--grey-100);
   color: var(--grey-700);
   border: 1px solid var(--grey-500);
-}
-
-.cancellationInfo {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: var(--grey-100);
-  border: 1px solid var(--border-color);
-  border-left: 3px solid var(--destructive);
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.cancellationInfo p {
-  margin: 0.25rem 0;
 }
 
 .cancelForm {
