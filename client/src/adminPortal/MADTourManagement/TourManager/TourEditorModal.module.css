@@ -1,11 +1,13 @@
-/* Uses variables from /client/src/styles/global.css */
-/* Uses styles from /client/src/adminPortal/adminshared.module.css */
+/* client/src/adminPortal/MADTourManagement/TourManager/TourEditorModal.module.css
+ * Uses variables from /client/src/styles/global.css
+ * Uses styles from /client/src/adminPortal/adminshared.module.css */
 
 .tabContainer {
   display: flex;
   border-bottom: 1px solid var(--border-color);
   margin: -1.5rem -1.5rem 1.5rem -1.5rem;
   padding: 0 1.5rem;
+  flex-wrap: wrap; 
 }
 
 .tabButton {
@@ -19,6 +21,7 @@
   color: var(--grey-700);
   border-bottom: 2px solid transparent;
   margin-right: 1.5rem;
+  white-space: nowrap;
 }
 
 .tabButton:hover {
@@ -53,37 +56,38 @@
 }
 
 .dayCheckboxes {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 0.5rem;
 }
 
-.dayLabel {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-weight: 500;
-  cursor: pointer;
+.dayButton {
+  background: var(--background);
+  color: var(--text);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 0.5rem;
   font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
 }
 
-.dayLabel input {
-  margin-right: 0.25rem;
-  cursor: pointer;
+.dayButton:hover {
+  background: var(--grey-200);
+}
+
+.dayButton.daySelected {
+  background: var(--text);
+  color: var(--background);
+  border-color: var(--text);
+  font-weight: 600;
 }
 
 .dayActions {
-  margin-top: 0.5rem;
-}
-
-.dayActions button {
-  background: none;
-  border: none;
-  color: var(--text);
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: 0.8rem;
-  margin-right: 0.5rem;
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .timeList {
@@ -106,8 +110,8 @@
   font-weight: 700;
   font-size: 1.2rem;
   line-height: 1;
-  width: 30px;
-  height: 30px;
+  width: 38px; /* Standard input height */
+  height: 38px; /* Standard input height */
   cursor: pointer;
   border-radius: 4px;
 }
@@ -126,3 +130,5 @@
   color: var(--grey-700);
   background: var(--grey-100);
 }
+
+/* --- REMOVED: .blackoutEditor styles --- */

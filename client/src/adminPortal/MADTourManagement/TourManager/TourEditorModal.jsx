@@ -1,13 +1,12 @@
 // client/src/adminPortal/MADTourManagement/TourManager/TourEditorModal.jsx
 import React, { useState, useEffect } from 'react';
-// === SYNTAX ERROR FIXED ===
-import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx'; 
-// === END FIX ===
+import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
 import * as adminTourService from '../../../services/admin/adminTourService.js';
+// REMOVED: CustomCalendar import
 import styles from './TourEditorModal.module.css';
 import sharedStyles from '../../adminshared.module.css';
 
-// --- NEW: Schedule Editor Sub-component ---
+// --- Schedule Editor Sub-component ---
 const ScheduleEditor = ({ schedule, onScheduleChange }) => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -41,9 +40,7 @@ const ScheduleEditor = ({ schedule, onScheduleChange }) => {
     onScheduleChange({ ...schedule, times: newTimes });
   };
 
-  const handleBlackoutChange = (e) => {
-    onScheduleChange({ ...schedule, blackout_dates: e.target.value });
-  };
+  // --- REMOVED: Blackout Dates input field ---
 
   return (
     <div className={styles.scheduleEditor}>
@@ -51,19 +48,19 @@ const ScheduleEditor = ({ schedule, onScheduleChange }) => {
         <label>Days of Week</label>
         <div className={styles.dayCheckboxes}>
           {days.map((day, index) => (
-            <label key={day} className={styles.dayLabel}>
-              <input
-                type="checkbox"
-                checked={schedule.days_of_week.includes(index)}
-                onChange={() => handleDayToggle(index)}
-              />
+            <button
+              type="button"
+              key={day}
+              className={`${styles.dayButton} ${schedule.days_of_week.includes(index) ? styles.daySelected : ''}`}
+              onClick={() => handleDayToggle(index)}
+            >
               {day}
-            </label>
+            </button>
           ))}
         </div>
         <div className={styles.dayActions}>
-          <button type="button" onClick={() => handleSelectAll(true)}>All</button>
-          <button type="button" onClick={() => handleSelectAll(false)}>None</button>
+          <button type="button" className={sharedStyles.secondaryButtonSmall} onClick={() => handleSelectAll(true)}>All Days</button>
+          <button type="button" className={sharedStyles.secondaryButtonSmall} onClick={() => handleSelectAll(false)}>Clear All</button>
         </div>
       </div>
 
@@ -96,17 +93,6 @@ const ScheduleEditor = ({ schedule, onScheduleChange }) => {
           </button>
         </div>
       </div>
-
-      <div className={sharedStyles.formGroup}>
-        <label>Blackout Dates (comma-separated YYYY-MM-DD)</label>
-        <input
-          type="text"
-          value={schedule.blackout_dates}
-          onChange={handleBlackoutChange}
-          className={sharedStyles.input}
-          placeholder="e.g., 2025-12-25, 2026-01-01"
-        />
-      </div>
     </div>
   );
 };
@@ -127,7 +113,7 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
     schedule: {
       days_of_week: [1, 2, 3, 4, 5, 6, 0],
       times: ['09:00', '11:00', '13:00', '15:00'],
-      blackout_dates: ''
+      blackout_ranges: [] // Renamed from blackout_dates
     },
     pricing: {
       adult: 100,
@@ -143,12 +129,11 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
       setActiveTab('details');
       
       if (isCreating) {
-        // --- Set defaults for a new tour ---
         setFormData({
           name: 'New Tour',
           description: '',
           duration_minutes: 60,
-          base_price: 100, // This is now a fallback
+          base_price: 100,
           capacity: 15,
           booking_window_days: 90,
           active: false
@@ -156,12 +141,11 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
         setScheduleConfig(defaultSchedule);
         setCurrentScheduleId(null);
       } else {
-        // --- Fetch data for an existing tour ---
         setFormData({
           name: tour.name,
           description: tour.description,
           duration_minutes: tour.duration_minutes,
-          base_price: tour.base_price, // Keep for now
+          base_price: tour.base_price,
           capacity: tour.capacity,
           booking_window_days: tour.booking_window_days,
           active: tour.active
@@ -181,13 +165,13 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
         setCurrentScheduleId(activeSchedule.id);
         setScheduleConfig({
           schedule: {
-            ...defaultSchedule.schedule, // Apply defaults
-            ...activeSchedule.schedule_config.schedule, // Override with saved
-            blackout_dates: (activeSchedule.schedule_config.schedule?.blackout_dates || []).join(', ')
+            ...defaultSchedule.schedule,
+            ...activeSchedule.schedule_config.schedule,
+            blackout_ranges: activeSchedule.schedule_config.schedule?.blackout_ranges || [] // Load ranges
           },
           pricing: {
-            ...defaultSchedule.pricing, // Use defaults
-            ...activeSchedule.schedule_config.pricing // Override with saved
+            ...defaultSchedule.pricing,
+            ...activeSchedule.schedule_config.pricing
           }
         });
       } else {
@@ -225,27 +209,19 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
     setLoading(true);
     
     try {
-      // --- Step 1: Save Tour Details ---
       let savedTour;
       if (isCreating) {
         savedTour = await adminTourService.createTour(formData);
       } else {
         savedTour = await adminTourService.updateTour(tour.id, formData);
       }
-
-      // --- Step 2: Save Schedule & Pricing ---
-      const configToSave = {
-        ...scheduleConfig,
-        schedule: {
-          ...scheduleConfig.schedule,
-          blackout_dates: scheduleConfig.schedule.blackout_dates.split(',').map(s => s.trim()).filter(Boolean)
-        }
-      };
+      
+      // We save the config, including the blackout_ranges array (which is now managed elsewhere)
+      const configToSave = { ...scheduleConfig };
 
       if (currentScheduleId) {
         await adminTourService.updateSchedule(currentScheduleId, configToSave);
       } else {
-        // Use the ID from the newly created tour
         await adminTourService.createSchedule(savedTour.id, configToSave);
       }
 
@@ -271,7 +247,7 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
           className={`${styles.tabButton} ${activeTab === 'schedule' ? styles.active : ''}`}
           onClick={() => setActiveTab('schedule')}
           disabled={isCreating}
-          title={isCreating ? "Save the tour first to enable schedules" : ""}
+          title={isCreating ? "Save the tour first to enable" : ""}
         >
           Schedule
         </button>
@@ -279,22 +255,22 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
           className={`${styles.tabButton} ${activeTab === 'pricing' ? styles.active : ''}`}
           onClick={() => setActiveTab('pricing')}
           disabled={isCreating}
-          title={isCreating ? "Save the tour first to enable pricing" : ""}
+          title={isCreating ? "Save the tour first to enable" : ""}
         >
           Pricing
         </button>
+        {/* --- REMOVED: Blackout Dates tab --- */}
         <button 
           className={`${styles.tabButton} ${activeTab === 'media' ? styles.active : ''}`}
           onClick={() => setActiveTab('media')}
           disabled={isCreating}
-          title={isCreating ? "Save the tour first to enable media" : ""}
+          title={isCreating ? "Save the tour first to enable" : ""}
         >
           Media
         </button>
       </div>
 
       <div className={styles.tabContent}>
-        {/* --- Error Display --- */}
         {error && <p className={sharedStyles.errorText}>{error}</p>}
         
         {loading && (
@@ -374,6 +350,8 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
             </div>
           </form>
         )}
+
+        {/* --- REMOVED: Blackout Dates Tab --- */}
         
         {/* --- TAB 4: Media --- */}
         {activeTab === 'media' && !loading && (
@@ -381,7 +359,6 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
             <p className={sharedStyles.description}>
               Upload images for your tour. The first image will be the cover.
             </p>
-            {/* This is the hook for our custom file upload, as per standards */}
             <div className={styles.uploadPlaceholder}>
               Custom file upload component will go here.
             </div>

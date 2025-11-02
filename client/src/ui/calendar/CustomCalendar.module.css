@@ -1,0 +1,80 @@
+/* client/src/ui/calendar/CustomCalendar.module.css */
+/* Uses variables from /client/src/styles/global.css */
+
+.calendar {
+  background: var(--grey-100);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  max-width: 400px; /* Mobile-first, constrained width */
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0.5rem 1rem 0.5rem;
+}
+
+.header button {
+  background: var(--background);
+  color: var(--text);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.header button:hover {
+  background: var(--grey-200);
+}
+
+.monthName {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.dayOfWeek {
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--grey-700);
+  padding-bottom: 0.5rem;
+}
+
+.dayCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px; /* Tappable size */
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dayCell:not(.padding):hover {
+  background: var(--grey-200);
+}
+
+.dayCell.padding {
+  background: var(--grey-100);
+  border-color: var(--grey-100);
+  cursor: default;
+}
+
+.dayCell.selected {
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: var(--primary);
+  font-weight: 600;
+}

@@ -9,36 +9,25 @@
   margin: 0 auto;
 }
 
-/* Filter styles are now in adminshared.module.css */
-/* Form styles are now in adminshared.module.css */
-
-.instancesList {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
-}
-
-.instanceCard {
-  background: var(--background);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 1.5rem;
+/* --- NEW: Styles for the enhanced filter bar --- */
+.filterBar {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: flex-end; /* Align items to the bottom */
+  gap: 1rem;
 }
 
-.instanceHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
+.filterBar > .filterGroup {
+  margin-bottom: 0; /* Remove default margin from shared style */
+  flex-grow: 1;
+  flex-basis: 150px;
 }
 
-.instanceHeader h3 {
-  margin: 0;
-  font-size: 1.1rem;
+/* --- REMOVED: All .instancesList and .instanceCard styles --- */
+
+/* --- NEW: Styles for table content --- */
+.actionsCell {
+  text-align: right;
 }
 
 .status {
@@ -66,22 +55,6 @@
   color: var(--grey-700);
   border: 1px solid var(--grey-500);
 }
-
-.instanceDetails {
-  flex-grow: 1;
-}
-
-.instanceDetails p {
-  margin: 0.5rem 0;
-}
-
-.actions {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
-}
-
-/* Danger button styles now use adminshared.module.css */
 
 .cancellationInfo {
   margin-top: 1rem;
