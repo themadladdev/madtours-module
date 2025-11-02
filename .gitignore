@@ -1,0 +1,44 @@
+# Environment files (except examples)
+.env
+.env.development
+.env.production
+.env.staging
+.env.local
+
+# Keep example files
+!.env.example
+
+# Dependencies
+node_modules/
+server/node_modules/
+client/node_modules/
+
+# Build outputs
+dist/
+build/
+client/dist/
+
+# Runtime data
+pids
+*.pid
+*.seed
+logs
+*.log
+npm-debug.log*
+
+# Coverage directory
+coverage/
+
+# Runtime data
+.npm
+.eslintcache
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

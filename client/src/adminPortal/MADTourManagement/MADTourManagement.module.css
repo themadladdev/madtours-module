@@ -1,0 +1,117 @@
+/* client/src/adminPortal/MADTourManagement/MADTourManagement.module.css
+ * Uses variables defined in src/styles/global.css */
+
+.tourContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100%; 
+    overflow: hidden;
+}
+
+/* --- Top Header Bar Layout --- */
+.topHeaderBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding: 1.5rem 1.5rem 0rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--background);
+    flex-shrink: 0;
+}
+
+.headerInfo {
+    flex-grow: 1;
+}
+.headerInfo h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.8rem;
+    color: var(--text);
+}
+/* sharedStyles.description handles the description text */
+
+/* --- Wrapper for SubNav --- */
+.pageNavWrapper {
+    display: flex;
+    flex-direction: column; 
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--background);
+    flex-shrink: 0;
+}
+
+.subNavigation {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.navButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--grey-700);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+}
+
+.navButton:hover {
+    background-color: var(--grey-100);
+    color: var(--text);
+}
+
+.navButton.active {
+    background-color: var(--grey-200);
+    color: var(--text);
+}
+
+.navButton svg,
+.navButton span {
+    opacity: 0.7;
+}
+
+.navButton.active svg,
+.navButton.active span {
+    opacity: 1;
+}
+
+.contentArea {
+    flex-grow: 1; 
+    overflow-y: auto;
+    background-color: var(--grey-100);
+    padding: 1.5rem;
+}
+
+@media (max-width: 900px) { 
+    .topHeaderBar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .pageNavWrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .subNavigation {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+     .topHeaderBar {
+         padding: 1rem;
+     }
+     .pageNavWrapper {
+         padding: 0.75rem 1rem;
+     }
+     .contentArea {
+         padding: 1rem;
+     }
+}

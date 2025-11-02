@@ -1,0 +1,127 @@
+/* client/src/ui/dialogbox/ConfirmationDialog.module.css */
+/* Uses variables defined in src/styles/global.css */
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text); /* Use theme variable */
+}
+
+.modalOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--modal-overlay); /* Use theme variable */
+  backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  position: relative;
+  z-index: 1001;
+  background-color: var(--background); /* Use theme variable */
+  border: 1px solid var(--text); /* Use theme variable */
+  border-radius: 0; /* Vanilla: Sharp corners */
+  box-shadow: 0 5px 15px rgba(var(--text-rgb), 0.2); /* Use theme variable */
+  width: 90%;
+  max-width: 500px;
+  overflow: hidden;
+}
+
+.modalHeader {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--text); /* Use theme variable */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: var(--text); /* Use theme variable */
+  cursor: pointer;
+  padding: 0.5rem;
+  margin: -0.5rem; /* Offset padding for larger click area */
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.closeButton:hover {
+  opacity: 1;
+}
+
+.modalBody {
+  padding: 1.5rem;
+}
+
+.modalBody .messageLine {
+  display: block; /* Ensures newlines are respected */
+  line-height: 1.6;
+  color: var(--grey-700); /* Use theme variable */
+}
+
+.modalBody .messageLine:first-of-type {
+  margin-bottom: 1rem; /* Space after the main message */
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.cancelButton,
+.submitButton,
+.deleteButton {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--text); /* Use theme variable */
+  border-radius: 0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: var(--secondary); /* Use theme variable */
+  color: var(--secondary-text); /* Use theme variable */
+}
+
+.cancelButton:hover {
+  background-color: var(--grey-100); /* Use theme variable */
+}
+
+.submitButton {
+  background: var(--primary); /* Use theme variable */
+  color: var(--primary-text); /* Use theme variable */
+  border-color: var(--primary); /* Use theme variable */
+}
+
+.submitButton:hover {
+  background-color: var(--grey-900);
+  border-color: var(--grey-900);
+}
+
+.deleteButton {
+  background: var(--destructive); /* Use theme variable */
+  color: var(--destructive-text); /* Use theme variable */
+  border-color: var(--destructive); /* Use theme variable */
+}
+
+.deleteButton:hover {
+  opacity: 0.8;
+}

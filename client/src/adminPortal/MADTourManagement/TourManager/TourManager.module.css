@@ -1,0 +1,63 @@
+/* client/src/adminPortal/MADTourManagement/TourManager/TourManager.module.css */
+/* Uses variables from /client/src/styles/global.css */
+/* Uses styles from /client/src/adminPortal/adminshared.module.css */
+
+/* Uses variables from /client/src/styles/global.css */
+/* Uses styles from /client/src/adminPortal/adminshared.module.css */
+
+.tourManagerContainer {
+  /* This component is rendered inside the contentArea, 
+     so it doesn't need its own padding. */
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Styles for the table row */
+.tourRow {
+  cursor: pointer;
+}
+
+.tourRow:hover {
+  background-color: var(--grey-100);
+}
+
+.tourName {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.statusBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.statusBadge.active {
+  background: var(--grey-200);
+  color: var(--text);
+  border: 1px solid var(--grey-700);
+}
+
+.statusBadge.inactive {
+  background: var(--grey-100);
+  color: var(--grey-700);
+  border: 1px solid var(--grey-500);
+}
+
+.actionsCell {
+  text-align: right;
+}

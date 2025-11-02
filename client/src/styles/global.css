@@ -1,0 +1,99 @@
+/* client/src/styles/global.css */
+
+/*
+ * VANILLA FOUNDATION - GLOBAL STYLESHEET
+ * 1. Defines all theme variables (B&W, greyscale, light/dark)
+ * 2. Implements a modern CSS reset
+ * 3. Sets base font and background properties
+*/
+
+:root {
+  /* --- Light Theme (Default) --- */
+  --theme-name: 'vanilla-light';
+
+  /* Core Palette */
+  --background: #ffffff; /* Pure white */
+  --text: #000000;       /* Pure black */
+
+  /* Greyscale Accents */
+  --grey-100: #f8f8f8; /* Lightest grey (e.g., hover) */
+  --grey-200: #eeeeee; /* Light grey (e.g., borders) */
+  --grey-300: #cccccc; /* Medium-light grey (e.g., dividers) */
+  --grey-500: #888888; /* Medium grey (e.g., disabled text) */
+  --grey-700: #555555; /* Dark grey (e.g., sub-text) */
+  --grey-900: #222222; /* Darkest grey */
+  
+  /* Buttons & Accents (Semantic) */
+  --primary: var(--text);             /* Black */
+  --primary-text: var(--background);  /* White */
+  
+  --secondary: var(--background);     /* White */
+  --secondary-text: var(--text);      /* Black */
+  
+  --destructive: #c00000;             /* Dark red for delete */
+  --destructive-text: var(--background); /* White */
+  
+  /* Component-Specific */
+  --button: var(--primary);           /* Black */
+  --button-text: var(--primary-text); /* White */
+  
+  --border-color: var(--grey-200);
+  --input-background: var(--background);
+  --modal-overlay: rgba(0, 0, 0, 0.4);
+  
+  /* RGB Variables for Opacity */
+  --text-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+  --primary-rgb: 0, 0, 0;
+  --destructive-rgb: 192, 0, 0;
+}
+
+/* --- 1. Modern CSS Reset --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+}
+
+input, button, textarea, select {
+  font: inherit;
+}
+
+p, h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+}
+
+#root {
+  isolation: isolate;
+}
+
+
+/* --- 2. Base Vanilla Styles --- */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  background-color: var(--background);
+  color: var(--text);
+}
+
+/* Ensure admin portal background is set */
+#root, .app-container, .admin-portal {
+    background-color: var(--background);
+}

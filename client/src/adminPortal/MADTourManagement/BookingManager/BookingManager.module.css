@@ -1,0 +1,140 @@
+/* ==========================================
+// ADMIN: Booking Manager Styles
+// client/src/adminPortal/MADTourManagement/BookingManager/BookingManager.module.css
+// ========================================== */
+
+/* Filter styles are now in adminshared.module.css */
+/* Table container styles are now in adminshared.module.css */
+/* Table styles are now in adminshared.module.css */
+/* Form styles are now in adminshared.module.css */
+
+/* Uses variables from /client/src/styles/global.css */
+
+.bookingForm {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  padding: 0.25rem;
+}
+.backButton:hover {
+  text-decoration: underline;
+}
+
+.summary {
+  padding: 1rem;
+  background: var(--grey-100);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-bottom: 2rem;
+}
+
+.summary h3 {
+  margin-top: 0;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.summary p {
+  margin: 0.5rem 0;
+}
+
+.total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 1rem;
+}
+
+.form h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Base input style */
+.formGroup input[type="text"],
+.formGroup input[type="email"],
+.formGroup input[type="tel"],
+.formGroup textarea {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-background);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.formGroup textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: var(--text);
+}
+
+.error {
+  color: var(--destructive);
+  background-color: rgba(var(--destructive-rgb), 0.1);
+  border: 1px solid var(--destructive);
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.paymentSection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.submitButton {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: var(--primary-text);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: var(--secondary);
+  color: var(--secondary-text);
+}
+
+.submitButton:disabled {
+  background: var(--grey-200);
+  color: var(--grey-500);
+  border-color: var(--grey-200);
+  cursor: not-allowed;
+}

@@ -1,0 +1,128 @@
+/* Uses variables from /client/src/styles/global.css */
+/* Uses styles from /client/src/adminPortal/adminshared.module.css */
+
+.tabContainer {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+  padding: 0 1.5rem;
+}
+
+.tabButton {
+  background: none;
+  border: none;
+  padding: 1rem 0.5rem;
+  margin-bottom: -1px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--grey-700);
+  border-bottom: 2px solid transparent;
+  margin-right: 1.5rem;
+}
+
+.tabButton:hover {
+  color: var(--text);
+}
+
+.tabButton.active {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+
+.tabButton:disabled {
+  color: var(--grey-300);
+  cursor: not-allowed;
+}
+
+.tabContent {
+  min-height: 300px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* --- Schedule Editor Styles --- */
+.scheduleEditor {
+  padding: 1rem;
+  background: var(--grey-100);
+  border-radius: 4px;
+}
+
+.dayCheckboxes {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dayLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dayLabel input {
+  margin-right: 0.25rem;
+  cursor: pointer;
+}
+
+.dayActions {
+  margin-top: 0.5rem;
+}
+
+.dayActions button {
+  background: none;
+  border: none;
+  color: var(--text);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+.timeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 300px;
+}
+
+.timeInputRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.removeTimeBtn {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  color: var(--destructive);
+  font-weight: 700;
+  font-size: 1.2rem;
+  line-height: 1;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.removeTimeBtn:hover {
+  background: var(--destructive);
+  color: var(--destructive-text);
+  border-color: var(--destructive);
+}
+
+.uploadPlaceholder {
+  border: 2px dashed var(--border-color);
+  border-radius: 4px;
+  padding: 2rem;
+  text-align: center;
+  color: var(--grey-700);
+  background: var(--grey-100);
+}

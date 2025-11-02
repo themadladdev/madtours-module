@@ -1,0 +1,102 @@
+/* ==========================================
+// ADMIN: Instance Manager Styles
+// client/src/adminPortal/MADTourManagement/InstanceManager/InstanceManager.module.css
+// ========================================== */
+
+.instanceManager {
+  /* Padding removed, handled by wrapper */
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Filter styles are now in adminshared.module.css */
+/* Form styles are now in adminshared.module.css */
+
+.instancesList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.instanceCard {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.instanceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.instanceHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status.scheduled {
+  background: var(--grey-200);
+  color: var(--text);
+  border: 1px solid var(--grey-700);
+}
+
+.status.cancelled {
+  background: var(--grey-100);
+  color: var(--destructive);
+  border: 1px solid var(--destructive);
+}
+
+.status.completed {
+  background: var(--grey-100);
+  color: var(--grey-700);
+  border: 1px solid var(--grey-500);
+}
+
+.instanceDetails {
+  flex-grow: 1;
+}
+
+.instanceDetails p {
+  margin: 0.5rem 0;
+}
+
+.actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Danger button styles now use adminshared.module.css */
+
+.cancellationInfo {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--grey-100);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--destructive);
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.cancellationInfo p {
+  margin: 0.25rem 0;
+}
+
+.cancelForm {
+  margin-top: 1rem;
+}

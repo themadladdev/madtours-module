@@ -1,0 +1,9 @@
+/* client/src/adminPortal/AdminDashboard.module.css
+ * Minimal styling for the admin prototype shell.
+*/
+
+/* * This file is intentionally left blank.
+ * The AdminDashboard.jsx component is now just a router.
+ * All styling is handled by its children components, 
+ * e.g., MADTourManagement.jsx and ManifestView.jsx.
+*/
