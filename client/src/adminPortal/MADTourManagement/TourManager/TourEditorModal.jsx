@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
 import * as adminTourService from '../../../services/admin/adminTourService.js';
-// REMOVED: CustomCalendar import
 import styles from './TourEditorModal.module.css';
 import sharedStyles from '../../adminshared.module.css';
 
@@ -39,8 +38,6 @@ const ScheduleEditor = ({ schedule, onScheduleChange }) => {
     const newTimes = schedule.times.filter((_, i) => i !== index);
     onScheduleChange({ ...schedule, times: newTimes });
   };
-
-  // --- REMOVED: Blackout Dates input field ---
 
   return (
     <div className={styles.scheduleEditor}>
@@ -96,15 +93,13 @@ const ScheduleEditor = ({ schedule, onScheduleChange }) => {
     </div>
   );
 };
-// --- END: Schedule Editor ---
 
-const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
+const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess, onSaveError }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [formData, setFormData] = useState({});
   const [scheduleConfig, setScheduleConfig] = useState(null);
   const [currentScheduleId, setCurrentScheduleId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const isCreating = !tour;
   const modalTitle = isCreating ? 'Create New Tour' : 'Edit Tour';
@@ -113,7 +108,7 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
     schedule: {
       days_of_week: [1, 2, 3, 4, 5, 6, 0],
       times: ['09:00', '11:00', '13:00', '15:00'],
-      blackout_ranges: [] // Renamed from blackout_dates
+      blackout_ranges: []
     },
     pricing: {
       adult: 100,
@@ -125,7 +120,6 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
 
   useEffect(() => {
     if (isOpen) {
-      setError('');
       setActiveTab('details');
       
       if (isCreating) {
@@ -167,7 +161,7 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
           schedule: {
             ...defaultSchedule.schedule,
             ...activeSchedule.schedule_config.schedule,
-            blackout_ranges: activeSchedule.schedule_config.schedule?.blackout_ranges || [] // Load ranges
+            blackout_ranges: activeSchedule.schedule_config.schedule?.blackout_ranges || []
           },
           pricing: {
             ...defaultSchedule.pricing,
@@ -179,7 +173,9 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
         setScheduleConfig(defaultSchedule);
       }
     } catch (err) {
-      setError(`Failed to load schedule: ${err.message}`);
+      if (onSaveError) {
+        onSaveError(`Failed to load schedule: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -187,9 +183,20 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let finalValue;
+
+    if (type === 'checkbox') {
+      finalValue = checked;
+    } else if (name === 'active') {
+      // Convert string 'true'/'false' to boolean
+      finalValue = value === 'true';
+    } else {
+      finalValue = value;
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: finalValue
     }));
   };
 
@@ -205,7 +212,6 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
   };
 
   const handleSave = async () => {
-    setError('');
     setLoading(true);
     
     try {
@@ -216,7 +222,6 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
         savedTour = await adminTourService.updateTour(tour.id, formData);
       }
       
-      // We save the config, including the blackout_ranges array (which is now managed elsewhere)
       const configToSave = { ...scheduleConfig };
 
       if (currentScheduleId) {
@@ -229,8 +234,10 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
       onSaveSuccess(isCreating ? 'Tour created!' : 'Tour updated!');
       
     } catch (err) {
-      setError(err.message);
       setLoading(false);
+      if (onSaveError) {
+        onSaveError(err.message || 'Failed to save tour');
+      }
     }
   };
 
@@ -259,7 +266,6 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
         >
           Pricing
         </button>
-        {/* --- REMOVED: Blackout Dates tab --- */}
         <button 
           className={`${styles.tabButton} ${activeTab === 'media' ? styles.active : ''}`}
           onClick={() => setActiveTab('media')}
@@ -271,15 +277,12 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
       </div>
 
       <div className={styles.tabContent}>
-        {error && <p className={sharedStyles.errorText}>{error}</p>}
-        
         {loading && (
           <div className={sharedStyles.loadingContainer}>
             <div className={sharedStyles.spinner}></div>
           </div>
         )}
 
-        {/* --- TAB 1: Details --- */}
         {activeTab === 'details' && !loading && (
           <form>
             <div className={styles.grid}>
@@ -318,7 +321,6 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
           </form>
         )}
 
-        {/* --- TAB 2: Schedule --- */}
         {activeTab === 'schedule' && !loading && scheduleConfig && (
           <ScheduleEditor 
             schedule={scheduleConfig.schedule} 
@@ -326,7 +328,6 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
           />
         )}
         
-        {/* --- TAB 3: Pricing --- */}
         {activeTab === 'pricing' && !loading && scheduleConfig && (
           <form className={styles.grid}>
             <p className={sharedStyles.description} style={{ gridColumn: '1 / -1'}}>
@@ -350,10 +351,7 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
             </div>
           </form>
         )}
-
-        {/* --- REMOVED: Blackout Dates Tab --- */}
         
-        {/* --- TAB 4: Media --- */}
         {activeTab === 'media' && !loading && (
           <div>
             <p className={sharedStyles.description}>
@@ -366,7 +364,6 @@ const TourEditorModal = ({ isOpen, onClose, tour, onSaveSuccess }) => {
         )}
       </div>
 
-      {/* --- Footer / Actions --- */}
       <div className={sharedStyles.formFooter}>
         <button 
           type="button" 

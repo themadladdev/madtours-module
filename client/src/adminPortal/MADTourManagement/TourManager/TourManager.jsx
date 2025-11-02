@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import * as adminTourService from '../../../services/admin/adminTourService.js';
 import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
-import TourEditorModal from './TourEditorModal.jsx'; // --- NEW IMPORT ---
+import TourEditorModal from './TourEditorModal.jsx';
 import styles from './TourManager.module.css';
 import sharedStyles from '../../adminshared.module.css';
 
@@ -11,10 +11,9 @@ const TourManager = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null); // { type: 'success', message: '...' }
   
-  // --- NEW STATE ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTour, setSelectedTour] = useState(null); // Tour being edited
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // Holds tour ID
+  const [selectedTour, setSelectedTour] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
   useEffect(() => {
     loadTours();
@@ -39,9 +38,8 @@ const TourManager = () => {
     }
   };
 
-  // --- NEW HANDLERS ---
   const handleOpenCreate = () => {
-    setSelectedTour(null); // null ID means "create new"
+    setSelectedTour(null);
     setIsModalOpen(true);
   };
 
@@ -51,7 +49,7 @@ const TourManager = () => {
   };
 
   const handleOpenDelete = (e, tour) => {
-    e.stopPropagation(); // Stop click from opening the edit modal
+    e.stopPropagation();
     setShowDeleteConfirm(tour);
   };
 
@@ -62,8 +60,13 @@ const TourManager = () => {
 
   const handleSaveSuccess = (message) => {
     handleModalClose();
-    loadTours(); // Refresh the list
+    loadTours();
     setToast({ type: 'success', message });
+  };
+
+  // NEW: Error handler for modal
+  const handleSaveError = (message) => {
+    setToast({ type: 'error', message });
   };
 
   const handleConfirmDelete = async () => {
@@ -71,7 +74,7 @@ const TourManager = () => {
     setToast(null);
     try {
       await adminTourService.deleteTour(showDeleteConfirm.id);
-      loadTours(); // Refresh list
+      loadTours();
       setToast({ type: 'success', message: `Tour "${showDeleteConfirm.name}" deleted.` });
     } catch (err) {
       setToast({ type: 'error', message: err.message });
@@ -79,7 +82,6 @@ const TourManager = () => {
       setShowDeleteConfirm(null);
     }
   };
-  // --- END NEW HANDLERS ---
 
   if (loading) {
     return (
@@ -158,15 +160,14 @@ const TourManager = () => {
         </table>
       </div>
 
-      {/* --- NEW: Editor Modal --- */}
       <TourEditorModal
         isOpen={isModalOpen}
         onClose={handleModalClose}
         tour={selectedTour}
         onSaveSuccess={handleSaveSuccess}
+        onSaveError={handleSaveError}
       />
 
-      {/* --- NEW: Delete Confirmation Dialog --- */}
       <ConfirmationDialog
         isOpen={!!showDeleteConfirm}
         title="Delete Tour"

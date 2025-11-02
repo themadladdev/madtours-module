@@ -55,8 +55,8 @@ export const createSchedule = async (tourId, scheduleConfig) => {
  * Corresponds to: PUT /api/admin/schedules/:id
  */
 export const updateSchedule = async (scheduleId, scheduleConfig) => {
-  // Note: This endpoint is not prefixed with /tours
-  return await adminApiFetch(`/admin/schedules/${scheduleId}`, {
+  // FIX: Add /tours to the path since the router is mounted at /api/admin/tours
+  return await adminApiFetch(`${API_PREFIX}/schedules/${scheduleId}`, {
     method: 'PUT',
     body: JSON.stringify(scheduleConfig)
   });
