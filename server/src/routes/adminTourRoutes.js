@@ -15,17 +15,20 @@ router.use(authenticateAdmin);
 // === Tour Instances (Daily Operations) ===
 // Static routes MUST be defined *before* dynamic routes like '/:id'
 router.get('/instances', adminTourController.getTourInstances);
-router.post('/instances/:id/cancel', adminTourController.cancelTourInstance);
 router.get('/instances/:id/manifest', adminTourController.getManifest);
+
+// === NEW CANCELLATION & RE-INSTATEMENT ROUTES ===
+router.post('/instances/cancel-operationally', adminTourController.operationalCancelInstance);
+router.post('/instances/re-instate', adminTourController.reInstateInstance);
+// === END NEW ROUTES ===
+
 
 // === Tour Schedules ===
 // Static routes MUST be defined *before* dynamic routes like '/:id'
 router.post('/schedules/:scheduleId/generate', adminTourController.generateInstances);
 
-// === NEW ROUTE (Bug 3) ===
 // PUT /api/admin/schedules/:scheduleId
 router.put('/schedules/:scheduleId', adminTourController.updateSchedule);
-// === END NEW ROUTE ===
 
 
 // === Tour Management (Dynamic routes go LAST) ===
@@ -44,10 +47,8 @@ router.put('/:id', adminTourController.updateTour);
 // DELETE /api/admin/tours/:id
 router.delete('/:id', adminTourController.deleteTour);
 
-// === NEW ROUTE (Bug 1 - 404 Error) ===
 // GET    /api/admin/tours/:id/schedules
 router.get('/:id/schedules', adminTourController.getSchedulesForTour);
-// === END NEW ROUTE ===
 
 // POST   /api/admin/tours/:id/schedules
 router.post('/:id/schedules', adminTourController.createSchedule);

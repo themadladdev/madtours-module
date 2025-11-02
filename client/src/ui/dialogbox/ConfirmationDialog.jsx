@@ -9,7 +9,9 @@ const ConfirmationDialog = ({
   message, 
   confirmText = 'Confirm', 
   cancelText = 'Cancel',
-  isDestructive = false 
+  isDestructive = false,
+  children, // <-- NEW: Accept children
+  errorMessage // <-- NEW: Accept error message
 }) => {
   if (!isOpen) return null;
 
@@ -39,6 +41,20 @@ const ConfirmationDialog = ({
               {line}
             </span>
           ))}
+          
+          {/* --- NEW: Render children (the form) --- */}
+          {children && (
+            <div className={styles.modalChildrenContent}>
+              {children}
+            </div>
+          )}
+          
+          {/* --- NEW: Render styled error message --- */}
+          {errorMessage && (
+            <div className={styles.errorMessage}>
+              {errorMessage}
+            </div>
+          )}
           
           <div className={styles.formActions}>
             <button

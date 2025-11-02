@@ -3,6 +3,10 @@
 // client/src/adminPortal/MADTourManagement/InstanceManager/InstanceManager.module.css
 // ========================================== */
 
+.textLeft   { text-align: left; }
+.textCenter { text-align: center; }
+.textRight  { text-align: right; }
+
 .instanceManager {
   max-width: 1400px;
   margin: 0 auto;
@@ -42,13 +46,13 @@
 }
 
 .actionsCell {
-  text-align: right;
+  text-align: center;
   white-space: nowrap;
 }
 
 .status {
   padding: 0.25rem 0.75rem;
-  border-radius: 12px;
+  border-radius: 4px;
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: capitalize;

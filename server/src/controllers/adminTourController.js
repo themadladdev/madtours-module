@@ -5,6 +5,7 @@
 
 import * as tourService from '../services/tourService.js';
 import { generateManifest } from '../utils/tourManifestGenerator.js';
+import { getAdminTourInstances } from '../utils/tourAvailabilityCalculator.js';
 
 export const createTour = async (req, res, next) => {
   try {
@@ -63,7 +64,6 @@ export const deleteTour = async (req, res, next) => {
   }
 };
 
-// === NEW CONTROLLER FUNCTION ===
 export const getSchedulesForTour = async (req, res, next) => {
   try {
     const schedules = await tourService.getSchedulesByTourId(req.params.id);
@@ -73,7 +73,6 @@ export const getSchedulesForTour = async (req, res, next) => {
     next(error);
   }
 };
-// === END NEW FUNCTION ===
 
 export const createSchedule = async (req, res, next) => {
   try {
@@ -85,7 +84,6 @@ export const createSchedule = async (req, res, next) => {
   }
 };
 
-// === NEW CONTROLLER FUNCTION ===
 export const updateSchedule = async (req, res, next) => {
   try {
     const schedule = await tourService.updateSchedule(req.params.scheduleId, req.body);
@@ -98,7 +96,6 @@ export const updateSchedule = async (req, res, next) => {
     next(error);
   }
 };
-// === END NEW FUNCTION ===
 
 export const generateInstances = async (req, res, next) => {
   try {
@@ -120,70 +117,112 @@ export const generateInstances = async (req, res, next) => {
 
 export const getTourInstances = async (req, res, next) => {
   try {
-    // This logic should be moved to tourService.js, but
-    // we will leave it for now to minimize changes.
-    const { startDate, endDate, status } = req.query;
-    
-    let query = `
-      SELECT 
-        ti.*,
-        t.name as tour_name,
-        t.base_price,
-        (ti.capacity - ti.booked_seats) as available_seats
-      FROM tour_instances ti
-      JOIN tours t ON ti.tour_id = t.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
-    let paramCount = 1;
+    const { tourId, startDate, endDate, status } = req.query;
 
-    if (startDate) {
-      query += ` AND ti.date >= $${paramCount++}`;
-      params.push(startDate);
-    }
-    
-    if (endDate) {
-      query += ` AND ti.date <= $${paramCount++}`;
-      params.push(endDate);
+    if (!startDate) {
+      return res.status(400).json({ message: 'A startDate query parameter is required.' });
     }
 
-    if (status) {
-      query += ` AND ti.status = $${paramCount++}`;
-      params.push(status);
+    const effectiveEndDate = endDate || startDate;
+
+    const queryOptions = {
+      startDate,
+      endDate: effectiveEndDate,
+      statusFilter: status || null,
+    };
+
+    let allInstances = [];
+
+    if (tourId) {
+      // --- Case 1: Operations Hub ---
+      allInstances = await getAdminTourInstances({
+        ...queryOptions,
+        tourId: parseInt(tourId, 10),
+      });
+
+    } else {
+      // --- Case 2: Dashboard ---
+      const activeTours = await tourService.getAllTours(true);
+      
+      const instancePromises = activeTours.map(tour => 
+        getAdminTourInstances({
+          ...queryOptions,
+          tourId: tour.id,
+        })
+      );
+      
+      const results = await Promise.all(instancePromises);
+      allInstances = results.flat();
     }
+    
+    allInstances.sort((a, b) => {
+      if (a.date < b.date) return -1;
+      if (a.date > b.date) return 1;
+      if (a.time < b.time) return -1;
+      if (a.time > b.time) return 1;
+      return 0;
+    });
 
-    query += ' ORDER BY ti.date, ti.time';
-
-    const { pool } = await import('../db/db.js');
-    const result = await pool.query(query, params);
-    res.json(result.rows);
+    res.json(allInstances);
+    
   } catch (error) {
-    console.error('Error fetching instances:', error);
+    console.error('Error fetching admin tour instances:', error);
     next(error);
   }
 };
 
-// === REFACTORED CONTROLLER FUNCTION ===
-export const cancelTourInstance = async (req, res, next) => {
+// === NEW OPERATIONAL CANCELLATION CONTROLLER ===
+export const operationalCancelInstance = async (req, res, next) => {
   try {
-    const { reason } = req.body;
-    
-    // This now calls the correct service which handles
-    // refunds, history, and email notifications.
-    const result = await tourService.cancelTourInstanceWithRefunds(
-      req.params.id, 
-      reason, 
-      req.user.id
-    );
+    const { tourId, date, time, reason, capacity } = req.body;
+    const adminId = req.user.id;
 
-    res.json(result);
+    if (!tourId || !date || !time || !reason || !capacity) {
+      return res.status(400).json({ message: 'Missing required fields for cancellation.' });
+    }
+
+    const result = await tourService.operationalCancelInstance({
+      tourId: parseInt(tourId, 10),
+      date,
+      time,
+      reason,
+      adminId,
+      capacity: parseInt(capacity, 10)
+    });
+
+    res.status(201).json(result);
   } catch (error) {
-    console.error('Error cancelling tour instance:', error);
+    console.error('Error in operational cancellation:', error);
     next(error);
   }
 };
-// === END REFACTORED FUNCTION ===
+// === END NEW CONTROLLER ===
+
+// === NEW RE-INSTATEMENT CONTROLLER ===
+export const reInstateInstance = async (req, res, next) => {
+  try {
+    const { tourId, date, time } = req.body;
+    const adminId = req.user.id;
+
+    if (!tourId || !date || !time) {
+      return res.status(400).json({ message: 'Missing required fields for re-instatement.' });
+    }
+
+    const result = await tourService.reInstateInstance({
+      tourId: parseInt(tourId, 10),
+      date,
+      time,
+      adminId
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error in re-instatement:', error);
+    next(error);
+  }
+};
+// === END NEW CONTROLLER ===
+
 
 export const getManifest = async (req, res, next) => {
   try {

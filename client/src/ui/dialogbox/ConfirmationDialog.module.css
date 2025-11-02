@@ -80,6 +80,23 @@
   margin-bottom: 1rem; /* Space after the main message */
 }
 
+/* --- NEW: Style for rendered children --- */
+.modalChildrenContent {
+  margin-top: 1.5rem;
+}
+
+/* --- NEW: Style for error message --- */
+.errorMessage {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--destructive-light); /* Use theme variable */
+  border: 1px solid var(--destructive); /* Use theme variable */
+  color: var(--destructive); /* Use theme variable */
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 .formActions {
   display: flex;
   justify-content: flex-end;

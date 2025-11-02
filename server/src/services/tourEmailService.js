@@ -320,3 +320,134 @@ export const sendBookingReminder = async (booking, customer, tourInstance, tour)
 
   console.log(`✅ Reminder email sent to ${customer.email}`);
 };
+
+// ==========================================
+// === NEW FUNCTIONS FOR TRIAGE WORKFLOW ===
+// ==========================================
+
+/**
+ * NEW: Sends "Tour Cancelled - Action Required" email.
+ * This informs the customer their tour was cancelled and that they will
+ * be contacted about rebooking or refund options.
+ * It intentionally DOES NOT promise an automatic refund.
+ */
+export const sendTourCancellationTriageNotice = async (customer, booking, tour, reason) => {
+  const subject = `Tour Cancelled - Action Required for ${tour.name}`;
+  
+  const content = `
+    <div class="header" style="background: #f57c00;">
+      <h1>Tour Cancelled - Action Required</h1>
+    </div>
+    <div class="content">
+      <p>Hi ${customer.first_name},</p>
+      <p>We regret to inform you that the following scheduled tour has been cancelled by our team.</p>
+      
+      <div class="reference">
+        Booking Reference: ${booking.booking_reference}
+      </div>
+      
+      <div class="booking-details">
+        <h2>Cancelled Tour Details</h2>
+        <div class="detail-row">
+          <strong>Tour:</strong>
+          <span>${tour.name}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Date:</strong>
+          <span>${new Date(tour.date).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Time:</strong>
+          <span>${tour.time}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Reason:</strong>
+          <span>${reason}</span>
+        </div>
+      </div>
+      
+      <div class="alert">
+        <p><strong>What's next?</strong></p>
+        <p>Our team will be in touch with you shortly to arrange rebooking for another date or to process a full refund. Your booking has been moved to our pending queue, and no further action is required from you at this time.</p>
+      </div>
+      
+      <p>We sincerely apologize for any inconvenience this has caused.</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: FROM_EMAIL,
+    to: customer.email,
+    subject: subject,
+    html: generateEmailHTML(content)
+  });
+
+  console.log(`✅ Tour cancellation TRIAGE notice sent to ${customer.email}`);
+};
+
+/**
+ * NEW: Sends "Tour Re-instated" email.
+ * This informs the customer that their previously cancelled tour is
+ * back on and their booking is re-confirmed.
+ */
+export const sendTourReinstatementNotice = async (customer, booking, tour) => {
+  const subject = `Tour Re-instated: Your Booking is Confirmed!`;
+  
+  const content = `
+    <div class="header" style="background: #28a745;">
+      <h1>Good News - Your Tour is Back On!</h1>
+    </div>
+    <div class="content">
+      <p>Hi ${customer.first_name},</p>
+      <p>Great news! The tour you were booked on, which was previously cancelled, has been re-instated. Your booking is now active and confirmed again.</p>
+      
+      <div class="reference">
+        Booking Reference: ${booking.booking_reference}
+      </div>
+      
+      <div class="booking-details">
+        <h2>Re-instated Tour Details</h2>
+        <div class="detail-row">
+          <strong>Tour:</strong>
+          <span>${tour.name}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Date:</strong>
+          <span>${new Date(tour.date).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Time:</strong>
+          <span>${tour.time}</span>
+        </div>
+        <div class="detail-row">
+          <strong>Guests:</strong>
+          <span>${booking.seats}</span>
+        </div>
+      </div>
+      
+      <div class="success">
+        <p><strong>Your booking is confirmed.</strong></p>
+        <p>No further action is required. We apologize for the confusion and look forward to seeing you!</p>
+      </div>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: FROM_EMAIL,
+    to: customer.email,
+    subject: subject,
+    html: generateEmailHTML(content)
+  });
+
+  console.log(`✅ Tour re-instatement notice sent to ${customer.email}`);
+};

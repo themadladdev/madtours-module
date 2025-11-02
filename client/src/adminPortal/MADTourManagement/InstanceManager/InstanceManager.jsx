@@ -1,9 +1,14 @@
 // client/src/adminPortal/MADTourManagement/InstanceManager/InstanceManager.jsx
 import React, { useState, useEffect } from 'react';
-import { getTourInstances, cancelTourInstance, getAllTours } from '../../../services/admin/adminTourService.js';
+import { 
+  getTourInstances, 
+  getAllTours,
+  operationalCancelInstance, // <-- NEW
+  reInstateInstance          // <-- NEW
+} from '../../../services/admin/adminTourService.js';
 import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
 import BlackoutManagerModal from './BlackoutManagerModal.jsx';
-import PriceManagerModal from './PriceManagerModal.jsx'; // --- NEW STUBBED MODAL ---
+import PriceManagerModal from './PriceManagerModal.jsx'; 
 import styles from './InstanceManager.module.css';
 import sharedStyles from '../../adminshared.module.css'; 
 
@@ -13,17 +18,23 @@ const InstanceManager = () => {
   const [tours, setTours] = useState([]);
   const [selectedTourId, setSelectedTourId] = useState('');
   
+  const today = new Date().toISOString().split('T')[0];
   const [filters, setFilters] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: '',
-    status: 'scheduled'
+    startDate: today,
+    endDate: today, 
+    status: '' // Default to all
   });
   
+  // --- NEW: Separate dialog states ---
   const [cancelDialog, setCancelDialog] = useState({ instance: null });
+  const [reInstateDialog, setReInstateDialog] = useState({ instance: null });
+  // ---
+  
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState(null); // <-- NEW: For styled error
   
   const [isBlackoutModalOpen, setIsBlackoutModalOpen] = useState(false);
-  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false); // --- NEW ---
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false); 
 
   useEffect(() => {
     const loadTours = async () => {
@@ -52,8 +63,13 @@ const InstanceManager = () => {
   const loadInstances = async () => {
     setLoading(true);
     try {
-      const data = await getTourInstances({
+      const effectiveFilters = {
         ...filters,
+        endDate: filters.endDate || filters.startDate,
+      };
+
+      const data = await getTourInstances({
+        ...effectiveFilters,
         tourId: selectedTourId 
       });
       setInstances(data);
@@ -64,35 +80,83 @@ const InstanceManager = () => {
     }
   };
 
+  // --- Click Handlers for Dialogs ---
   const handleCancelClick = (instance) => {
     setCancelDialog({ instance: instance });
-    setCancelReason('');
+    setCancelReason(''); // Clear reason on dialog open
+    setCancelError(null); // <-- NEW: Clear error on dialog open
   };
 
-  const handleCloseDialog = () => {
+  const handleReInstateClick = (instance) => {
+    setReInstateDialog({ instance: instance });
+  };
+
+  const handleCloseDialogs = () => {
     setCancelDialog({ instance: null });
+    setReInstateDialog({ instance: null });
+    setCancelError(null); // <-- NEW: Clear error on any close action
   };
+  // ---
 
-  // --- STUBBED: Micro Price Edit ---
   const handleMicroPriceEdit = (instance) => {
     alert(`STUB: Open modal to edit price for instance ${instance.id}. You can fix this.`);
   };
 
+  // === NEW UNIFIED CANCELLATION LOGIC ===
   const handleConfirmCancel = async () => {
+    const { instance } = cancelDialog;
+
+    // --- NEW: Styled Validation ---
     if (!cancelReason) {
-      alert('Cancellation reason is required.');
-      return;
+      setCancelError('A cancellation reason is required.');
+      return; // Stop execution, keep modal open
     }
+    setCancelError(null); // Clear error if validation passes
+    // --- END NEW VALIDATION ---
+
     try {
-      await cancelTourInstance(cancelDialog.instance.id, cancelReason);
-      handleCloseDialog();
-      loadInstances(); 
-      alert('Tour cancelled successfully. All customers will be notified and refunded.');
+      await operationalCancelInstance({
+        tourId: instance.tour_id,
+        date: instance.date,
+        time: instance.time,
+        reason: cancelReason,
+        capacity: instance.capacity
+      });
+      
+      // --- FIX 1: Removed browser alert ---
+      
+      handleCloseDialogs();
+      await loadInstances(); // --- FIX 2: Await the instance reload ---
+
     } catch (error) {
-      console.error('Error cancelling tour:', error);
-      alert('Failed to cancel tour: ' + error.message);
+      console.error('Error performing operational cancellation:', error);
+      // --- NEW: Set styled error on API fail ---
+      setCancelError(error.message || 'Failed to cancel tour');
     }
   };
+  // === END NEW LOGIC ===
+
+  // === NEW RE-INSTATEMENT LOGIC ===
+  const handleConfirmReInstate = async () => {
+    const { instance } = reInstateDialog;
+    try {
+      await reInstateInstance({
+        tourId: instance.tour_id,
+        date: instance.date,
+        time: instance.time,
+      });
+
+      // --- FIX 1: Removed browser alert ---
+
+      handleCloseDialogs();
+      await loadInstances(); // --- FIX 2: Await the instance reload ---
+
+    } catch (error) {
+      console.error('Error re-instating tour:', error);
+      alert('Failed to re-instate tour: ' + error.message);
+    }
+  };
+  // === END NEW LOGIC ===
   
   const selectedTour = tours.find(t => t.id === parseInt(selectedTourId));
 
@@ -146,7 +210,7 @@ const InstanceManager = () => {
             type="date"
             className={sharedStyles.input}
             value={filters.startDate}
-            onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+            onChange={(e) => setFilters({ ...filters, startDate: e.get.value, endDate: e.target.value })}
           />
         </div>
         <div className={sharedStyles.filterGroup}>
@@ -157,6 +221,7 @@ const InstanceManager = () => {
             className={sharedStyles.input}
             value={filters.endDate}
             onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+            min={filters.startDate}
           />
         </div>
         <div className={sharedStyles.filterGroup}>
@@ -180,12 +245,12 @@ const InstanceManager = () => {
         <table className={sharedStyles.table}>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Status</th>
-              <th>Booked</th>
-              <th>Capacity</th>
-              <th>Actions (Micro)</th>
+              <th className={styles.textLeft}>Date</th>
+              <th className={styles.textCenter}>Time</th>
+              <th className={styles.textCenter}>Status</th>
+              <th className={styles.textCenter}>Booked</th>
+              <th className={styles.textCenter}>Capacity</th>
+              <th className={styles.textCenter}>Actions (Micro)</th>
             </tr>
           </thead>
           <tbody>
@@ -203,20 +268,21 @@ const InstanceManager = () => {
               </tr>
             ) : (
               instances.map(instance => (
-                <tr key={instance.id}>
-                  <td>{new Date(instance.date).toLocaleDateString()}</td>
-                  <td>{instance.time}</td>
-                  <td>
+                <tr key={instance.id || `gen-${instance.date}-${instance.time}`}>
+                  <td className={styles.textLeft}>{new Date(instance.date).toLocaleDateString()}</td>
+                  <td className={styles.textCenter}>{instance.time.substring(0, 5)}</td>
+                  <td className={styles.textCenter}>
                     <span className={`${styles.status} ${styles[instance.status]}`}>
                       {instance.status}
                     </span>
                   </td>
-                  <td>{instance.booked_seats}</td>
-                  <td>{instance.capacity}</td>
+                  <td className={styles.textCenter}>{instance.booked_seats}</td>
+                  <td className={styles.textCenter}>{instance.capacity}</td>
                   <td className={styles.actionsCell}>
+                    
+                    {/* --- ACTION 1: Scheduled Tour --- */}
                     {instance.status === 'scheduled' && (
                       <>
-                        {/* --- STUBBED: Micro Price Edit Button --- */}
                         <button
                           onClick={() => handleMicroPriceEdit(instance)}
                           className={sharedStyles.secondaryButtonSmall}
@@ -227,13 +293,29 @@ const InstanceManager = () => {
                         <button
                           onClick={() => handleCancelClick(instance)}
                           className={sharedStyles.destructiveButtonSmall}
-                          disabled={instance.booked_seats === 0}
-                          title={instance.booked_seats === 0 ? "Cannot cancel" : "Cancel tour and refund all bookings"}
+                          title="Cancel tour and move bookings to pending"
                         >
                           Cancel
                         </button>
                       </>
                     )}
+                    
+                    {/* --- ACTION 2: Cancelled Tour --- */}
+                    {instance.status === 'cancelled' && (
+                      <button
+                        onClick={() => handleReInstateClick(instance)}
+                        className={sharedStyles.primaryButtonSmall}
+                        title="Re-instate tour and re-confirm pending bookings"
+                      >
+                        Re-instate
+                      </button>
+                    )}
+                    
+                    {/* --- ACTION 3: Completed Tour --- */}
+                    {instance.status === 'completed' && (
+                      <span>(Completed)</span>
+                    )}
+                    
                   </td>
                 </tr>
               ))
@@ -242,16 +324,19 @@ const InstanceManager = () => {
         </table>
       </div>
 
+      {/* --- Cancel Dialog --- */}
       <ConfirmationDialog
         isOpen={!!cancelDialog.instance}
         title="Cancel Tour Instance"
-        message={`Are you sure you want to cancel this tour?\nAll ${cancelDialog.instance?.booked_seats} confirmed bookings will be automatically refunded and customers will be notified by email.`}
+        message={`Are you sure you want to cancel this tour? ${cancelDialog.instance?.booked_seats || 0} existing bookings will be moved to the "Pending Triage" queue.`}
         onConfirm={handleConfirmCancel}
-        onClose={handleCloseDialog}
-        confirmText="Cancel Tour & Refund"
+        onClose={handleCloseDialogs}
+        confirmText="Confirm Cancellation"
         cancelText="Go Back"
         isDestructive={true}
+        errorMessage={cancelError} // <-- NEW: Pass error message
       >
+        {/* --- This form is now passed as children --- */}
         <div className={styles.cancelForm}>
           <div className={sharedStyles.formGroup}>
             <label htmlFor="cancel-reason">Cancellation Reason (required):</label>
@@ -262,10 +347,22 @@ const InstanceManager = () => {
               onChange={(e) => setCancelReason(e.target.value)}
               placeholder="e.g., Bad weather forecast, mechanical issues, etc."
               rows="3"
-              required
             />
           </div>
         </div>
+      </ConfirmationDialog>
+      
+      {/* --- Re-instate Dialog --- */}
+      <ConfirmationDialog
+        isOpen={!!reInstateDialog.instance}
+        title="Re-instate Tour Instance"
+        message={`Are you sure you want to re-instate this tour for ${new Date(reInstateDialog.instance?.date || '').toLocaleDateString()} at ${reInstateDialog.instance?.time.substring(0, 5)}?\n\nAll bookings still in 'Pending Triage' will be automatically re-confirmed.`}
+        onConfirm={handleConfirmReInstate}
+        onClose={handleCloseDialogs}
+        confirmText="Re-instate Tour"
+        cancelText="Go Back"
+        isDestructive={false}
+      >
       </ConfirmationDialog>
       
       <BlackoutManagerModal
@@ -274,7 +371,6 @@ const InstanceManager = () => {
         tour={selectedTour}
       />
       
-      {/* --- NEW: Stubbed Price Modal --- */}
       <PriceManagerModal
         isOpen={isPriceModalOpen}
         onClose={() => setIsPriceModalOpen(false)}

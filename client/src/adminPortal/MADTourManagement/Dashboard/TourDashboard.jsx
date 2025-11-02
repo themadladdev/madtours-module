@@ -92,8 +92,12 @@ const TourDashboard = () => {
           </div>
         ) : (
           <div className={styles.toursList}>
+            {/* === FIX 1: Add composite key for virtual instances === */}
             {todayTours.map(tour => (
-              <div key={tour.id} className={styles.tourCard}>
+              <div 
+                key={tour.id || `gen-${tour.tour_id}-${tour.date}-${tour.time}`} 
+                className={styles.tourCard}
+              >
                 <div className={styles.tourHeader}>
                   <h3>{tour.tour_name}</h3>
                   <span className={`${styles.status} ${styles[tour.status]}`}>
@@ -101,14 +105,17 @@ const TourDashboard = () => {
                   </span>
                 </div>
                 <div className={styles.tourDetails}>
-                  <p><strong>Time:</strong> {tour.time}</p>
+                  <p><strong>Time:</strong> {tour.time.substring(0, 5)}</p>
                   <p><strong>Capacity:</strong> {tour.booked_seats}/{tour.capacity}</p>
                   <p><strong>Available:</strong> {tour.available_seats} seats</p>
                 </div>
                 <div className={styles.tourActions}>
+                  {/* === FIX 2: Disable button if instance is virtual (no id) === */}
                   <button 
                     onClick={() => handleViewManifest(tour.id)}
                     className={sharedStyles.primaryButtonSmall}
+                    disabled={!tour.id}
+                    title={!tour.id ? "Manifest becomes available after first booking" : "View tour manifest"}
                   >
                     View Manifest
                   </button>

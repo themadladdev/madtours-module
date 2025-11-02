@@ -33,11 +33,6 @@ export const deleteTour = async (id) => {
   });
 };
 
-// === NEW FUNCTION ===
-/**
- * Gets all schedules for a specific tour.
- * Corresponds to: GET /api/admin/tours/:tourId/schedules
- */
 export const getSchedulesForTour = async (tourId) => {
   return await adminApiFetch(`${API_PREFIX}/${tourId}/schedules`);
 };
@@ -49,13 +44,7 @@ export const createSchedule = async (tourId, scheduleConfig) => {
   });
 };
 
-// === NEW FUNCTION ===
-/**
- * Updates an existing schedule.
- * Corresponds to: PUT /api/admin/schedules/:id
- */
 export const updateSchedule = async (scheduleId, scheduleConfig) => {
-  // FIX: Add /tours to the path since the router is mounted at /api/admin/tours
   return await adminApiFetch(`${API_PREFIX}/schedules/${scheduleId}`, {
     method: 'PUT',
     body: JSON.stringify(scheduleConfig)
@@ -74,13 +63,36 @@ export const getTourInstances = async (filters = {}) => {
   return await adminApiFetch(`${API_PREFIX}/instances?${params}`);
 };
 
-export const cancelTourInstance = async (instanceId, reason) => {
-  return await adminApiFetch(`${API_PREFIX}/instances/${instanceId}/cancel`, {
-    method: 'POST',
-    body: JSON.stringify({ reason })
-  });
-};
-
 export const getManifest = async (instanceId) => {
   return await adminApiFetch(`${API_PREFIX}/instances/${instanceId}/manifest`);
 };
+
+// === NEW UNIFIED CANCELLATION FUNCTION ===
+/**
+ * Performs an "Operational Cancellation".
+ * This cancels the tour and moves all affected bookings to a 'pending_triage'
+ * queue for later, separate processing (refund/transfer).
+ * @param {object} cancelData - { tourId, date, time, reason, capacity }
+ */
+export const operationalCancelInstance = async (cancelData) => {
+  return await adminApiFetch(`${API_PREFIX}/instances/cancel-operationally`, {
+    method: 'POST',
+    body: JSON.stringify(cancelData)
+  });
+};
+// === END NEW FUNCTION ===
+
+// === NEW RE-INSTATEMENT FUNCTION ===
+/**
+ * Re-instates a previously cancelled tour.
+ * This sets the tour back to 'scheduled' and re-confirms any
+ * bookings that are still in the 'pending_triage' queue.
+ * @param {object} reInstateData - { tourId, date, time }
+ */
+export const reInstateInstance = async (reInstateData) => {
+  return await adminApiFetch(`${API_PREFIX}/instances/re-instate`, {
+    method: 'POST',
+    body: JSON.stringify(reInstateData)
+  });
+};
+// === END NEW FUNCTION ===
