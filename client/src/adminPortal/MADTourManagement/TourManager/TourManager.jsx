@@ -118,7 +118,7 @@ const TourManager = () => {
         <table className={sharedStyles.table}>
           <thead>
             <tr>
-              <th>Tour Name</th>
+              <th className={styles.textLeft}>Tour Name</th>
               <th>Status</th>
               <th>Duration</th>
               <th>Base Price</th>
@@ -137,14 +137,14 @@ const TourManager = () => {
               tours.map(tour => (
                 <tr key={tour.id} className={styles.tourRow} onClick={() => handleOpenEdit(tour)}>
                   <td className={styles.tourName}>{tour.name}</td>
-                  <td>
+                  <td className={styles.textCenter}>
                     <span className={`${styles.statusBadge} ${tour.active ? styles.active : styles.inactive}`}>
                       {tour.active ? 'Active' : 'Draft'}
                     </span>
                   </td>
-                  <td>{tour.duration_minutes} min</td>
-                  <td>${tour.base_price}</td>
-                  <td>{tour.capacity}</td>
+                  <td className={styles.textCenter}>{tour.duration_minutes} min</td>
+                  <td className={styles.textCenter}>${tour.base_price}</td>
+                  <td className={styles.textCenter}>{tour.capacity}</td>
                   <td className={styles.actionsCell}>
                     <button
                       className={sharedStyles.destructiveGhostButtonSmall}
