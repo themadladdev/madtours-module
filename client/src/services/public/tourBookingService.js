@@ -1,8 +1,4 @@
-// ==========================================
-// SERVICES: Public Tour Booking Service
 // client/src/services/public/tourBookingService.js
-// ==========================================
-
 import publicApiFetch from '../publicApiFetch.js';
 
 /**
@@ -11,6 +7,15 @@ import publicApiFetch from '../publicApiFetch.js';
  */
 export const getActiveTours = () => {
   return publicApiFetch('/tours');
+};
+
+/**
+ * NEW: Fetches a single active tour by its ID.
+ * Corresponds to: GET /api/tours/:id
+ * @param {number} id - The ID of the tour.
+ */
+export const getTourById = (id) => {
+  return publicApiFetch(`/tours/${id}`);
 };
 
 /**

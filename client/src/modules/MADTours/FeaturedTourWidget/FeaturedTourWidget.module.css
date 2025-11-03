@@ -1,0 +1,118 @@
+/* client/src/modules/MADTours/FeaturedTourWidget/FeaturedTourWidget.module.css */
+/* Uses variables defined in client/src/styles/global.css */
+
+.widgetContainer {
+    background-color: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(var(--text-rgb), 0.05);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.widgetContainer:hover {
+    border-color: var(--grey-300);
+    box-shadow: 0 4px 8px rgba(var(--text-rgb), 0.08);
+}
+
+/* --- Status States --- */
+.statusContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--grey-700);
+    min-height: 200px;
+}
+
+.spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 3px solid rgba(var(--text-rgb), 0.1);
+    border-top: 3px solid var(--text);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.errorText {
+    color: var(--destructive);
+    font-weight: 500;
+}
+
+/* --- Card Content Styles --- */
+.tourHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.tourName {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+}
+
+.tourPrice {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.tourDescription {
+    color: var(--grey-700);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    flex-grow: 1; /* Pushes footer down */
+    margin-bottom: 1.5rem;
+    
+    /* Truncate long descriptions */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tourFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+.tourDuration {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--grey-700);
+}
+
+.detailsButton {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: var(--secondary);
+    color: var(--secondary-text);
+    border: 1px solid var(--primary);
+    border-radius: 4px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.detailsButton:hover {
+    background-color: var(--primary);
+    color: var(--primary-text);
+}

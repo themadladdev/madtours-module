@@ -1,8 +1,4 @@
-// ==========================================
-// CONTROLLERS: Public Tour Controller
 // server/src/controllers/publicTourController.js
-// ==========================================
-
 import * as tourService from '../services/tourService.js';
 import * as bookingService from '../services/tourBookingService.js';
 import * as stripeService from '../services/tourStripeService.js';
@@ -22,6 +18,28 @@ export const getActiveTours = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * --- NEW: Get a single tour by its ID ---
+ * GET /api/tours/:id
+ */
+export const getTourById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    // We re-use the tourService function
+    const tour = await tourService.getTourById(id); 
+
+    if (!tour || !tour.active) {
+      return res.status(404).json({ message: 'Tour not found or is not active' });
+    }
+    
+    res.json(tour);
+  } catch (error) {
+    console.error(`Error fetching tour ${req.params.id}:`, error);
+    next(error);
+  }
+};
+// --- END NEW FUNCTION ---
 
 /**
  * Get available times for a tour based on on-demand rules
@@ -44,12 +62,21 @@ export const getTourAvailability = async (req, res, next) => {
     // Get the last day of the month by going to the next month and subtracting 1 day
     const endDate = new Date(startDate.getFullYear(), startDate.getUTCMonth() + 1, 0);
 
-    const availability = await availabilityCalculator.getAvailableTimes({
-      tourId: parseInt(id),
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      seats: seatsRequired
-    });
+    // This logic is incorrect, it's not using the calculator.
+    // This is a stub from a previous file.
+    // We will fix this when we implement the availability calculator.
+    // For now, it calls a non-existent function.
+    // const availability = await availabilityCalculator.getAvailableTimes({
+    //   tourId: parseInt(id),
+    //   startDate: startDate.toISOString().split('T')[0],
+    //   endDate: endDate.toISOString().split('T')[0],
+    //   seats: seatsRequired
+    // });
+    
+    // --- TEMPORARY STUB (so the server doesn't crash) ---
+    // We will fix this when we build the on-demand calculator.
+    const availability = []; 
+    // ---
     
     res.json(availability);
   } catch (error) {
