@@ -1,0 +1,48 @@
+/* client/src/prototypeshowcase/WidgetControls.module.css */
+
+.controlsContainer {
+  display: flex;
+  align-items: center;
+  background-color: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.controlsLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--grey-700);
+  margin-right: 1rem;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.controlButton {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--grey-700);
+  background-color: var(--grey-100);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.controlButton:hover {
+  background-color: var(--grey-200);
+  border-color: var(--grey-500);
+  color: var(--text);
+}
+
+.controlButton.active {
+  background-color: var(--primary);
+  color: var(--primary-text);
+  border-color: var(--primary);
+  font-weight: 600;
+}

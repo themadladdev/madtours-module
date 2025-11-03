@@ -16,6 +16,11 @@ router.post('/bookings', bookingRateLimit, publicTourController.createBooking);
 // GET    /api/tours/bookings/:reference
 router.get('/bookings/:reference', publicTourController.getBookingByReference);
 
+// === NEW: Availability Indicator (Dynamic route) ===
+// GET /api/tours/:id/instances?date=YYYY-MM-DD
+router.get('/:id/instances', publicTourController.getPublicTourInstances);
+// === END NEW ROUTE ===
+
 // === Availability Check (Dynamic route) ===
 // GET    /api/tours/:id/availability
 router.get('/:id/availability', publicTourController.getTourAvailability);

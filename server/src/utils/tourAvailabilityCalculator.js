@@ -371,3 +371,157 @@ export const getAvailableTimes = async ({ tourId, startDate, endDate, seats = 1 
 
   return availableTimes;
 };
+
+// ================================================================
+// === NEW: PUBLIC FUNCTION FOR AVAILABILITY INDICATOR WIDGET ===
+// ================================================================
+/**
+ * Generates a list of *all* tour instances (virtual, booked, cancelled)
+ * for a specific day for the public-facing indicator widget.
+ *
+ * This is a public-safe version of `getAdminTourInstances`.
+ * It respects blackouts and only queries active tours.
+ *
+ * @param {object} options
+ * @param {number} options.tourId - The ID of the tour to check.
+ * @param {string} options.date - The specific date to check (YYYY-MM-DD).
+ * @returns {Promise<Array<object>>} - A list of all tour instances for that day.
+ */
+export const getPublicInstancesForDate = async ({ tourId, date }) => {
+  
+  // === 1. Fetch the "Rules" (Tour + Schedules) ===
+  const rulesResult = await pool.query(
+    `SELECT 
+      t.id, t.name,
+      t.capacity AS default_capacity, 
+      t.booking_window_days,
+      ts.schedule_config
+    FROM tours t
+    LEFT JOIN tour_schedules ts ON t.id = ts.tour_id
+    WHERE t.id = $1 AND t.active = true AND ts.active = true`,
+    [tourId]
+  );
+
+  if (rulesResult.rows.length === 0) {
+    // No active tour or no active schedule found
+    return [];
+  }
+  
+  const tour = rulesResult.rows[0];
+  const scheduleConfig = tour.schedule_config;
+  const scheduleRules = scheduleConfig ? scheduleConfig.schedule : null;
+
+  if (!scheduleRules || !scheduleRules.times || !scheduleRules.days_of_week) {
+    console.error(`Tour ${tourId} has invalid or missing schedule config.`);
+    return [];
+  }
+  
+  // --- Pre-parse blackout ranges for efficient lookup ---
+  const blackoutRanges = (scheduleRules.blackout_ranges || []).map(range => ({
+    from: new Date(`${range.from}T00:00:00Z`),
+    to: new Date(`${range.to}T00:00:00Z`)
+  }));
+
+  // === 2. Fetch the "Exceptions" (Booked/Cancelled Instances) ===
+  // We only need to fetch exceptions for this *single day*.
+  const exceptionsResult = await pool.query(
+    `SELECT id, date, time, capacity, booked_seats, status, cancellation_reason
+     FROM tour_instances
+     WHERE tour_id = $1 AND date = $2`,
+    [tourId, date]
+  );
+
+  // Convert exceptions to a Map for O(1) lookup
+  const exceptionsMap = new Map();
+  for (const instance of exceptionsResult.rows) {
+    const y = instance.date.getFullYear();
+    const m = String(instance.date.getMonth() + 1).padStart(2, '0');
+    const d_str = String(instance.date.getDate()).padStart(2, '0');
+    const localDateStr = `${y}-${m}-${d_str}`;
+    const utcDate = new Date(`${localDateStr}T00:00:00Z`);
+    const dateKey = generateDateTimeKey(utcDate, instance.time);
+    exceptionsMap.set(dateKey, instance);
+  }
+
+  // === 3. Generate & Merge In-Memory Instance List ===
+  
+  const instances = [];
+  const d = new Date(`${date}T00:00:00Z`); // Explicitly UTC
+
+  // Rule: Check for blackout_ranges (Rule-Level Exception)
+  let isBlackedOut = false;
+  for (const range of blackoutRanges) {
+    if (d >= range.from && d <= range.to) {
+      isBlackedOut = true;
+      break;
+    }
+  }
+  // If the whole day is blacked out, we can just return the exceptions
+  // that are 'cancelled' (which is what the loop will do anyway).
+  // But if it's blacked out, we shouldn't show 'scheduled' tours.
+  if (isBlackedOut) {
+    // Return only the *exceptions* for this day, which will be 'cancelled'
+    // This correctly shows 'Cancelled' for all times.
+    return exceptionsResult.rows.map(ex => ({
+        id: ex.id,
+        tour_id: tour.id,
+        date: date,
+        time: ex.time,
+        status: ex.status,
+        booked_seats: ex.booked_seats,
+        capacity: ex.capacity,
+        available_seats: ex.capacity - ex.booked_seats,
+        cancellation_reason: ex.cancellation_reason
+    })).sort((a,b) => a.time.localeCompare(b.time));
+  }
+
+  const dayOfWeek = d.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
+  const dateString = d.toISOString().split('T')[0]; // YYYY-MM-DD
+
+  // Rule: Check if tour runs on this day of the week
+  if (!scheduleRules.days_of_week.includes(dayOfWeek)) {
+    return []; // No tours run this day
+  }
+
+  // Rule: Check for hard-coded exception dates (e.g., holidays)
+  if (scheduleRules.blackout_dates && scheduleRules.blackout_dates.includes(dateString)) {
+    return []; // No tours run this day
+  }
+  
+  // This is a valid day for tours. Loop through the scheduled times.
+  for (const time of scheduleRules.times) {
+    const timeWithSeconds = `${time}:00`;
+    const dateKey = generateDateTimeKey(d, timeWithSeconds);
+    const exception = exceptionsMap.get(dateKey);
+
+    let capacity = tour.default_capacity;
+    let booked_seats = 0;
+    let status = 'scheduled';
+    let tour_instance_id = null;
+    let cancellation_reason = null;
+
+    if (exception) {
+      // An exception exists! Override defaults.
+      capacity = exception.capacity;
+      booked_seats = exception.booked_seats;
+      status = exception.status;
+      tour_instance_id = exception.id;
+      cancellation_reason = exception.cancellation_reason;
+    }
+    
+    // Add to list regardless of status (Available, Sold Out, Cancelled)
+    instances.push({
+      id: tour_instance_id,
+      tour_id: tour.id,
+      date: dateString,
+      time: timeWithSeconds,
+      status: status,
+      booked_seats: booked_seats,
+      capacity: capacity,
+      available_seats: capacity - booked_seats,
+      cancellation_reason: cancellation_reason,
+    });
+  }
+
+  return instances; // Already sorted by time
+};

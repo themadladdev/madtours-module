@@ -1,0 +1,203 @@
+/* client/src/ui/MADTours/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.module.css */
+/* Uses variables from /client/src/styles/global.css */
+
+.widgetContainer {
+  background-color: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  font-family: var(--font-body);
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.controls {
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* --- Clickable Date Picker Implementation --- */
+
+/* 1. The Container: Establishes stacking context */
+.dateInputContainer {
+  position: relative; 
+  flex-grow: 1;
+  text-align: center;
+  cursor: pointer;
+  /* Remove pointer-events if you added it */
+}
+
+/* 2. The Display: The visible, styled text layer (bottom) */
+.dateInputDisplay {
+  display: block;
+  padding: 0.75rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--grey-100);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  user-select: none;
+  position: relative; 
+  z-index: 1;
+  pointer-events: none; /* Keep this */
+}
+
+.dateInputContainer:hover .dateInputDisplay {
+  background-color: var(--grey-200);
+}
+
+/* 3. The Input: The invisible <input> layer (top) */
+.dateInput {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  border: none;
+  text-indent: -9999px;
+}
+
+/* Hides the focus ring on Chrome/Firefox */
+.dateInput:focus,
+.dateInput:active {
+  outline: none;
+}
+
+/* Hides the calendar picker icon in WebKit (Chrome, Safari) */
+/* The clickable area still exists */
+.dateInput::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Hides the clear (x) button in WebKit */
+.dateInput::-webkit-clear-button {
+  display: none;
+}
+/* --- End Clickable Date Picker --- */
+
+
+.navButton {
+  background: var(--grey-100);
+  border: 1px solid var(--border-color);
+  color: var(--grey-700);
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.75rem;
+  flex-shrink: 0;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+  line-height: 1;
+}
+.navButton:hover {
+  background-color: var(--grey-200);
+  color: var(--text);
+}
+
+.contentArea {
+  min-height: 100px;
+}
+
+.loader,
+.error,
+.noInstances {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--grey-700);
+  text-align: center;
+}
+
+.error {
+  color: var(--destructive);
+}
+
+.instanceList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.instanceItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: var(--grey-100);
+  border-radius: 4px;
+}
+
+.time {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* --- Shared class to standardize size --- */
+.statusOrButton {
+  min-width: 90px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-align: center;
+  text-transform: uppercase;
+  box-sizing: border-box;
+}
+
+.statusAvailable {
+  /* This class is no longer used */
+}
+
+.statusSoldOut {
+  color: var(--grey-700);
+  background-color: var(--grey-100);
+  border: 1px solid var(--grey-500);
+  text-decoration: line-through;
+}
+
+.statusCancelled {
+  color: var(--destructive);
+  background-color: var(--background);
+  border: 1px solid var(--destructive);
+}
+
+.bookButton {
+  background-color: var(--primary);
+  color: var(--primary-text);
+  border: 1px solid var(--primary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.bookButton:hover {
+  background-color: var(--text);
+  border-color: var(--text);
+}
+

@@ -42,6 +42,34 @@ export const getTourById = async (req, res, next) => {
 // --- END NEW FUNCTION ---
 
 /**
+ * === NEW: Get all instances for a single day (for indicator widget) ===
+ * GET /api/tours/:id/instances?date=YYYY-MM-DD
+ */
+export const getPublicTourInstances = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ message: 'Date query parameter (YYYY-MM-DD) is required' });
+    }
+    
+    // Use the new public-safe calculator function
+    const instances = await availabilityCalculator.getPublicInstancesForDate({
+      tourId: parseInt(id, 10),
+      date: date,
+    });
+    
+    res.json(instances);
+  } catch (error) {
+    console.error('Error fetching public tour instances:', error);
+    next(error);
+  }
+};
+// === END NEW FUNCTION ===
+
+
+/**
  * Get available times for a tour based on on-demand rules
  * GET /api/tours/:id/availability?month=YYYY-MM&seats=N
  */
@@ -62,21 +90,14 @@ export const getTourAvailability = async (req, res, next) => {
     // Get the last day of the month by going to the next month and subtracting 1 day
     const endDate = new Date(startDate.getFullYear(), startDate.getUTCMonth() + 1, 0);
 
-    // This logic is incorrect, it's not using the calculator.
-    // This is a stub from a previous file.
-    // We will fix this when we implement the availability calculator.
-    // For now, it calls a non-existent function.
-    // const availability = await availabilityCalculator.getAvailableTimes({
-    //   tourId: parseInt(id),
-    //   startDate: startDate.toISOString().split('T')[0],
-    //   endDate: endDate.toISOString().split('T')[0],
-    //   seats: seatsRequired
-    // });
-    
-    // --- TEMPORARY STUB (so the server doesn't crash) ---
-    // We will fix this when we build the on-demand calculator.
-    const availability = []; 
-    // ---
+    // --- FIX: Replaced STUB with correct call to the calculator ---
+    const availability = await availabilityCalculator.getAvailableTimes({
+      tourId: parseInt(id, 10),
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      seats: seatsRequired
+    });
+    // --- END FIX ---
     
     res.json(availability);
   } catch (error) {

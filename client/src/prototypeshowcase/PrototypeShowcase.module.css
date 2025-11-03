@@ -30,8 +30,18 @@
 .sidebarDescription {
   font-size: 0.85rem;
   color: var(--grey-700);
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   font-family: monospace;
+}
+
+/* --- NEW: Heading for sidebar lists --- */
+.listHeading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--grey-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 1.5rem 0 0.5rem 0.25rem;
 }
 
 .menuList {
@@ -79,4 +89,11 @@
   border-radius: 4px;
   padding: 2rem;
   min-height: 100%;
+  /* --- MODIFICATION: Transition now applies to max-width and border style --- */
+  transition: max-width 0.3s ease-in-out, border-style 0.3s, box-shadow 0.3s;
+  /* --- NEW: Center the sandbox when it's not fluid --- */
+  margin-left: auto;
+  margin-right: auto;
 }
+
+/* --- REMOVED: .widgetMode class is no longer needed --- */

@@ -2,51 +2,94 @@
 import React, { useState } from 'react';
 import styles from './PrototypeShowcase.module.css';
 
-// Import all the components we built
-import TourCollectionPage from '../modules/MADTours/TourCollectionPage/TourCollectionPage.jsx';
-import AvailabilityWidget from '../modules/MADTours/AvailabilityWidget/AvailabilityWidget.jsx';
-import FeaturedTourWidget from '../modules/MADTours/FeaturedTourWidget/FeaturedTourWidget.jsx';
-import TourDetailPage from '../modules/MADTours/TourDetailPage/TourDetailPage.jsx';
-import BookingCalendar from '../modules/MADTours/BookingCalendar/BookingCalendar.jsx';
-import AvailabilityBookingWidget from '../modules/MADTours/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx';
+// --- NEW: Import the new controls component ---
+import WidgetControls from './WidgetControls.jsx';
 
-// --- Component List for the Menu ---
+// --- Page ("Module") Imports ---
+import TourCollectionPage from '../modules/MADTours/TourCollectionPage/TourCollectionPage.jsx';
+import TourDetailPage from '../modules/MADTours/TourDetailPage/TourDetailPage.jsx';
+
+// --- Widget ("UI Component") Imports (from new location) ---
+import AvailabilityWidget from '../ui/MADTours/AvailabilityWidget/AvailabilityWidget.jsx';
+import FeaturedTourWidget from '../ui/MADTours/FeaturedTourWidget/FeaturedTourWidget.jsx';
+import BookingCalendar from '../ui/MADTours/BookingCalendar/BookingCalendar.jsx';
+import AvailabilityBookingWidget from '../ui/MADTours/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx';
+// --- NEW: Import the AvailabilityIndicatorWidget ---
+import AvailabilityIndicatorWidget from '../ui/MADTours/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.jsx';
+
+
+// --- Component List with 'type' and clean labels ---
 const components = [
-  { id: 'TourCollectionPage', label: 'Tour Collection Page (Item 3)' },
-  { id: 'AvailabilityWidget', label: 'Availability Widget (Item 1)' },
-  { id: 'FeaturedTourWidget', label: 'Featured Tour Widget (Item 2)' },
-  { id: 'TourDetailPage', label: 'Tour Detail Page (Item 4)' },
-  { id: 'BookingCalendar', label: 'Booking Calendar Widget (Item 5)' },
-  { id: 'AvailabilityBookingWidget', label: 'Combined "Super" Widget' },
+  // Pages
+  { id: 'TourCollectionPage', label: 'Tour Collection Page', type: 'page' },
+  { id: 'TourDetailPage', label: 'Tour Detail Page', type: 'page' },
+  // Widgets
+  { id: 'AvailabilityWidget', label: 'Availability Widget', type: 'widget' },
+  { id: 'FeaturedTourWidget', label: 'Featured Tour Widget', type: 'widget' },
+  { id: 'BookingCalendar', label: 'Booking Calendar Widget', type: 'widget' },
+  { id: 'AvailabilityBookingWidget', label: 'Combined "Super" Widget', type: 'widget' },
+  // --- NEW: Add new widget to the list ---
+  { id: 'AvailabilityIndicatorWidget', label: 'Availability Indicator', type: 'widget' },
 ];
 
+// --- NEW: Filter components into Pages and Widgets ---
+const pageComponents = [...components]
+  .filter((c) => c.type === 'page')
+  .sort((a, b) => a.label.localeCompare(b.label));
+
+const widgetComponents = [...components]
+  .filter((c) => c.type === 'widget')
+  .sort((a, b) => a.label.localeCompare(b.label));
+
 const PrototypeShowcase = () => {
-  const [activeComponentId, setActiveComponentId] = useState('TourCollectionPage');
+  const [activeComponentId, setActiveComponentId] = useState(pageComponents[0].id);
+  
+  // --- NEW: State to hold dynamic widget container style ---
+  const [widgetContainerStyle, setWidgetContainerStyle] = useState({
+    maxWidth: '100%',
+  });
+
+  // Find the config for the active component to check its type
+  const activeComponentConfig = components.find(
+    (c) => c.id === activeComponentId
+  );
+  const componentType = activeComponentConfig?.type || 'page';
+
+  // --- NEW: Handle component selection ---
+  const handleSelectComponent = (id, type) => {
+    setActiveComponentId(id);
+    // Reset container style if we switch to a page
+    if (type === 'page') {
+      setWidgetContainerStyle({ maxWidth: '100%' });
+    }
+  };
 
   const renderActiveComponent = () => {
     switch (activeComponentId) {
+      // Pages
       case 'TourCollectionPage':
         return <TourCollectionPage />;
+      case 'TourDetailPage':
+        return <TourDetailPage id={3} />;
+      // Widgets
       case 'AvailabilityWidget':
         return <AvailabilityWidget />;
       case 'FeaturedTourWidget':
-        // --- FIX: Hard-coded tourId updated from 1 to 3 ---
         return <FeaturedTourWidget tourId={3} />;
-      case 'TourDetailPage':
-        // --- FIX: Hard-coded id updated from 1 to 3 ---
-        return <TourDetailPage id={3} />;
       case 'BookingCalendar':
-        // --- FIX: Hard-coded props updated from 1 to 3 ---
         return (
           <BookingCalendar
             tourId={3}
-            basePrice="50.00" // Updated to match DB
+            basePrice="50.00"
             defaultDate={null}
             defaultGuests={1}
           />
         );
       case 'AvailabilityBookingWidget':
         return <AvailabilityBookingWidget />;
+      // --- NEW: Add case for the new widget ---
+      case 'AvailabilityIndicatorWidget':
+        return <AvailabilityIndicatorWidget />;
       default:
         return <p>Select a component to view.</p>;
     }
@@ -58,16 +101,36 @@ const PrototypeShowcase = () => {
       <nav className={styles.sidebar}>
         <h2 className={styles.sidebarTitle}>Prototype Showcase</h2>
         <p className={styles.sidebarDescription}>
-          Rendering components from `/client/src/modules/MADTours/`
+          MADTours Module Prototypes
         </p>
+        
+        {/* --- NEW: Pages List --- */}
+        <h3 className={styles.listHeading}>Pages (Modules)</h3>
         <ul className={styles.menuList}>
-          {components.map(component => (
+          {pageComponents.map((component) => (
             <li key={component.id}>
               <button
                 className={`${styles.menuButton} ${
                   activeComponentId === component.id ? styles.active : ''
                 }`}
-                onClick={() => setActiveComponentId(component.id)}
+                onClick={() => handleSelectComponent(component.id, component.type)}
+              >
+                {component.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {/* --- NEW: Widgets List --- */}
+        <h3 className={styles.listHeading}>Widgets (UI Components)</h3>
+        <ul className={styles.menuList}>
+          {widgetComponents.map((component) => (
+            <li key={component.id}>
+              <button
+                className={`${styles.menuButton} ${
+                  activeComponentId === component.id ? styles.active : ''
+                }`}
+                onClick={() => handleSelectComponent(component.id, component.type)}
               >
                 {component.label}
               </button>
@@ -78,7 +141,16 @@ const PrototypeShowcase = () => {
 
       {/* --- Main Content Sandbox --- */}
       <main className={styles.content}>
-        <div className={styles.sandbox}>
+        {/* --- NEW: Conditionally render controls --- */}
+        {componentType === 'widget' && (
+          <WidgetControls onSetStyle={setWidgetContainerStyle} />
+        )}
+
+        <div
+          className={styles.sandbox}
+          // --- NEW: Apply dynamic style ---
+          style={widgetContainerStyle}
+        >
           {renderActiveComponent()}
         </div>
       </main>
