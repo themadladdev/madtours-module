@@ -1,140 +1,133 @@
-/* ==========================================
-// ADMIN: Booking Manager Styles
-// client/src/adminPortal/MADTourManagement/BookingManager/BookingManager.module.css
-// ========================================== */
+/* client/src/adminPortal/MADTourManagement/BookingManager/BookingManager.module.css */
+/* Uses variables defined in src/styles/global.css and adminshared.module.css */
 
-/* Filter styles are now in adminshared.module.css */
-/* Table container styles are now in adminshared.module.css */
-/* Table styles are now in adminshared.module.css */
-/* Form styles are now in adminshared.module.css */
-
-/* Uses variables from /client/src/styles/global.css */
-
-.bookingForm {
-  max-width: 600px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background: var(--background);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+.bookingManager {
+    width: 100%;
 }
 
-.backButton {
-  background: none;
-  border: none;
-  color: var(--text);
-  cursor: pointer;
-  font-size: 0.9rem;
-  margin-bottom: 1.5rem;
-  padding: 0.25rem;
-}
-.backButton:hover {
-  text-decoration: underline;
+/* --- Quick Filter Navigation --- */
+.quickFilterNav {
+    display: flex;
+    gap: 0.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
 }
 
-.summary {
-  padding: 1rem;
-  background: var(--grey-100);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  margin-bottom: 2rem;
+.navButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--grey-700);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap;
 }
 
-.summary h3 {
-  margin-top: 0;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
+.navButton:hover {
+    background-color: var(--grey-100);
+    color: var(--text);
+    border-color: var(--grey-300);
 }
 
-.summary p {
-  margin: 0.5rem 0;
+.navButton.active {
+    background-color: var(--grey-900);
+    color: var(--background);
+    border-color: var(--grey-900);
 }
 
-.total {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-top: 1rem;
+/* --- Table & Cell Styles --- */
+.reference {
+    font-family: monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--grey-700);
 }
 
-.form h3 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
+.email {
+    font-size: 0.85rem;
+    /* --- FIX: Use existing variable --- */
+    color: var(--grey-500);
 }
 
-.formGroup {
-  margin-bottom: 1rem;
+.time {
+    font-size: 0.85rem;
+    /* --- FIX: Use existing variable --- */
+    color: var(--grey-500);
 }
 
-.formGroup label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  font-size: 0.9rem;
+.centered {
+    text-align: center;
 }
 
-/* Base input style */
-.formGroup input[type="text"],
-.formGroup input[type="email"],
-.formGroup input[type="tel"],
-.formGroup textarea {
-  width: 100%;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--input-background);
-  color: var(--text);
-  font-size: 0.9rem;
+.amount {
+    font-weight: 600;
 }
 
-.formGroup textarea {
-  resize: vertical;
-  min-height: 80px;
+.badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: var(--grey-200);
+    color: var(--grey-700);
 }
 
-.formGroup input:focus,
-.formGroup textarea:focus {
-  outline: none;
-  border-color: var(--text);
+.badge.confirmed,
+.badge.paid {
+    background-color: var(--grey-900);
+    color: var(--background);
 }
 
-.error {
-  color: var(--destructive);
-  background-color: rgba(var(--destructive-rgb), 0.1);
-  border: 1px solid var(--destructive);
-  padding: 1rem;
-  border-radius: 4px;
-  margin: 1.5rem 0;
-  text-align: center;
+.badge.pending {
+    background-color: var(--grey-200);
+    color: var(--grey-700);
 }
 
-.paymentSection {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
+.badge.cancelled,
+.badge.refunded {
+    background-color: var(--grey-100);
+    /* --- FIX: Use existing variable --- */
+    color: var(--grey-500);
+    text-decoration: line-through;
 }
 
-.submitButton {
-  display: block;
-  width: 100%;
-  padding: 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  background: var(--primary);
-  color: var(--primary-text);
-  border: 1px solid var(--primary);
-  border-radius: 4px;
-  cursor: pointer;
+.badge.pending_triage {
+    background-color: var(--destructive);
+    color: var(--background);
 }
 
-.submitButton:hover:not(:disabled) {
-  background: var(--secondary);
-  color: var(--secondary-text);
+.actions {
+    text-align: right;
+    min-width: 100px;
 }
 
-.submitButton:disabled {
-  background: var(--grey-200);
-  color: var(--grey-500);
-  border-color: var(--grey-200);
-  cursor: not-allowed;
+.reason {
+    font-style: italic;
+    color: var(--grey-700);
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- Styles for the form inside the confirmation dialog --- */
+.refundForm {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.refundForm small {
+    display: block;
+    margin-top: 0.25rem;
+    /* --- FIX: Use existing variable --- */
+    color: var(--grey-500);
 }

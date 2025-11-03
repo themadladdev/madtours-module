@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import styles from './MADTourManagement.module.css';
 import sharedStyles from '../adminshared.module.css';
+// --- FIX: Corrected import path from 3 dots to 2 ---
+import { getAllBookings } from '../../services/admin/adminBookingService.js';
 
 // Import sub-page components
 import TourDashboard from './Dashboard/TourDashboard.jsx';
@@ -15,11 +17,11 @@ const IconPlaceholder = () => <span style={{ marginRight: '8px' }}>•</span>;
 
 const MADTourManagement = () => {
     const [activeSubTab, setActiveSubTab] = useState('dashboard');
+    const [resolutionCount, setResolutionCount] = useState(0); 
 
     // Read the path to set the initial tab
     useEffect(() => {
         const path = window.location.pathname;
-        // --- UPDATED to 'operations' ---
         if (path.includes('/operations')) {
             setActiveSubTab('operations');
         } else if (path.includes('/bookings')) {
@@ -29,21 +31,33 @@ const MADTourManagement = () => {
         } else {
             setActiveSubTab('dashboard');
         }
+        
+        // Fetch count for the badge
+        fetchResolutionCount();
     }, []);
 
     // Custom navigation handler
     const handleNavigate = (event, path, tabId) => {
         event.preventDefault();
+        
+        fetchResolutionCount();
+        
         setActiveSubTab(tabId);
-        
-        // Update browser URL without full reload
         window.history.pushState({}, '', path);
-        
-        // Dispatch custom event for our router
         const navigationEvent = new CustomEvent('route-change');
         window.dispatchEvent(navigationEvent);
     };
 
+    const fetchResolutionCount = async () => {
+        try {
+            const data = await getAllBookings({ status: 'pending_triage' });
+            setResolutionCount(data.length || 0);
+        } catch (error) {
+            console.error('Error fetching resolution count:', error);
+            setResolutionCount(0);
+        }
+    };
+    
     const subTabs = [
         { 
             id: 'dashboard', 
@@ -52,14 +66,6 @@ const MADTourManagement = () => {
             icon: <IconPlaceholder />,
             component: <TourDashboard /> 
         },
-        { 
-            id: 'tours', 
-            label: 'Tours', 
-            path: '/admin/tours/manage',
-            icon: <IconPlaceholder />,
-            component: <TourManager /> 
-        },
-        // --- UPDATED to 'Operations Hub' ---
         { 
             id: 'operations', 
             label: 'Operations Hub', 
@@ -72,7 +78,15 @@ const MADTourManagement = () => {
             label: 'Bookings', 
             path: '/admin/tours/bookings',
             icon: <IconPlaceholder />,
-            component: <BookingManager />
+            component: <BookingManager defaultResolutionCount={resolutionCount} />,
+            badge: resolutionCount > 0 ? resolutionCount : null
+        },
+        { 
+            id: 'tours', 
+            label: 'Tours', 
+            path: '/admin/tours/manage',
+            icon: <IconPlaceholder />,
+            component: <TourManager /> 
         },
     ];
 
@@ -104,6 +118,9 @@ const MADTourManagement = () => {
                         >
                             {tab.icon}
                             <span>{tab.label}</span>
+                            {tab.badge && (
+                                <span className={styles.resolutionBadge}>{tab.badge}</span>
+                            )}
                         </button>
                     ))}
                 </div>
