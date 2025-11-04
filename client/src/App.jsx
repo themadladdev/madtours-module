@@ -20,6 +20,9 @@ const PrototypeShowcase = lazy(() => import('./prototypeshowcase/PrototypeShowca
 // --- NEW MADTours Prototype Components ---
 const TourCollectionPage = lazy(() => import('./modules/MADTours/TourCollectionPage/TourCollectionPage.jsx'));
 const TourDetailPage = lazy(() => import('./modules/MADTours/TourDetailPage/TourDetailPage.jsx'));
+// --- NEW: Add the BookingPage ---
+const BookingPage = lazy(() => import('./modules/MADTours/BookingPage/BookingPage.jsx'));
+
 
 // A simple loading component
 function PageLoader() {
@@ -85,6 +88,11 @@ function App() {
         return <TourCollectionPage />;
       }
       
+      // --- NEW: Add the route for the booking page ---
+      if (path === '/tours/book') {
+        return <BookingPage />;
+      }
+
       // The tour detail page (captures /tours/1, /tours/2, etc.)
       const detailMatch = path.match(/^\/tours\/(\d+)$/);
       if (detailMatch) {
@@ -104,20 +112,27 @@ function App() {
     );
   };
 
-  // --- MODIFICATION: Removed isPrototypeView check ---
-  // The controls and sandbox now apply to ALL routes.
+  // --- BUG FIX: Check for /home AND / path ---
+  // These are the two paths that render the showcase, which has its own controls.
+  const isShowcasePage = (path === '/home' || path === '/');
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <div style={{ padding: '2rem' }}>
-        <WidgetControls onSetStyle={setWidgetContainerStyle} />
-        <div
-          className={sandboxStyles.sandbox}
-          style={widgetContainerStyle}
-        >
-          {renderComponent()}
+      {isShowcasePage ? (
+        // Just render the component, it has its own controls
+        renderComponent()
+      ) : (
+        // Render all other pages with the global controls
+        <div style={{ padding: '2rem' }}>
+          <WidgetControls onSetStyle={setWidgetContainerStyle} />
+          <div
+            className={sandboxStyles.sandbox}
+            style={widgetContainerStyle}
+          >
+            {renderComponent()}
+          </div>
         </div>
-      </div>
+      )}
     </Suspense>
   );
 }
