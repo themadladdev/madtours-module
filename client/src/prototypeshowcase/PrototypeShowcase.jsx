@@ -58,10 +58,8 @@ const PrototypeShowcase = () => {
   // --- NEW: Handle component selection ---
   const handleSelectComponent = (id, type) => {
     setActiveComponentId(id);
-    // Reset container style if we switch to a page
-    if (type === 'page') {
-      setWidgetContainerStyle({ maxWidth: '100%' });
-    }
+    // --- MODIFICATION: Removed style reset ---
+    // The style will now persist when switching between pages and widgets
   };
 
   const renderActiveComponent = () => {
@@ -141,10 +139,9 @@ const PrototypeShowcase = () => {
 
       {/* --- Main Content Sandbox --- */}
       <main className={styles.content}>
-        {/* --- NEW: Conditionally render controls --- */}
-        {componentType === 'widget' && (
-          <WidgetControls onSetStyle={setWidgetContainerStyle} />
-        )}
+        {/* --- MODIFICATION: Conditionally render controls --- */}
+        {/* The controls are now always visible */}
+        <WidgetControls onSetStyle={setWidgetContainerStyle} />
 
         <div
           className={styles.sandbox}

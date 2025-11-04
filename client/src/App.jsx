@@ -4,6 +4,11 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useFeatures } from './contexts/FeatureContext.jsx';
 
+// --- Import Controls & Styles ---
+import WidgetControls from './prototypeshowcase/WidgetControls.jsx';
+// We borrow the sandbox style from the showcase for our wrapper
+import sandboxStyles from './prototypeshowcase/PrototypeShowcase.module.css';
+
 // --- Lazy Load All Page-Level Components ---
 
 // Admin portal host
@@ -15,7 +20,6 @@ const PrototypeShowcase = lazy(() => import('./prototypeshowcase/PrototypeShowca
 // --- NEW MADTours Prototype Components ---
 const TourCollectionPage = lazy(() => import('./modules/MADTours/TourCollectionPage/TourCollectionPage.jsx'));
 const TourDetailPage = lazy(() => import('./modules/MADTours/TourDetailPage/TourDetailPage.jsx'));
-// --- FIX: Removed import for BookingFormProto as it doesn't exist yet ---
 
 // A simple loading component
 function PageLoader() {
@@ -25,6 +29,11 @@ function PageLoader() {
 function App() {
   const [path, setPath] = useState(window.location.pathname);
   const { features } = useFeatures();
+
+  // --- NEW: State for responsive controls ---
+  const [widgetContainerStyle, setWidgetContainerStyle] = useState({
+    maxWidth: '100%',
+  });
 
   // --- Custom Router Logic (from Universal_Custom_React_Router_Standard.md) ---
   useEffect(() => {
@@ -76,8 +85,6 @@ function App() {
         return <TourCollectionPage />;
       }
       
-      // --- FIX: Removed route for /tours/book as component doesn't exist yet ---
-
       // The tour detail page (captures /tours/1, /tours/2, etc.)
       const detailMatch = path.match(/^\/tours\/(\d+)$/);
       if (detailMatch) {
@@ -97,9 +104,20 @@ function App() {
     );
   };
 
+  // --- MODIFICATION: Removed isPrototypeView check ---
+  // The controls and sandbox now apply to ALL routes.
+
   return (
     <Suspense fallback={<PageLoader />}>
-      {renderComponent()}
+      <div style={{ padding: '2rem' }}>
+        <WidgetControls onSetStyle={setWidgetContainerStyle} />
+        <div
+          className={sandboxStyles.sandbox}
+          style={widgetContainerStyle}
+        >
+          {renderComponent()}
+        </div>
+      </div>
     </Suspense>
   );
 }

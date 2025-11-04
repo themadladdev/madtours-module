@@ -4,13 +4,20 @@ import styles from './WidgetControls.module.css';
 
 const PRESET_STYLES = {
   fluid: { maxWidth: '100%', borderStyle: 'dashed', boxShadow: 'none' },
-  sidebar: {
-    maxWidth: '400px',
+  tablet: {
+    maxWidth: '870px',
     borderStyle: 'solid',
     boxShadow: '0 0 15px var(--grey-200)',
   },
-  small: {
-    maxWidth: '300px',
+  smartphone: {
+    maxWidth: '360px',
+    borderStyle: 'solid',
+    boxShadow: '0 0 15px var(--grey-200)',
+  },
+  // FIXED: Renamed from 'mobiles' to 'mobileS' to match your button text,
+  // or you can change button text to 'Mobiles (320px)'
+  mobileS: {
+    maxWidth: '320px',
     borderStyle: 'solid',
     boxShadow: '0 0 15px var(--grey-200)',
   },
@@ -38,19 +45,31 @@ const WidgetControls = ({ onSetStyle }) => {
         </button>
         <button
           className={`${styles.controlButton} ${
-            activePreset === 'sidebar' ? styles.active : ''
+            activePreset === 'tablet' ? styles.active : ''
           }`}
-          onClick={() => handlePresetClick('sidebar')}
+          onClick={() => handlePresetClick('tablet')}
         >
-          Sidebar (400px)
+          Tablet (870px)
         </button>
         <button
+          // FIXED: Check for 'smartphone'
           className={`${styles.controlButton} ${
-            activePreset === 'small' ? styles.active : ''
+            activePreset === 'smartphone' ? styles.active : ''
           }`}
-          onClick={() => handlePresetClick('small')}
+          // FIXED: Pass 'smartphone'
+          onClick={() => handlePresetClick('smartphone')}
         >
-          Small (300px)
+          Smartphone (360px)
+        </button>
+        <button
+          // FIXED: Check for 'mobileS'
+          className={`${styles.controlButton} ${
+            activePreset === 'mobileS' ? styles.active : ''
+          }`}
+          // FIXED: Pass 'mobileS'
+          onClick={() => handlePresetClick('mobileS')}
+        >
+          MobileS (320px)
         </button>
       </div>
     </div>
