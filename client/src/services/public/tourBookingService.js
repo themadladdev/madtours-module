@@ -29,8 +29,19 @@ export const getTourAvailability = (tourId, month, seats) => {
   return publicApiFetch(`/tours/${tourId}/availability?month=${month}&seats=${seats}`);
 };
 
+// --- NEW: Function to get pricing from the Ticket Library ---
 /**
- * Creates a new booking.
+ * Fetches all available ticket prices for a tour.
+ * Corresponds to: GET /api/tours/:id/pricing
+ * @param {number} tourId - The ID of the tour.
+ */
+export const getTourPricing = (tourId) => {
+  return publicApiFetch(`/tours/${tourId}/pricing`);
+};
+// --- END NEW FUNCTION ---
+
+/**
+ * Creates a new booking. (OLD WIDGET)
  * This sends the "on-demand" data (tourId, date, time) instead of an instance ID.
  * Corresponds to: POST /api/tours/bookings
  * @param {object} bookingData - The booking details.
@@ -41,6 +52,21 @@ export const createBooking = (bookingData) => {
     body: JSON.stringify(bookingData),
   });
 };
+
+// --- NEW: Function to create a booking from the TicketBookingWidget ---
+/**
+ * Creates a new, complex booking with passenger details. (NEW WIDGET)
+ * Corresponds to: POST /api/tours/ticket-bookings
+ * @param {object} bookingData - The complex booking details.
+ * { tourId, date, time, customer: {...}, tickets: [...], passengers: [...] }
+ */
+export const createTicketBooking = (bookingData) => {
+  return publicApiFetch('/tours/ticket-bookings', {
+    method: 'POST',
+    body: JSON.stringify(bookingData),
+  });
+};
+// --- END NEW FUNCTION ---
 
 /**
  * Fetches a booking by its 8-character reference.

@@ -10,6 +10,9 @@ import TourDashboard from './Dashboard/TourDashboard.jsx';
 import BookingManager from './BookingManager/BookingManager.jsx';
 import InstanceManager from './InstanceManager/InstanceManager.jsx';
 import TourManager from './TourManager/TourManager.jsx';
+// --- NEW: Import Ticket Manager ---
+import TicketManager from './TicketManager/TicketManager.jsx';
+
 
 // Placeholder Icon
 const IconPlaceholder = () => <span style={{ marginRight: '8px' }}>•</span>;
@@ -28,6 +31,8 @@ const MADTourManagement = () => {
             setActiveSubTab('bookings');
         } else if (path.includes('/manage')) {
             setActiveSubTab('tours');
+        } else if (path.includes('/tickets')) { // --- NEW ---
+            setActiveSubTab('tickets');
         } else {
             setActiveSubTab('dashboard');
         }
@@ -87,6 +92,14 @@ const MADTourManagement = () => {
             path: '/admin/tours/manage',
             icon: <IconPlaceholder />,
             component: <TourManager /> 
+        },
+        // --- NEW: Add Ticket Library Tab ---
+        { 
+            id: 'tickets', 
+            label: 'Ticket Library', 
+            path: '/admin/tours/tickets',
+            icon: <IconPlaceholder />,
+            component: <TicketManager /> 
         },
     ];
 

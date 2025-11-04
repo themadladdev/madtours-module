@@ -10,11 +10,23 @@ const router = express.Router();
 router.get('/', publicTourController.getActiveTours);
 
 // === Booking Flow (Specific routes MUST come before dynamic :id) ===
+
+// --- OLD BOOKING ROUTE (for AvailabilityBookingWidget) ---
 // POST   /api/tours/bookings
 router.post('/bookings', bookingRateLimit, publicTourController.createBooking);
 
+// --- NEW BOOKING ROUTE (for TicketBookingWidget) ---
+// POST   /api/tours/ticket-bookings
+router.post('/ticket-bookings', bookingRateLimit, publicTourController.createTicketBooking);
+// --- END NEW ROUTE ---
+
 // GET    /api/tours/bookings/:reference
 router.get('/bookings/:reference', publicTourController.getBookingByReference);
+
+// === NEW: Public Pricing (Dynamic route) ===
+// GET    /api/tours/:id/pricing
+router.get('/:id/pricing', publicTourController.getTourPricing);
+// === END NEW ROUTE ===
 
 // === NEW: Availability Indicator (Dynamic route) ===
 // GET /api/tours/:id/instances?date=YYYY-MM-DD

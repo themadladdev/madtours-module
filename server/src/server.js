@@ -11,6 +11,10 @@ import { startReminderCron } from './utils/tourReminderCron.js';
 import adminTourRoutes from './routes/adminTourRoutes.js';
 import adminBookingRoutes from './routes/adminBookingRoutes.js';
 import publicTourRoutes from './routes/publicTourRoutes.js';
+
+// --- NEW: Import Ticket Library Routes ---
+import adminTicketRoutes from './routes/adminTicketRoutes.js';
+
 // We need the controller for the webhook
 import { handleStripeWebhook } from './controllers/publicTourController.js';
 
@@ -45,6 +49,9 @@ app.get('/health', (req, res) => {
 app.use('/api/admin/tours', adminTourRoutes);
 app.use('/api/admin/bookings', adminBookingRoutes);
 app.use('/api/tours', publicTourRoutes); // Corrected from app.set to app.use
+
+// --- NEW: Add Ticket Library routes ---
+app.use('/api/admin/tickets', adminTicketRoutes);
 
 
 // --- Error Handling ---

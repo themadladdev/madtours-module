@@ -5,6 +5,10 @@ import * as stripeService from '../services/tourStripeService.js';
 import * as availabilityCalculator from '../utils/tourAvailabilityCalculator.js';
 import { sanitizeBookingData } from '../utils/tourSanitize.js';
 
+// --- NEW: Import public ticket service ---
+import * as publicTicketService from '../services/publicTicketService.js';
+
+
 /**
  * Get all active tours
  * GET /api/tours
@@ -106,6 +110,23 @@ export const getTourAvailability = async (req, res, next) => {
   }
 };
 
+// --- NEW: Get public pricing for a tour ---
+/**
+ * Get all available ticket prices for a tour
+ * GET /api/tours/:id/pricing
+ */
+export const getTourPricing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const pricing = await publicTicketService.getPublicPricingForTour(parseInt(id, 10));
+    res.json(pricing);
+  } catch (error) {
+    console.error(`Error fetching pricing for tour ${req.params.id}:`, error);
+    next(error);
+  }
+};
+// --- END NEW FUNCTION ---
+
 /**
  * Create a new booking and payment intent using "Just-in-Time" logic
  * POST /api/tours/bookings
@@ -162,6 +183,51 @@ export const createBooking = async (req, res, next) => {
     next(error);
   }
 };
+
+// --- NEW: Controller for the new TicketBookingWidget ---
+/**
+ * Create a new, complex booking with passenger details.
+ * POST /api/tours/ticket-bookings
+ */
+export const createTicketBooking = async (req, res, next) => {
+  try {
+    // NOTE: This controller is a STUB for Step 3.
+    // It calls a function `createTicketBooking` that we will
+    // create in `tourBookingService.js` during Step 4.
+    // We also need to build a sanitizer for this new data shape.
+    
+    const bookingData = req.body; // { tourId, date, time, customer: {...}, tickets: [...], passengers: [...] }
+    
+    // --- STUBBED ---
+    // In Step 4, we will replace this with:
+    // const sanitizedData = sanitizeTicketBookingData(bookingData);
+    // const booking = await bookingService.createTicketBooking(sanitizedData);
+    // const paymentIntent = await stripeService.createPaymentIntent(booking);
+    
+    console.log("STUB: New ticket booking received:", JSON.stringify(bookingData, null, 2));
+    
+    // Return a STUBBED response that mimics the real one
+    res.status(201).json({
+      booking: {
+        id: 9999,
+        reference: "STUB001",
+        status: "pending"
+      },
+      payment: {
+        clientSecret: "pi_12345_secret_67890_STUB"
+      }
+    });
+    // --- END STUBBED ---
+
+  } catch (error) {
+    console.error('Error creating ticket booking:', error);
+    if (error.message.includes('seats available') || error.message.includes('tour is no longer scheduled')) {
+      return res.status(409).json({ message: error.message });
+    }
+    next(error);
+  }
+};
+// --- END NEW FUNCTION ---
 
 /**
  * Get booking details by reference

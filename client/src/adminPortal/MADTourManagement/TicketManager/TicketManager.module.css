@@ -1,0 +1,50 @@
+/* client/src/adminPortal/MADTourManagement/TicketManager/TicketManager.module.css */
+
+.managerContainer {
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.tableHeading {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ticketRow {
+  cursor: pointer;
+}
+
+.ticketRow:hover {
+  background-color: var(--grey-100);
+}
+
+.ticketName {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.actionsCell {
+  text-align: right;
+}
