@@ -1,6 +1,6 @@
+// server/src/services/tourBookingService.js
 import { pool } from '../db/db.js';
 import { randomBytes } from 'crypto';
-// REMOVED: checkAvailability import is no longer needed.
 import { sendBookingConfirmation, sendBookingCancellation } from './tourEmailService.js';
 
 export const generateBookingReference = () => {
@@ -9,8 +9,7 @@ export const generateBookingReference = () => {
 
 /**
  * Creates a booking using "on-demand" / "Just-in-Time" logic.
- * This function will find OR create the tour_instance row,
- * lock it, and then create the booking.
+ * (For the OLD AvailabilityBookingWidget)
  */
 export const createBooking = async (bookingData) => {
   const {
@@ -41,11 +40,7 @@ export const createBooking = async (bookingData) => {
     }
     const defaultCapacity = tourResult.rows[0].capacity;
 
-    // Step 2: "Upsert" the Tour Instance (Create if not exists)
-    // This is the core "Just-in-Time" logic.
-    // It creates the instance row using the tour's default capacity.
-    // If the row already exists (due to a conflict), it does nothing
-    // but the subsequent SELECT will still find it.
+    // Step 2: "Upsert" the Tour Instance
     const instanceResult = await client.query(
       `WITH upsert AS (
          INSERT INTO tour_instances (tour_id, date, "time", capacity, booked_seats, status)
@@ -63,7 +58,6 @@ export const createBooking = async (bookingData) => {
     const tourInstanceId = instanceResult.rows[0].id;
 
     // Step 3: Lock instance row and check availability
-    // This is the critical anti-race-condition step.
     const lockResult = await client.query(
       'SELECT * FROM tour_instances WHERE id = $1 FOR UPDATE',
       [tourInstanceId]
@@ -79,7 +73,7 @@ export const createBooking = async (bookingData) => {
       throw new Error('Not enough seats available');
     }
 
-    // Step 4: Create or get customer (Same as old logic)
+    // Step 4: Create or get customer
     const customerResult = await client.query(
       `INSERT INTO tour_customers (email, first_name, last_name, phone)
        VALUES ($1, $2, $3, $4)
@@ -94,7 +88,7 @@ export const createBooking = async (bookingData) => {
 
     const customerId = customerResult.rows[0].id;
 
-    // Step 5: Generate unique booking reference (Same as old logic)
+    // Step 5: Generate unique booking reference
     let reference = generateBookingReference();
     let attempts = 0;
     while (attempts < 5) {
@@ -138,7 +132,6 @@ export const createBooking = async (bookingData) => {
     );
 
     // Step 8: Create history record
-    // Corrected table name from 'booking_history' to 'tour_booking_history'
     await client.query(
       `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
        VALUES ($1, NULL, 'pending', 'Booking created')`,
@@ -155,6 +148,170 @@ export const createBooking = async (bookingData) => {
     client.release();
   }
 };
+
+// --- NEW: Function for the TicketBookingWidget ---
+/**
+ * Creates a complex booking from the new TicketBookingWidget.
+ * This function will:
+ * 1. Find/Create the tour_instance.
+ * 2. Lock and check availability.
+ * 3. Create the tour_customer.
+ * 4. Create the main tour_bookings record.
+ * 5. Create all tour_booking_passengers records.
+ */
+export const createTicketBooking = async (bookingData) => {
+  const {
+    tourId,
+    date,
+    time,
+    totalSeats,
+    totalAmount,
+    customer, // { email, firstName, lastName, phone }
+    tickets, // [{ ticket_id, quantity }]
+    passengers // [{ firstName, lastName, ticket_type }]
+  } = bookingData;
+  
+  // We will add the `ticket_summary` column to this INSERT
+  // once we've added it to the table. For now, we skip it.
+  const ticketSummaryJson = JSON.stringify(tickets);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Step 1: Get Tour Template (for default capacity)
+    const tourResult = await client.query(
+      'SELECT capacity FROM tours WHERE id = $1',
+      [tourId]
+    );
+    if (tourResult.rows.length === 0) {
+      throw new Error('Tour not found');
+    }
+    const defaultCapacity = tourResult.rows[0].capacity;
+
+    // Step 2: "Upsert" the Tour Instance
+    const instanceResult = await client.query(
+      `WITH upsert AS (
+         INSERT INTO tour_instances (tour_id, date, "time", capacity, booked_seats, status)
+         VALUES ($1, $2, $3, $4, 0, 'scheduled')
+         ON CONFLICT (tour_id, date, "time") DO NOTHING
+         RETURNING id
+       )
+       SELECT id FROM upsert
+       UNION ALL
+       SELECT id FROM tour_instances 
+       WHERE tour_id = $1 AND date = $2 AND "time" = $3`,
+      [tourId, date, time, defaultCapacity]
+    );
+
+    const tourInstanceId = instanceResult.rows[0].id;
+
+    // Step 3: Lock instance row and check availability
+    const lockResult = await client.query(
+      'SELECT * FROM tour_instances WHERE id = $1 FOR UPDATE',
+      [tourInstanceId]
+    );
+    const instance = lockResult.rows[0];
+
+    if (instance.status !== 'scheduled') {
+      throw new Error('This tour is no longer scheduled');
+    }
+    
+    const availableSeats = instance.capacity - instance.booked_seats;
+    if (availableSeats < totalSeats) {
+      throw new Error('Not enough seats available');
+    }
+
+    // Step 4: Create or get customer (using customer object)
+    const customerResult = await client.query(
+      `INSERT INTO tour_customers (email, first_name, last_name, phone)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (email) DO UPDATE SET
+         first_name = EXCLUDED.first_name,
+         last_name = EXCLUDED.last_name,
+         phone = EXCLUDED.phone,
+         updated_at = NOW()
+       RETURNING id`,
+      [customer.email, customer.firstName, customer.lastName, customer.phone]
+    );
+
+    const customerId = customerResult.rows[0].id;
+
+    // Step 5: Generate unique booking reference
+    let reference = generateBookingReference();
+    let attempts = 0;
+    while (attempts < 5) {
+      const existing = await client.query(
+        'SELECT id FROM tour_bookings WHERE booking_reference = $1',
+        [reference]
+      );
+      if (existing.rows.length === 0) break;
+      reference = generateBookingReference();
+      attempts++;
+    }
+    if (attempts === 5) {
+      throw new Error('Failed to generate unique booking reference');
+    }
+
+    // Step 6: Create booking
+    // NOTE: We are skipping special_requests and ticket_summary for now
+    // We will add ticket_summary once the column is created
+    const bookingResult = await client.query(
+      `INSERT INTO tour_bookings 
+       (booking_reference, tour_instance_id, customer_id, seats, total_amount, 
+        status, payment_status)
+       VALUES ($1, $2, $3, $4, $5, 'pending', 'pending')
+       RETURNING *`,
+      [
+        reference,
+        tourInstanceId,
+        customerId,
+        totalSeats, // Use totalSeats
+        totalAmount // Use totalAmount
+      ]
+    );
+
+    const newBooking = bookingResult.rows[0];
+    const newBookingId = newBooking.id;
+
+    // Step 7: Update booked seats
+    await client.query(
+      `UPDATE tour_instances 
+       SET booked_seats = booked_seats + $1, updated_at = NOW()
+       WHERE id = $2`,
+      [totalSeats, tourInstanceId]
+    );
+
+    // Step 8: Create history record
+    await client.query(
+      `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
+       VALUES ($1, NULL, 'pending', 'Booking created')`,
+      [newBookingId]
+    );
+
+    // --- NEW: Step 9: Create passenger records ---
+    // We use a loop for this
+    for (const passenger of passengers) {
+      await client.query(
+        `INSERT INTO tour_booking_passengers (booking_id, first_name, last_name, ticket_type)
+         VALUES ($1, $2, $3, $4)`,
+        [newBookingId, passenger.firstName, passenger.lastName, passenger.ticket_type]
+      );
+    }
+    // --- END NEW STEP ---
+
+    await client.query('COMMIT');
+    return newBooking; // Return the main booking object
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+// --- END NEW FUNCTION ---
 
 export const getBookingByReference = async (reference) => {
   const result = await pool.query(
@@ -190,7 +347,6 @@ export const updateBookingPaymentIntent = async (bookingId, paymentIntentId) => 
   return result.rows[0];
 };
 
-// Add to confirmBooking function (after booking update)
 export const confirmBooking = async (bookingId) => {
   const client = await pool.connect();
 
@@ -248,7 +404,6 @@ export const confirmBooking = async (bookingId) => {
   }
 };
 
-// Update cancelBooking to send email
 export const cancelBooking = async (bookingId, reason, adminId = null) => {
   const client = await pool.connect();
 

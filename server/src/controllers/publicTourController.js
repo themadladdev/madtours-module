@@ -3,7 +3,8 @@ import * as tourService from '../services/tourService.js';
 import * as bookingService from '../services/tourBookingService.js';
 import * as stripeService from '../services/tourStripeService.js';
 import * as availabilityCalculator from '../utils/tourAvailabilityCalculator.js';
-import { sanitizeBookingData } from '../utils/tourSanitize.js';
+// --- UPDATED: Import the new sanitizer ---
+import { sanitizeBookingData, sanitizeTicketBookingData } from '../utils/tourSanitize.js';
 
 // --- NEW: Import public ticket service ---
 import * as publicTicketService from '../services/publicTicketService.js';
@@ -184,40 +185,36 @@ export const createBooking = async (req, res, next) => {
   }
 };
 
-// --- NEW: Controller for the new TicketBookingWidget ---
+// --- UPDATED: Controller for the new TicketBookingWidget ---
 /**
  * Create a new, complex booking with passenger details.
  * POST /api/tours/ticket-bookings
  */
 export const createTicketBooking = async (req, res, next) => {
   try {
-    // NOTE: This controller is a STUB for Step 3.
-    // It calls a function `createTicketBooking` that we will
-    // create in `tourBookingService.js` during Step 4.
-    // We also need to build a sanitizer for this new data shape.
+    // --- THIS IS NO LONGER A STUB ---
     
-    const bookingData = req.body; // { tourId, date, time, customer: {...}, tickets: [...], passengers: [...] }
+    // 1. Sanitize the complex data
+    const sanitizedData = sanitizeTicketBookingData(req.body);
+
+    // 2. Call the new, real booking service
+    const booking = await bookingService.createTicketBooking(sanitizedData);
+
+    // 3. Create a payment intent for the new booking
+    const paymentIntent = await stripeService.createPaymentIntent(booking);
     
-    // --- STUBBED ---
-    // In Step 4, we will replace this with:
-    // const sanitizedData = sanitizeTicketBookingData(bookingData);
-    // const booking = await bookingService.createTicketBooking(sanitizedData);
-    // const paymentIntent = await stripeService.createPaymentIntent(booking);
-    
-    console.log("STUB: New ticket booking received:", JSON.stringify(bookingData, null, 2));
-    
-    // Return a STUBBED response that mimics the real one
+    // 4. Return the real response
     res.status(201).json({
       booking: {
-        id: 9999,
-        reference: "STUB001",
-        status: "pending"
+        id: booking.id,
+        reference: booking.booking_reference,
+        status: booking.status
       },
       payment: {
-        clientSecret: "pi_12345_secret_67890_STUB"
+        clientSecret: paymentIntent.clientSecret
       }
     });
-    // --- END STUBBED ---
+    // --- END REAL CODE ---
 
   } catch (error) {
     console.error('Error creating ticket booking:', error);
@@ -227,7 +224,7 @@ export const createTicketBooking = async (req, res, next) => {
     next(error);
   }
 };
-// --- END NEW FUNCTION ---
+// --- END UPDATED FUNCTION ---
 
 /**
  * Get booking details by reference

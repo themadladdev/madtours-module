@@ -8,10 +8,11 @@ import { config } from '../config/environment.js';
 import { updateBookingPaymentIntent, confirmBooking } from './tourBookingService.js';
 import { pool } from '../db/db.js';
 
+// --- FIX: Use the imported config object for the key ---
 const stripe = new Stripe(
   config.nodeEnv === 'production' 
-    ? process.env.STRIPE_SECRET_KEY_PROD 
-    : process.env.STRIPE_SECRET_KEY_DEV
+    ? process.env.STRIPE_SECRET_KEY_PROD // This would also be config.stripeSecretKeyProd
+    : config.stripeSecretKey // Use the exported config variable
 );
 
 export const createPaymentIntent = async (booking) => {
@@ -82,9 +83,10 @@ export const processRefund = async (bookingId, amount = null, reason = 'requeste
 };
 
 export const handleWebhook = async (rawBody, signature) => {
+  // --- FIX: Use the imported config object ---
   const webhookSecret = config.nodeEnv === 'production'
     ? process.env.STRIPE_WEBHOOK_SECRET_PROD
-    : process.env.STRIPE_WEBHOOK_SECRET_DEV;
+    : config.stripeWebhookSecret; // Use the exported config variable
 
   let event;
 
