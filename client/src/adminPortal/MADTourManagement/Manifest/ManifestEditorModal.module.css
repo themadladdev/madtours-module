@@ -1,0 +1,51 @@
+/* ==========================================
+ * NEW FILE
+ * client/src/adminPortal/MADTourManagement/Manifest/ManifestEditorModal.module.css
+ * ==========================================
+ */
+
+/* This overrides the default padding from AdminFormModal */
+.modalBody {
+    padding: 0 !important;
+}
+
+.instructions {
+    padding: 1rem 1.5rem;
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--grey-700);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.passengerList {
+    padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.passengerRow {
+    margin-bottom: 1.25rem;
+}
+
+.passengerLabel {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+}
+
+.passengerInputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--grey-100);
+}

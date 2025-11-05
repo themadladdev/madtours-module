@@ -1,4 +1,8 @@
+// ==========================================
+// UPDATED FILE
 // server/src/services/tourBookingService.js
+// ==========================================
+
 import { pool } from '../db/db.js';
 import { randomBytes } from 'crypto';
 import { sendBookingConfirmation, sendBookingCancellation } from './tourEmailService.js';
@@ -436,6 +440,12 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
     }
 
     const booking = bookingResult.rows[0];
+    
+    // Do not cancel a booking that is already cancelled
+    if (booking.status === 'cancelled') {
+        client.release();
+        return booking; // Return the already-cancelled booking
+    }
 
     const result = await client.query(
       `UPDATE tour_bookings 
@@ -448,8 +458,9 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
       [reason, bookingId]
     );
 
-    // Only update seats if the booking was confirmed
-    if (booking.status === 'confirmed') {
+    // --- [CRITICAL FIX] ---
+    // Decrement seats if booking was 'confirmed' OR 'pending' (hostage)
+    if (booking.status === 'confirmed' || booking.status === 'pending') {
       await client.query(
         `UPDATE tour_instances 
          SET booked_seats = booked_seats - $1, updated_at = NOW()
@@ -457,6 +468,7 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
         [booking.seats, booking.tour_instance_id]
       );
     }
+    // --- [END CRITICAL FIX] ---
 
     await client.query(
       `INSERT INTO tour_booking_history 
@@ -467,14 +479,16 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
 
     await client.query('COMMIT');
 
-    // Send cancellation email
-    sendBookingCancellation(
-      booking,
-      { first_name: booking.first_name, last_name: booking.last_name, email: booking.email },
-      { date: booking.date, time: booking.time },
-      { name: booking.tour_name },
-      reason
-    ).catch(err => console.error('Failed to send cancellation email:', err));
+    // Send cancellation email (only if it wasn't just a pending timeout)
+    if (booking.status === 'confirmed') {
+      sendBookingCancellation(
+        booking,
+        { first_name: booking.first_name, last_name: booking.last_name, email: booking.email },
+        { date: booking.date, time: booking.time },
+        { name: booking.tour_name },
+        reason
+      ).catch(err => console.error('Failed to send cancellation email:', err));
+    }
 
     return result.rows[0];
 
@@ -485,3 +499,48 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
     client.release();
   }
 };
+
+// --- [NEW FUNCTION] ---
+/**
+ * Updates the passenger list for a booking in a single transaction.
+ * This function will DELETE all existing passengers and INSERT the new list.
+ */
+export const updateBookingPassengers = async (bookingId, passengers) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    // Step 1: Delete all existing passengers for this booking
+    await client.query(
+      'DELETE FROM tour_booking_passengers WHERE booking_id = $1',
+      [bookingId]
+    );
+
+    // Step 2: Insert the new list of passengers
+    for (const passenger of passengers) {
+      await client.query(
+        `INSERT INTO tour_booking_passengers 
+         (booking_id, first_name, last_name, ticket_type)
+         VALUES ($1, $2, $3, $4)`,
+        [
+          bookingId,
+          passenger.first_name,
+          passenger.last_name,
+          passenger.ticket_type
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+    return { success: true, bookingId, passengerCount: passengers.length };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`Error in updateBookingPassengers transaction:`, error);
+    throw error; // Re-throw to be caught by the controller
+  } finally {
+    client.release();
+  }
+};
+// --- [END NEW FUNCTION] ---

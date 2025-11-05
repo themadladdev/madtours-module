@@ -1,5 +1,5 @@
 // ==========================================
-// ROUTES: Admin Booking Management
+// UPDATED FILE
 // server/src/routes/adminBookingRoutes.js
 // ==========================================
 
@@ -29,5 +29,11 @@ router.post('/:id/cancel', adminBookingController.cancelBooking);
 
 // POST   /api/admin/bookings/:id/refund
 router.post('/:id/refund', adminBookingController.refundBooking);
+
+// --- NEW ROUTE ---
+// PUT    /api/admin/bookings/:id/passengers
+// (Used by the Manifest Editor)
+router.put('/:id/passengers', adminBookingController.updateBookingPassengers);
+// --- END NEW ROUTE ---
 
 export default router;

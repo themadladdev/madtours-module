@@ -1,6 +1,6 @@
 // ==========================================
-// CONTROLLERS: Booking Admin Controller
-// server/src/controllers/tourBookingAdminController.js
+// UPDATED FILE
+// server/src/controllers/adminTourBookingController.js
 // ==========================================
 
 import { pool } from '../db/db.js';
@@ -146,8 +146,33 @@ export const getDashboardStats = async (req, res, next) => {
     
     res.json({ stats: result.rows[0] });
     
-  } catch (error) {
+  } catch (error)
+ {
     console.error('Error fetching dashboard stats:', error);
     next(error);
   }
 };
+
+// --- NEW CONTROLLER FUNCTION ---
+/**
+ * Handles updating the passenger list for a booking from the Manifest Editor.
+ */
+export const updateBookingPassengers = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { passengers } = req.body;
+
+    if (!passengers || !Array.isArray(passengers)) {
+      return res.status(400).json({ message: 'Invalid passenger data' });
+    }
+
+    await bookingService.updateBookingPassengers(id, passengers);
+    
+    res.json({ message: 'Passengers updated successfully' });
+
+  } catch (error) {
+    console.error(`Error updating passengers for booking ${req.params.id}:`, error);
+    next(error);
+  }
+};
+// --- END NEW FUNCTION ---

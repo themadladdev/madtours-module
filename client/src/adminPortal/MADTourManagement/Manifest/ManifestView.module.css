@@ -1,7 +1,7 @@
 /* ==========================================
-// ADMIN: Manifest Styles
-// client/src/adminPortal/MADTourManagement/Manifest/ManifestView.module.css
-// ========================================== */
+ * UPDATED FILE
+ * client/src/adminPortal/MADTourManagement/Manifest/ManifestView.module.css
+ * ========================================== */
 
 .manifestContainer {
   padding: 2rem;
@@ -93,7 +93,7 @@
 
 .paymentStatus {
   padding: 0.25rem 0.75rem;
-  border-radius: 12px;
+  border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: capitalize;
@@ -119,7 +119,18 @@
   vertical-align: top;
 }
 
-/* --- NEW STYLES --- */
+/* --- NEW/MODIFIED STYLES --- */
+
+/* Add cursor feedback and hover effect */
+.editableRow {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.editableRow:hover {
+  background-color: var(--grey-100) !important;
+}
+
 .passengerRow:not(:first-child) td {
   /* For multi-passenger bookings, add a border for clarity */
   border-top: 1px dashed var(--grey-300);
@@ -147,7 +158,7 @@
   color: var(--destructive);
   margin-top: 0.25rem;
 }
-/* --- END NEW STYLES --- */
+/* --- END NEW/MODIFIED STYLES --- */
 
 
 .footer {
@@ -167,8 +178,9 @@
 /* Print styles */
 @media print {
   body {
-    background-color: #fff;
-    color: #000;
+    /* --- FIX: Use CSS Variables --- */
+    background-color: var(--background);
+    color: var(--text);
   }
   
   .noPrint {
@@ -177,13 +189,22 @@
 
   .manifestContainer {
     padding: 0;
-    background: #fff;
+    /* --- FIX: Use CSS Variable --- */
+    background: var(--background);
   }
 
   .manifest {
     box-shadow: none;
     padding: 1rem;
     border: none;
+  }
+  
+  .editableRow {
+    cursor: default;
+  }
+  
+  .editableRow:hover {
+    background-color: inherit !important;
   }
 
   .passengerTable {
@@ -195,18 +216,19 @@
     padding: 0.5rem;
   }
 
-  /* --- NEW PRINT STYLES --- */
   .fallbackRow {
-    background-color: #fff !important;
+    /* --- FIX: Use CSS Variable --- */
+    background-color: var(--background) !important;
     border-left: none;
   }
 
   .fallbackLabel {
-    color: #555;
+    /* --- FIX: Use CSS Variable --- */
+    color: var(--grey-700);
   }
 
   .passengerRow:nth-child(n+2) {
-    background-color: #fff !important;
+    /* --- FIX: Use CSS Variable --- */
+    background-color: var(--background) !important;
   }
-  /* --- END NEW PRINT STYLES --- */
 }

@@ -1,11 +1,17 @@
 // ==========================================
-// CRON JOB: Send Reminder Emails
+// UPDATED FILE
 // server/src/utils/tourReminderCron.js
 // ==========================================
 
 import cron from 'node-cron';
 import { pool } from '../db/db.js';
 import { sendBookingReminder } from '../services/tourEmailService.js';
+
+// --- NEW: Imports for Abandoned Cart Janitor ---
+import { stripe } from '../services/tourStripeService.js';
+import { cancelBooking } from '../services/tourBookingService.js';
+
+// --- 1. Existing Reminder Job (SQL Fixed) ---
 
 export const startReminderCron = () => {
   // Run every day at 9 AM
@@ -18,14 +24,15 @@ export const startReminderCron = () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowDate = tomorrow.toISOString().split('T')[0];
 
+      // --- FIX: Corrected table name 'bookings' to 'tour_bookings' ---
       const result = await pool.query(
         `SELECT 
           b.id, b.booking_reference, b.seats,
           c.first_name, c.last_name, c.email,
           ti.date, ti.time,
           t.name as tour_name, t.duration_minutes
-        FROM bookings b
-        JOIN customers c ON b.customer_id = c.id
+        FROM tour_bookings b 
+        JOIN tour_customers c ON b.customer_id = c.id
         JOIN tour_instances ti ON b.tour_instance_id = ti.id
         JOIN tours t ON ti.tour_id = t.id
         WHERE ti.date = $1
@@ -45,9 +52,9 @@ export const startReminderCron = () => {
             { name: booking.tour_name, duration_minutes: booking.duration_minutes }
           );
 
-          // Mark as reminded
+          // --- FIX: Corrected table name 'bookings' to 'tour_bookings' ---
           await pool.query(
-            'UPDATE bookings SET reminder_sent = true WHERE id = $1',
+            'UPDATE tour_bookings SET reminder_sent = true WHERE id = $1',
             [booking.id]
           );
         } catch (error) {
@@ -63,4 +70,78 @@ export const startReminderCron = () => {
   });
 
   console.log('✅ Reminder cron job scheduled (daily at 9 AM)');
+};
+
+
+// --- 2. NEW: Abandoned Cart "Janitor" Job ---
+
+// Define the timeout (e.g., 60 minutes)
+const PENDING_TIMEOUT_MINUTES = 60;
+
+export const startAbandonedCartCron = () => {
+  // Run every 15 minutes
+  cron.schedule('*/15 * * * *', async () => {
+    console.log('🧹 Running abandoned cart "Janitor" job...');
+    
+    const timeout = new Date(Date.now() - PENDING_TIMEOUT_MINUTES * 60 * 1000);
+
+    let client;
+    try {
+      client = await pool.connect();
+      
+      // Find all bookings that are 'pending' and older than the timeout
+      const { rows: abandonedBookings } = await client.query(
+        `SELECT id, payment_intent_id 
+         FROM tour_bookings 
+         WHERE status = 'pending' 
+         AND created_at < $1`,
+        [timeout]
+      );
+
+      if (abandonedBookings.length === 0) {
+        console.log('🧹 No abandoned carts found.');
+        client.release();
+        return;
+      }
+
+      console.log(`Found ${abandonedBookings.length} abandoned cart(s). Cleaning up...`);
+
+      for (const booking of abandonedBookings) {
+        try {
+          // 1. Cancel the PaymentIntent with Stripe
+          if (booking.payment_intent_id) {
+            await stripe.paymentIntents.cancel(booking.payment_intent_id);
+          }
+
+          // 2. Call our local cancelBooking service
+          // This will decrement booked_seats and set status to 'cancelled'
+          await cancelBooking(booking.id, 'Abandoned cart timeout (Janitor)');
+          
+          console.log(`- Cleaned up booking ${booking.id}`);
+
+        } catch (err) {
+          // Log error but continue to the next booking
+          console.error(`- Failed to clean up booking ${booking.id}:`, err.message);
+          
+          // If Stripe cancellation failed (e.g., already succeeded), 
+          // we might still need to handle our local booking status.
+          // For now, we'll log and move on.
+          if (err.code === 'payment_intent_unexpected_state') {
+             console.warn(`  > Stripe PI ${booking.payment_intent_id} was in an unexpected state. Manual review may be needed.`);
+          }
+        }
+      }
+      
+      console.log('✅ Abandoned cart job completed.');
+
+    } catch (err) {
+      console.error('❌ Error in abandoned cart cron job:', err);
+    } finally {
+      if (client) {
+        client.release();
+      }
+    }
+  });
+
+  console.log('✅ Abandoned cart "Janitor" scheduled (every 15 mins)');
 };

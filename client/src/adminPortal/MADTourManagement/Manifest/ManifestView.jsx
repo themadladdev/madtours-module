@@ -1,16 +1,22 @@
 // ==========================================
-// ADMIN: Manifest View
+// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/Manifest/ManifestView.jsx
 // ==========================================
 
 import React, { useState, useEffect } from 'react';
 import { getManifest } from '../../../services/admin/adminTourService.js';
 import styles from './ManifestView.module.css';
-import sharedStyles from '../../adminshared.module.css'; // Import shared styles
+import sharedStyles from '../../adminshared.module.css';
+// --- NEW: Import the modal ---
+import ManifestEditorModal from './ManifestEditorModal.jsx';
 
 const ManifestView = ({ instanceId }) => {
   const [manifest, setManifest] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // --- NEW: State for the modal ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   // Use our custom router logic
   const handleNavigate = (event, path) => {
@@ -42,17 +48,39 @@ const ManifestView = ({ instanceId }) => {
     window.print();
   };
 
+  // --- NEW: Modal open/close handlers ---
+  const handleOpenEditor = (booking) => {
+    setSelectedBooking(booking);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseEditor = () => {
+    setIsModalOpen(false);
+    setSelectedBooking(null);
+  };
+
+  const handleSaveSuccess = () => {
+    // Reload the manifest to show the new data
+    loadManifest();
+  };
+  
   // --- RE-WRITTEN: This logic is now correct ---
   const renderBookingRows = (booking) => {
     const elements = [];
+    const hasAllPassengerNames = booking.passengers.length === booking.seats_total;
     
-    // 1. High-Detail: Passengers were provided
-    if (booking.passengers && booking.passengers.length > 0) {
+    // --- BUG FIX: This is the correct logic ---
+    // 1. High-Detail: We have a name for every seat.
+    if (hasAllPassengerNames) {
       const totalPassengers = booking.passengers.length;
 
       // Create the first row (Payer)
       elements.push(
-        <tr key={booking.booking_reference} className={styles.passengerRow}>
+        <tr 
+          key={booking.booking_reference} 
+          className={`${styles.passengerRow} ${styles.editableRow}`}
+          onClick={() => handleOpenEditor(booking)} // --- NEW: Click handler
+        >
           <td rowSpan={totalPassengers} className={styles.reference}>{booking.booking_reference}</td>
           <td className={styles.name}>{booking.passengers[0].first_name} {booking.passengers[0].last_name}</td>
           <td rowSpan={totalPassengers} className={styles.contact}>
@@ -74,7 +102,11 @@ const ManifestView = ({ instanceId }) => {
       // Create all subsequent rows for other passengers
       for (let i = 1; i < totalPassengers; i++) {
         elements.push(
-          <tr key={`${booking.booking_reference}-${i}`} className={styles.passengerRow}>
+          <tr 
+            key={`${booking.booking_reference}-${i}`} 
+            className={`${styles.passengerRow} ${styles.editableRow}`}
+            onClick={() => handleOpenEditor(booking)} // --- NEW: Click handler
+          >
             {/* This row ONLY contains the name, as all other cells are row-spanned */}
             <td className={styles.name}>{booking.passengers[i].first_name} {booking.passengers[i].last_name}</td>
           </tr>
@@ -82,14 +114,22 @@ const ManifestView = ({ instanceId }) => {
       }
     } 
     
-    // 2. Low-Friction Fallback: No passengers provided
+    // --- BUG FIX: This path will now be correctly used ---
+    // 2. Low-Friction Fallback: Not all passenger names provided
     else {
+      // Get the first passenger (the "Payer" row)
+      const payer = booking.passengers[0] || booking.customer;
+      
       elements.push(
-        <tr key={booking.booking_reference} className={styles.fallbackRow}>
+        <tr 
+          key={booking.booking_reference} 
+          className={`${styles.fallbackRow} ${styles.editableRow}`}
+          onClick={() => handleOpenEditor(booking)} // --- NEW: Click handler
+        >
           <td className={styles.reference}>{booking.booking_reference}</td>
           <td className={styles.name}>
-            {booking.customer.first_name} {booking.customer.last_name}
-            <span className={styles.fallbackLabel}>(Payer - No passenger names provided)</span>
+            {payer.first_name} {payer.last_name}
+            <span className={styles.fallbackLabel}>(Payer - Click to add remaining {booking.seats_total - 1} names)</span>
           </td>
           <td className={styles.contact}>
             <div>{booking.customer.phone}</div>
@@ -143,81 +183,91 @@ const ManifestView = ({ instanceId }) => {
   const totalPax = manifest.total_confirmed_seats || 0;
 
   return (
-    <div className={styles.manifestContainer}>
-      <div className={styles.noPrint}>
-        <button 
-          onClick={(e) => handleNavigate(e, '/admin/tours/dashboard')}
-          className={sharedStyles.secondaryButton}
-          style={{ marginRight: '1rem' }}
-        >
-          Back to Dashboard
-        </button>
-        <button onClick={handlePrint} className={sharedStyles.primaryButton}>
-          Print Manifest
-        </button>
-      </div>
-
-      <div className={styles.manifest}>
-        <div className={styles.header}>
-          <h1>Tour Manifest</h1>
-          <div className={styles.tourInfo}>
-            <h2>{manifest.tour_name}</h2>
-            {/* FIX: Corrected UTC date display */}
-            <p><strong>Date:</strong> {new Date(manifest.date).toLocaleDateString()}</p>
-            <p><strong>Time:</strong> {manifest.time}</p>
-            <p><strong>Duration:</strong> {manifest.duration_minutes} minutes</p>
-          </div>
+    <>
+      {/* --- NEW: Render the modal --- */}
+      <ManifestEditorModal
+        isOpen={isModalOpen}
+        onClose={handleCloseEditor}
+        booking={selectedBooking}
+        onSaveSuccess={handleSaveSuccess}
+      />
+    
+      <div className={styles.manifestContainer}>
+        <div className={styles.noPrint}>
+          <button 
+            onClick={(e) => handleNavigate(e, '/admin/tours/dashboard')}
+            className={sharedStyles.secondaryButton}
+            style={{ marginRight: '1rem' }}
+          >
+            Back to Dashboard
+          </button>
+          <button onClick={handlePrint} className={sharedStyles.primaryButton}>
+            Print Manifest
+          </button>
         </div>
 
-        <div className={styles.summary}>
-          <div className={styles.summaryItem}>
-            <strong>Total Passengers:</strong> {totalPax}
+        <div className={styles.manifest}>
+          <div className={styles.header}>
+            <h1>Tour Manifest</h1>
+            <div className={styles.tourInfo}>
+              <h2>{manifest.tour_name}</h2>
+              {/* FIX: Corrected UTC date display */}
+              <p><strong>Date:</strong> {new Date(manifest.date).toLocaleDateString()}</p>
+              <p><strong>Time:</strong> {manifest.time}</p>
+              <p><strong>Duration:</strong> {manifest.duration_minutes} minutes</p>
+            </div>
           </div>
-          <div className={styles.summaryItem}>
-            <strong>Capacity:</strong> {manifest.capacity}
-          </div>
-          {/* FIX: Corrected missing syntax from previous error */}
-          <div className={styles.summaryItem}>
-            <strong>Available:</strong> {manifest.available_seats}
-          </div>
-        </div>
 
-        <div className={sharedStyles.contentBox}>
-          <table className={sharedStyles.table}>
-            <thead>
-              <tr>
-                <th>Ref</th>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Pax</th>
-                <th>Payment</th>
-                <th>Special Requests</th>
-              </tr>
-            </thead>
-            <tbody>
-              {confirmedBookings.length === 0 ? (
+          <div className={styles.summary}>
+            <div className={styles.summaryItem}>
+              <strong>Total Passengers:</strong> {totalPax}
+            </div>
+            <div className={styles.summaryItem}>
+              <strong>Capacity:</strong> {manifest.capacity}
+            </div>
+            {/* FIX: Corrected missing syntax from previous error */}
+            <div className={styles.summaryItem}>
+              <strong>Available:</strong> {manifest.available_seats}
+            </div>
+          </div>
+
+          <div className={sharedStyles.contentBox}>
+            <table className={sharedStyles.table}>
+              <thead>
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
-                    No confirmed bookings
-                  </td>
+                  <th>Ref</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Pax</th>
+                  <th>Payment</th>
+                  <th>Special Requests</th>
                 </tr>
-              ) : (
-                // --- REFACTORED: Use the new render function ---
-                confirmedBookings.flatMap(booking => renderBookingRows(booking))
-                // --- END REFACTOR ---
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {confirmedBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
+                      No confirmed bookings
+                    </td>
+                  </tr>
+                ) : (
+                  // --- REFACTORED: Use the new render function ---
+                  confirmedBookings.flatMap(booking => renderBookingRows(booking))
+                  // --- END REFACTOR ---
+                )}
+              </tbody>
+            </table>
+          </div>
 
-        <div className={styles.footer}>
-          <p>Generated: {new Date().toLocaleString()}</p>
-          <p className={styles.emergency}>
-            <strong>Emergency Contact:</strong> [Your emergency number here]
-          </p>
+          <div className={styles.footer}>
+            <p>Generated: {new Date().toLocaleString()}</p>
+            <p className={styles.emergency}>
+              <strong>Emergency Contact:</strong> [Your emergency number here]
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

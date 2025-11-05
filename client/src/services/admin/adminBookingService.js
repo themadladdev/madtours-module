@@ -1,5 +1,5 @@
 // ==========================================
-// SERVICES: Booking Admin Service
+// UPDATED FILE
 // client/src/services/admin/adminBookingService.js
 // ==========================================
 
@@ -39,3 +39,18 @@ export const getDashboardStats = async () => {
   // MODIFIED: Added prefix
   return await adminApiFetch(`${API_PREFIX}/dashboard/stats`);
 };
+
+// --- NEW FUNCTION ---
+/**
+ * Updates the passenger list for a specific booking.
+ * @param {number} bookingId - The ID of the booking to update
+ * @param {Array} passengers - The full list of passenger objects
+ * { id: (number|null), first_name: string, last_name: string, ticket_type: string }
+ */
+export const updateBookingPassengers = async (bookingId, passengers) => {
+  return await adminApiFetch(`${API_PREFIX}/${bookingId}/passengers`, {
+    method: 'PUT',
+    body: JSON.stringify({ passengers })
+  });
+};
+// --- END NEW FUNCTION ---

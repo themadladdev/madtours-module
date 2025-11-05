@@ -1,5 +1,5 @@
 // ==========================================
-// SERVICES: Stripe Service
+// UPDATED FILE
 // server/src/services/tourStripeService.js
 // ==========================================
 
@@ -8,8 +8,9 @@ import { config } from '../config/environment.js';
 import { updateBookingPaymentIntent, confirmBooking } from './tourBookingService.js';
 import { pool } from '../db/db.js';
 
-// --- FIX: Use the imported config object for the key ---
-const stripe = new Stripe(
+// --- FIX 1: Use the imported config object for the key ---
+// --- FIX 2: Export the stripe instance so other modules can use it ---
+export const stripe = new Stripe(
   config.nodeEnv === 'production' 
     ? process.env.STRIPE_SECRET_KEY_PROD // This would also be config.stripeSecretKeyProd
     : config.stripeSecretKey // Use the exported config variable
@@ -37,8 +38,9 @@ export const createPaymentIntent = async (booking) => {
 };
 
 export const processRefund = async (bookingId, amount = null, reason = 'requested_by_customer') => {
+  // --- FIX 3: Corrected table name 'bookings' to 'tour_bookings' ---
   const bookingResult = await pool.query(
-    'SELECT * FROM bookings WHERE id = $1',
+    'SELECT * FROM tour_bookings WHERE id = $1',
     [bookingId]
   );
 
@@ -69,8 +71,9 @@ export const processRefund = async (bookingId, amount = null, reason = 'requeste
   });
 
   // Update booking
+  // --- FIX 4: Corrected table name 'bookings' to 'tour_bookings' ---
   await pool.query(
-    `UPDATE bookings 
+    `UPDATE tour_bookings 
      SET payment_status = 'refunded',
          refund_amount = $1,
          refunded_at = NOW(),
@@ -117,8 +120,9 @@ export const handleWebhook = async (rawBody, signature) => {
 };
 
 const handlePaymentSuccess = async (paymentIntent) => {
+  // --- FIX 5: Corrected table name 'bookings' to 'tour_bookings' ---
   const result = await pool.query(
-    'SELECT id FROM bookings WHERE payment_intent_id = $1',
+    'SELECT id FROM tour_bookings WHERE payment_intent_id = $1',
     [paymentIntent.id]
   );
 
@@ -128,8 +132,9 @@ const handlePaymentSuccess = async (paymentIntent) => {
 };
 
 const handlePaymentFailure = async (paymentIntent) => {
+  // --- FIX 6: Corrected table name 'bookings' to 'tour_bookings' ---
   await pool.query(
-    `UPDATE bookings 
+    `UPDATE tour_bookings 
      SET payment_status = 'failed', updated_at = NOW()
      WHERE payment_intent_id = $1`,
     [paymentIntent.id]
