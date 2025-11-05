@@ -9,13 +9,13 @@ import TourCollectionPage from '../modules/MADTours/TourCollectionPage/TourColle
 import TourDetailPage from '../modules/MADTours/TourDetailPage/TourDetailPage.jsx';
 
 // --- Widget ("UI Component") Imports ---
-import AvailabilityWidget from '../ui/MADTours/AvailabilityWidget/AvailabilityWidget.jsx';
-import FeaturedTourWidget from '../ui/MADTours/FeaturedTourWidget/FeaturedTourWidget.jsx';
-import BookingCalendar from '../ui/MADTours/BookingCalendar/BookingCalendar.jsx';
-import AvailabilityBookingWidget from '../ui/MADTours/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx';
-import AvailabilityIndicatorWidget from '../ui/MADTours/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.jsx';
+import AvailabilityWidget from '../ui/MADTours/Widgets/AvailabilityWidget/AvailabilityWidget.jsx';
+import FeaturedTourWidget from '../ui/MADTours/Widgets/FeaturedTourWidget/FeaturedTourWidget.jsx';
+import BookingCalendar from '../ui/MADTours/Widgets/BookingCalendar/BookingCalendar.jsx';
+import AvailabilityBookingWidget from '../ui/MADTours/Widgets/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx';
+import AvailabilityIndicatorWidget from '../ui/MADTours/Widgets/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.jsx';
 // --- NEW: Import the new TicketBookingWidget ---
-import TicketBookingWidget from '../ui/MADTours/TicketBookingWidget/TicketBookingWidget.jsx';
+import TicketBookingWidget from '../ui/MADTours/Widgets/TicketBookingWidget/TicketBookingWidget.jsx';
 
 
 // --- Component List with 'type' and clean labels ---

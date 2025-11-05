@@ -1,6 +1,6 @@
-// client/src/modules/MADTours/BookingCalendar/BookingCalendar.jsx
+// client/src/modules/MADTours/Widgets/BookingCalendar/BookingCalendar.jsx
 import React, { useState, useEffect } from 'react';
-import { getTourAvailability } from '../../../services/public/tourBookingService.js';
+import { getTourAvailability } from '../../../../services/public/tourBookingService.js';
 import styles from './BookingCalendar.module.css';
 
 // Helper to get days in a month for the calendar grid

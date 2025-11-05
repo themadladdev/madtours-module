@@ -1,6 +1,6 @@
-// client/src/modules/MADTours/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx
+// client/src/modules/MADTours/Widgets/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx
 import React, { useState, useEffect } from 'react';
-import { getActiveTours, getTourAvailability } from '../../../services/public/tourBookingService.js';
+import { getActiveTours, getTourAvailability } from '../../../../services/public/tourBookingService.js';
 import styles from './AvailabilityBookingWidget.module.css';
 
 // --- Calendar Helper Functions ---

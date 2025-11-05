@@ -1,0 +1,36 @@
+/* client/src/ui/MADTours/WidgetComponents/TicketSelector/TicketSelector.module.css */
+/* Uses variables defined in client/src/styles/global.css */
+
+.ticketRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.ticketInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.ticketName {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.ticketPrice {
+  font-size: 0.9rem;
+  color: var(--grey-700);
+}
+
+.ticketInput {
+  width: 70px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-background);
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: center;
+}

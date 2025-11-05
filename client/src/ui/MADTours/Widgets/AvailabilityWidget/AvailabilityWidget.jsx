@@ -1,6 +1,6 @@
 // client/src/modules/MADTours/AvailabilityWidget/AvailabilityWidget.jsx
 import React, { useState, useEffect } from 'react';
-import { getActiveTours } from '../../../services/public/tourBookingService.js';
+import { getActiveTours } from '../../../../services/public/tourBookingService.js';
 import styles from './AvailabilityWidget.module.css';
 
 const AvailabilityWidget = () => {

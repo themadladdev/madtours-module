@@ -1,4 +1,4 @@
-/* client/src/modules/MADTours/BookingCalendar/BookingCalendar.module.css */
+/* client/src/modules/MADTours/Widgets/AvailabilityBookingWidget/AvailabilityBookingWidget.module.css */
 /* Uses variables defined in client/src/styles/global.css */
 
 .widgetContainer {
@@ -6,12 +6,11 @@
     border: 1px solid var(--border-color);
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(var(--text-rgb), 0.08);
+    max-width: 400px;
+    margin: 1rem auto;
 }
 
 .widgetHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
 }
@@ -21,28 +20,59 @@
     font-weight: 600;
     color: var(--text);
     margin: 0;
+    text-align: center;
+}
+
+/* --- Step 1: Tour Selection --- */
+.tourSelectorGroup {
+    padding: 1.5rem;
+}
+
+.tourSelectorGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--grey-700);
+}
+
+.input {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text);
+    font-size: 0.9rem;
+}
+
+/* --- Step 2: Calendar Section --- */
+.calendarSection {
+    border-top: 1px solid var(--border-color);
 }
 
 .guestSelector {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
+    padding: 1.5rem 1.5rem 0 1.5rem;
 }
 
 .guestSelector label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--grey-700);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .guestInput {
-    width: 60px;
+    width: 70px;
     padding: 0.4rem 0.6rem;
     border: 1px solid var(--border-color);
     border-radius: 4px;
     background-color: var(--input-background);
     color: var(--text);
     font-size: 0.9rem;
+    text-align: center;
 }
 
 /* --- Month Navigator --- */

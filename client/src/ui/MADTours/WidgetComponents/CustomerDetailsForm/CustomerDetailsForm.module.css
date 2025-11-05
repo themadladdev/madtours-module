@@ -1,0 +1,41 @@
+/* client/src/ui/MADTours/WidgetComponents/CustomerDetailsForm/CustomerDetailsForm.module.css */
+/* Uses variables defined in client/src/styles/global.css */
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--grey-700);
+}
+
+/* --- Checkbox Group --- */
+.checkboxGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.checkboxGroup input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.checkboxGroup label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+}

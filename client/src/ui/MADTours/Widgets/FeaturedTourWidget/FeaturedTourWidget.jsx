@@ -1,6 +1,6 @@
 // client/src/modules/MADTours/FeaturedTourWidget/FeaturedTourWidget.jsx
 import React, { useState, useEffect } from 'react';
-import { getTourById } from '../../../services/public/tourBookingService.js';
+import { getTourById } from '../../../../services/public/tourBookingService.js';
 import styles from './FeaturedTourWidget.module.css';
 
 const FeaturedTourWidget = ({ tourId }) => {
