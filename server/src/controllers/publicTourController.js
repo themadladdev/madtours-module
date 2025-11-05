@@ -179,7 +179,7 @@ export const createBooking = async (req, res, next) => {
     console.error('Error creating booking:', error);
     // Send specific error message for availability issues
     if (error.message.includes('seats available') || error.message.includes('tour is no longer scheduled')) {
-      return res.status(409).json({ message: error.message });
+      return res.status(t09).json({ message: error.message });
     }
     next(error);
   }

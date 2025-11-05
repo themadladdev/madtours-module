@@ -5,7 +5,12 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config/environment.js';
 import { pool } from './db/db.js';
-import { startReminderCron } from './utils/tourReminderCron.js';
+
+// --- UPDATED: Import both cron jobs ---
+import { 
+  startReminderCron, 
+  startAbandonedCartCron // 1. IMPORT THE NEW JANITOR
+} from './utils/tourReminderCron.js';
 
 // --- Import MADTours Routes (FIXED) ---
 import adminTourRoutes from './routes/adminTourRoutes.js';
@@ -79,6 +84,7 @@ const startServer = async () => {
       // Start cron jobs
       if (config.nodeEnv === 'production') { // Corrected logic location
          startReminderCron();
+         startAbandonedCartCron(); // 2. CALL THE NEW JANITOR
       }
     });
   } catch (err) {
