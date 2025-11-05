@@ -1,7 +1,16 @@
-/* client/src/adminPortal/MADTourManagement/InstanceManager/PriceManagerModal.module.css */
+/* client/src/adminPortal/MADTourManagement/InstanceManager/PriceManagerModal.module.css
+ * Uses variables from /client/src/styles/global.css
+ * Uses styles from /client/src/adminPortal/adminshared.module.css */
 
-.priceEditor {
-  padding: 1rem;
-  background: var(--grey-100);
-  border-radius: 4px;
+.priceForm {
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Ensure form groups in the form share space */
+.priceForm .formGroup {
+  flex: 1;
+  min-width: 200px;
 }

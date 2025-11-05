@@ -58,3 +58,24 @@ export const setPricingForTour = async (tourId, pricing) => {
     body: JSON.stringify({ pricing }),
   });
 };
+
+// === 4. Pricing Exceptions (tour_pricing_exceptions) ===
+
+/**
+ * Applies a "Macro" price adjustment as a batch of "Micro" exceptions.
+ * The backend will iterate the date range, find-or-create all
+ * relevant tour_instances, and UPSERT rows into tour_pricing_exceptions.
+ * * @param {object} adjustmentData
+ * @param {number} adjustmentData.tourId
+ * @param {number} adjustmentData.ticketId
+ * @param {string} adjustmentData.startDate
+ * @param {string} adjustmentData.endDate
+ * @param {number} adjustmentData.price
+ * @returns {Promise<object>}
+ */
+export const applyPriceExceptionBatch = async (adjustmentData) => {
+  return adminApiFetch('/admin/tickets/exceptions/batch-apply', {
+    method: 'POST',
+    body: JSON.stringify(adjustmentData),
+  });
+};

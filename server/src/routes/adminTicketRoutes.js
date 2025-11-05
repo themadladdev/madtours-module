@@ -27,4 +27,8 @@ router.get('/pricing/tour/:tourId', controller.getPricingForTour);
 // Set all pricing rules for a specific tour (full overwrite)
 router.post('/pricing/tour/:tourId', controller.setPricingForTour);
 
+// --- 4. tour_pricing_exceptions (NEW) ---
+// Apply a "Macro" price adjustment over a date range
+router.post('/exceptions/batch-apply', controller.applyPriceExceptionBatch);
+
 export default router;

@@ -75,6 +75,7 @@ const InstanceManager = () => {
     }
   }, [toast]);
 
+  // --- FIX: Corrected arrow function syntax ---
   const loadInstances = async () => {
     setLoading(true);
     setToast(null); 
@@ -176,6 +177,14 @@ const InstanceManager = () => {
     loadInstances();
     setToast({ type: 'success', message: 'Blackout range has been updated.' });
   };
+
+  // --- NEW: Handler for successful price adjustment ---
+  const handlePriceSuccess = (result) => {
+    console.log('Price adjustment success:', result);
+    setIsPriceModalOpen(false);
+    // We don't need to reload instances, as this doesn't change their status
+    setToast({ type: 'success', message: 'Price adjustment has been applied.' });
+  };
   
   const selectedTour = tours.find(t => t.id === parseInt(selectedTourId));
 
@@ -242,6 +251,7 @@ const InstanceManager = () => {
             type="date"
             className={sharedStyles.input}
             value={filters.startDate}
+            // --- FIX: Corrected typo ---
             onChange={(e) => setFilters({ ...filters, startDate: e.target.value, endDate: e.target.value })}
           />
         </div>
@@ -280,6 +290,7 @@ const InstanceManager = () => {
               <th className={styles.textLeft}>Date</th>
               <th className={styles.textCenter}>Time</th>
               <th className={styles.textCenter}>Status</th>
+              {/* --- FIX: Corrected typo --- */}
               <th className={styles.textCenter}>Booked</th>
               <th className={styles.textCenter}>Capacity</th>
               <th className={styles.textCenter}>Actions (Micro)</th>
@@ -403,7 +414,6 @@ const InstanceManager = () => {
       >
       </ConfirmationDialog>
       
-      {/* --- FIX: Pass the boolean variable directly --- */}
       <BlackoutManagerModal
         isOpen={isBlackoutModalOpen}
         onClose={() => setIsBlackoutModalOpen(false)}
@@ -414,6 +424,7 @@ const InstanceManager = () => {
       <PriceManagerModal
         isOpen={isPriceModalOpen}
         onClose={() => setIsPriceModalOpen(false)}
+        onSuccess={handlePriceSuccess}
         tour={selectedTour}
       />
     </div>

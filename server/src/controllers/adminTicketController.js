@@ -106,3 +106,32 @@ export const setPricingForTour = async (req, res, next) => {
     next(error);
   }
 };
+
+// --- 4. tour_pricing_exceptions (NEW) ---
+
+export const applyPriceExceptionBatch = async (req, res, next) => {
+  try {
+    const { tourId, ticketId, startDate, endDate, price } = req.body;
+
+    // Basic validation
+    if (!tourId || !ticketId || !startDate || !endDate || price === undefined) {
+      return res.status(400).json({ message: 'Missing required fields: tourId, ticketId, startDate, endDate, price' });
+    }
+    if (parseFloat(price) < 0) {
+      return res.status(400).json({ message: 'Price cannot be negative' });
+    }
+
+    const result = await ticketService.applyPriceExceptionBatch({
+      tourId: parseInt(tourId, 10),
+      ticketId: parseInt(ticketId, 10),
+      startDate,
+      endDate,
+      price: parseFloat(price)
+    });
+    
+    res.status(201).json(result);
+
+  } catch (error) {
+    next(error);
+  }
+};

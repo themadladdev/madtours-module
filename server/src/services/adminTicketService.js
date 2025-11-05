@@ -2,6 +2,10 @@
 // Manages all database interactions for the Ticket Library.
 
 import { pool } from '../db/db.js';
+// --- NEW ---
+// Import the helper function from tourService
+import { findOrCreateInstance } from './tourService.js';
+// --- END NEW ---
 
 // --- 1. tour_tickets (Ticket Definitions) ---
 
@@ -148,6 +152,131 @@ export const setPricingForTour = async (tourId, pricing) => {
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
+  } finally {
+    client.release();
+  }
+};
+
+// --- 4. tour_pricing_exceptions (NEW BATCH FUNCTION) ---
+
+/**
+ * Applies a "Macro" price adjustment as a batch of "Micro" exceptions.
+ * This function iterates a date range, finds/creates all relevant
+ * tour_instances, and UPSERTS their price into tour_pricing_exceptions.
+ */
+export const applyPriceExceptionBatch = async ({ tourId, ticketId, startDate, endDate, price }) => {
+  console.log(`[Service] Starting batch-price-adjustment for Tour ${tourId}...`);
+  const client = await pool.connect();
+  let affected_instances_count = 0;
+
+  try {
+    await client.query('BEGIN');
+
+    // --- Step 1: Get Tour Rules (Schedule and default capacity) ---
+    // This logic is mirrored from batchCancelBlackout
+    const tourRulesResult = await client.query(
+      `SELECT 
+         t.capacity AS default_capacity,
+         ts.schedule_config
+       FROM tours t
+       JOIN tour_schedules ts ON t.id = ts.tour_id
+       WHERE t.id = $1 AND ts.active = true
+       LIMIT 1`,
+      [tourId]
+    );
+
+    if (tourRulesResult.rows.length === 0) {
+      throw new Error(`No active tour or schedule found for Tour ID ${tourId}.`);
+    }
+
+    const { default_capacity, schedule_config } = tourRulesResult.rows[0];
+
+    // --- THIS IS THE FIX ---
+    // The schedule_config object has a nested 'schedule' object.
+    const scheduleRules = schedule_config.schedule;
+    // --- END FIX ---
+
+    if (!scheduleRules || !scheduleRules.times || !scheduleRules.days_of_week) {
+      throw new Error(`Tour ${tourId} has invalid or missing schedule config.`);
+    }
+
+    // --- Step 2: Generate list of all virtual tours for this range ---
+    const toursToPrice = [];
+    const start = new Date(`${startDate}T00:00:00Z`); // Explicitly UTC
+    const end = new Date(`${endDate}T00:00:00Z`);   // Explicitly UTC
+
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+      const dayOfWeek = d.getUTCDay(); // 0 = Sunday
+      const dateString = d.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      // Check if this day is a scheduled day
+      if (scheduleRules.days_of_week.includes(dayOfWeek)) {
+        // Add all times for this day
+        for (const time of scheduleRules.times) {
+          toursToPrice.push({
+            date: dateString,
+            time: `${time}:00`
+          });
+        }
+      }
+    }
+    
+    if (toursToPrice.length === 0) {
+       console.log(`[Service] No virtual tours scheduled in this range.`);
+       // We can still commit, as no action is needed.
+    }
+
+    // --- Step 3: Loop virtual tours, find/create instance, upsert price ---
+    console.log(`[Service] Found ${toursToPrice.length} virtual tours to price...`);
+    
+    for (const tour of toursToPrice) {
+      const { date, time } = tour;
+      
+      // 1. Get the tour_instance_id (atomically)
+      const instance = await findOrCreateInstance(client, {
+        tourId: tourId,
+        date: date,
+        time: time,
+        defaultCapacity: default_capacity
+      });
+      
+      const instanceId = instance.id;
+
+      // 2. UPSERT the price into tour_pricing_exceptions
+      const priceResult = await client.query(
+        `INSERT INTO tour_pricing_exceptions 
+           (tour_instance_id, ticket_id, price)
+         VALUES 
+           ($1, $2, $3)
+         ON CONFLICT (tour_instance_id, ticket_id)
+         DO UPDATE SET
+           price = $3,
+           updated_at = NOW()
+         RETURNING id`,
+        [instanceId, ticketId, price]
+      );
+      
+      if (priceResult.rows.length > 0) {
+        affected_instances_count++;
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`[Service] Batch-price-adjustment transaction committed.`);
+
+    return {
+      affected_instances: affected_instances_count,
+      tour_id: tourId,
+      ticket_id: ticketId,
+      new_price: price,
+      start_date: startDate,
+      end_date: endDate
+    };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('[Service] Error in applyPriceExceptionBatch:', error);
+    throw new Error(`Failed to apply price adjustment: ${error.message}`);
   } finally {
     client.release();
   }
