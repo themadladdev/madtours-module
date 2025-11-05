@@ -1,0 +1,75 @@
+/* client/src/adminPortal/MADTourManagement/InstanceManager/MicroPriceEditorModal.module.css */
+
+.priceEditor {
+  margin-top: 1.5rem;
+}
+
+.priceTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.priceTable th {
+  background: var(--grey-100);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-align: left;
+}
+
+.priceTable td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+.priceTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.priceTable th:nth-child(2),
+.priceTable td:nth-child(2) {
+  text-align: center;
+}
+.priceTable th:last-child,
+.priceTable td:last-child {
+  text-align: right;
+  width: 150px; /* Give space for the input */
+}
+
+/* New compact input field */
+.priceInputWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.dollarSign {
+  position: absolute;
+  top: 50%;
+  left: 0.8rem;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  color: var(--grey-700);
+  pointer-events: none;
+}
+
+.priceInput {
+  /* Use shared styles as a base but override padding */
+  composes: input from '../../adminshared.module.css';
+  width: 120px;
+  padding: 0.6rem 0.8rem 0.6rem 1.75rem; /* Left padding for $ sign */
+  text-align: left;
+}
+
+/* Remove arrows for text/number input */
+.priceInput::-webkit-outer-spin-button,
+.priceInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.priceInput[type=number] {
+  -moz-appearance: textfield;
+}

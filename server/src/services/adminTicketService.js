@@ -157,7 +157,7 @@ export const setPricingForTour = async (tourId, pricing) => {
   }
 };
 
-// --- 4. tour_pricing_exceptions (NEW BATCH FUNCTION) ---
+// --- 4. tour_pricing_exceptions (Macro) ---
 
 /**
  * Applies a "Macro" price adjustment as a batch of "Micro" exceptions.
@@ -190,11 +190,9 @@ export const applyPriceExceptionBatch = async ({ tourId, ticketId, startDate, en
     }
 
     const { default_capacity, schedule_config } = tourRulesResult.rows[0];
-
-    // --- THIS IS THE FIX ---
-    // The schedule_config object has a nested 'schedule' object.
-    const scheduleRules = schedule_config.schedule;
-    // --- END FIX ---
+    
+    // This is the correct structure per batchCancelBlackout
+    const scheduleRules = schedule_config.schedule; 
 
     if (!scheduleRules || !scheduleRules.times || !scheduleRules.days_of_week) {
       throw new Error(`Tour ${tourId} has invalid or missing schedule config.`);
@@ -277,6 +275,121 @@ export const applyPriceExceptionBatch = async ({ tourId, ticketId, startDate, en
     await client.query('ROLLBACK');
     console.error('[Service] Error in applyPriceExceptionBatch:', error);
     throw new Error(`Failed to apply price adjustment: ${error.message}`);
+  } finally {
+    client.release();
+  }
+};
+
+// --- 5. tour_pricing_exceptions (Micro) (NEW) ---
+
+/**
+ * Gets the resolved pricing for a single tour instance.
+ * 1. Finds/Creates the tour_instance row.
+ * 2. Fetches all "Rule" prices for that tour.
+ * 3. LEFT JOINS any "Exception" prices for that specific instance.
+ */
+export const getInstancePricing = async ({ tourId, date, time, capacity }) => {
+  const client = await pool.connect();
+  try {
+    // Step 1: Find or create the instance row to get its ID
+    const instance = await findOrCreateInstance(client, {
+      tourId,
+      date,
+      time,
+      defaultCapacity: capacity
+    });
+    const instanceId = instance.id;
+    
+    // Step 2: Fetch all "Rule" prices for this tour, and LEFT JOIN any
+    // "Exception" prices for this specific instance.
+    const { rows } = await client.query(
+      `SELECT
+         tp.ticket_id,
+         tt.name,
+         tp.price AS rule_price,
+         tpe.price AS exception_price
+       FROM tour_pricing tp
+       JOIN tour_tickets tt ON tp.ticket_id = tt.id
+       LEFT JOIN tour_pricing_exceptions tpe 
+         ON tp.ticket_id = tpe.ticket_id
+         AND tpe.tour_instance_id = $1
+       WHERE tp.tour_id = $2
+       ORDER BY tt.type, tt.name`,
+      [instanceId, tourId]
+    );
+
+    return rows;
+    
+  } catch (error) {
+    console.error('[Service] Error in getInstancePricing:', error);
+    throw new Error(`Failed to get instance pricing: ${error.message}`);
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Sets (UPSERTS or DELETES) "Micro" price exceptions for an instance.
+ * 1. Finds/Creates the tour_instance row.
+ * 2. Loops through provided prices and updates the exceptions table.
+ */
+export const setInstancePricing = async ({ tourId, date, time, capacity, prices }) => {
+  const client = await pool.connect();
+  let affected_rows = 0;
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Step 1: Find or create the instance row to get its ID
+    const instance = await findOrCreateInstance(client, {
+      tourId,
+      date,
+      time,
+      defaultCapacity: capacity
+    });
+    const instanceId = instance.id;
+
+    // Step 2: Loop prices and apply changes
+    for (const p of prices) {
+      if (p.price === null || p.price === undefined) {
+        // --- DELETE EXCEPTION ---
+        // If price is null, remove the override
+        const { rowCount } = await client.query(
+          `DELETE FROM tour_pricing_exceptions
+           WHERE tour_instance_id = $1 AND ticket_id = $2`,
+          [instanceId, p.ticket_id]
+        );
+        if (rowCount > 0) affected_rows++;
+        
+      } else {
+        // --- UPSERT EXCEPTION ---
+        // If price is provided, add/update the override
+        const { rowCount } = await client.query(
+          `INSERT INTO tour_pricing_exceptions
+             (tour_instance_id, ticket_id, price)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (tour_instance_id, ticket_id)
+           DO UPDATE SET
+             price = $3,
+             updated_at = NOW()`,
+          [instanceId, p.ticket_id, p.price]
+        );
+        if (rowCount > 0) affected_rows++;
+      }
+    }
+    
+    await client.query('COMMIT');
+    
+    return {
+      message: 'Instance pricing updated',
+      instance_id: instanceId,
+      affected_rows: affected_rows
+    };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('[Service] Error in setInstancePricing:', error);
+    throw new Error(`Failed to set instance pricing: ${error.message}`);
   } finally {
     client.release();
   }

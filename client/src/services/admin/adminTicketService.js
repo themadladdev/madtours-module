@@ -79,3 +79,34 @@ export const applyPriceExceptionBatch = async (adjustmentData) => {
     body: JSON.stringify(adjustmentData),
   });
 };
+
+/**
+ * --- NEW: MICRO PRICING ---
+ * Gets the complete, resolved pricing for a single instance.
+ * Backend finds/creates the instance and returns all "Rule" prices
+ * merged with any "Exception" prices.
+ * @param {object} instanceData - { tourId, date, time, capacity }
+ * @returns {Promise<Array>} Array of price objects
+ */
+export const getInstancePricing = async ({ tourId, date, time, capacity }) => {
+  const params = new URLSearchParams({ tourId, date, time, capacity }).toString();
+  return adminApiFetch(`/admin/tickets/exceptions/instance-prices?${params}`);
+};
+
+/**
+ * --- NEW: MICRO PRICING ---
+ * Sets the "Micro" price exceptions for a single instance.
+ * @param {object} pricingData
+ * @param {number} pricingData.tourId
+ * @param {string} pricingData.date
+ * @param {string} pricingData.time
+ * @param {number} pricingData.capacity
+ * @param {Array} pricingData.prices - [{ ticket_id: 1, price: 150.00 }, ...]
+ * @returns {Promise<object>}
+ */
+export const setInstancePricing = async (pricingData) => {
+  return adminApiFetch('/admin/tickets/exceptions/instance-prices', {
+    method: 'POST',
+    body: JSON.stringify(pricingData),
+  });
+};

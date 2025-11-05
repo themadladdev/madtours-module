@@ -107,7 +107,7 @@ export const setPricingForTour = async (req, res, next) => {
   }
 };
 
-// --- 4. tour_pricing_exceptions (NEW) ---
+// --- 4. tour_pricing_exceptions (Macro) ---
 
 export const applyPriceExceptionBatch = async (req, res, next) => {
   try {
@@ -129,6 +129,51 @@ export const applyPriceExceptionBatch = async (req, res, next) => {
       price: parseFloat(price)
     });
     
+    res.status(201).json(result);
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// --- 5. tour_pricing_exceptions (Micro) (NEW) ---
+
+export const getInstancePricing = async (req, res, next) => {
+  try {
+    const { tourId, date, time, capacity } = req.query;
+    if (!tourId || !date || !time || !capacity) {
+      return res.status(400).json({ message: 'Missing required query params: tourId, date, time, capacity' });
+    }
+
+    const pricing = await ticketService.getInstancePricing({
+      tourId: parseInt(tourId, 10),
+      date,
+      time,
+      capacity: parseInt(capacity, 10)
+    });
+    
+    res.status(200).json(pricing);
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const setInstancePricing = async (req, res, next) => {
+  try {
+    const { tourId, date, time, capacity, prices } = req.body;
+    if (!tourId || !date || !time || !capacity || !Array.isArray(prices)) {
+      return res.status(400).json({ message: 'Missing required fields: tourId, date, time, capacity, and prices array' });
+    }
+
+    const result = await ticketService.setInstancePricing({
+      tourId: parseInt(tourId, 10),
+      date,
+      time,
+      capacity: parseInt(capacity, 10),
+      prices
+    });
+
     res.status(201).json(result);
 
   } catch (error) {

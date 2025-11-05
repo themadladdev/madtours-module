@@ -8,7 +8,8 @@ import {
 } from '../../../services/admin/adminTourService.js';
 import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
 import BlackoutManagerModal from './BlackoutManagerModal.jsx';
-import PriceManagerModal from './PriceManagerModal.jsx'; 
+import PriceManagerModal from './MacroPriceEditorModal.jsx'; 
+import MicroPriceEditorModal from './MicroPriceEditorModal.jsx';
 import styles from './InstanceManager.module.css';
 import sharedStyles from '../../adminshared.module.css'; 
 
@@ -34,8 +35,12 @@ const InstanceManager = () => {
   
   const [isBlackoutModalOpen, setIsBlackoutModalOpen] = useState(false);
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false); 
+  
+  const [microPriceModal, setMicroPriceModal] = useState({
+    isOpen: false,
+    instance: null
+  });
 
-  // --- NEW: Custom navigation handler ---
   const handleNavigate = (event, path) => {
     event.preventDefault();
     window.history.pushState({}, '', path);
@@ -75,7 +80,6 @@ const InstanceManager = () => {
     }
   }, [toast]);
 
-  // --- FIX: Corrected arrow function syntax ---
   const loadInstances = async () => {
     setLoading(true);
     setToast(null); 
@@ -112,11 +116,14 @@ const InstanceManager = () => {
     setReInstateDialog({ instance: null });
   };
 
+  // --- UPDATED: Removed faulty check ---
+  // This function now correctly opens the modal for ANY scheduled instance,
+  // virtual or real, letting the backend create the exception.
   const handleMicroPriceEdit = (instance) => {
-    setToast({ type: 'info', message: 'Price editing is not yet implemented.' });
+    setMicroPriceModal({ isOpen: true, instance: instance });
   };
+  // --- END UPDATE ---
 
-  // --- NEW: Manifest button handler ---
   const handleViewManifest = (e, instanceId) => {
     e.stopPropagation(); // Stop the row's click event
     handleNavigate(e, `/admin/tours/manifest/${instanceId}`);
@@ -178,12 +185,16 @@ const InstanceManager = () => {
     setToast({ type: 'success', message: 'Blackout range has been updated.' });
   };
 
-  // --- NEW: Handler for successful price adjustment ---
   const handlePriceSuccess = (result) => {
     console.log('Price adjustment success:', result);
     setIsPriceModalOpen(false);
-    // We don't need to reload instances, as this doesn't change their status
     setToast({ type: 'success', message: 'Price adjustment has been applied.' });
+  };
+  
+  const handleMicroPriceSuccess = (result) => {
+    console.log('Micro price success:', result);
+    setMicroPriceModal({ isOpen: false, instance: null });
+    setToast({ type: 'success', message: 'Instance prices have been updated.' });
   };
   
   const selectedTour = tours.find(t => t.id === parseInt(selectedTourId));
@@ -207,7 +218,7 @@ const InstanceManager = () => {
       {/* --- ROW 1: MACRO CONTROLS --- */}
       <div className={`${sharedStyles.filterBox} ${styles.macroBar}`}>
         <div className={sharedStyles.filterGroup} style={{ minWidth: '250px' }}>
-          <label htmlFor="tour-selector">Selected Tour (Macro Controls)</label>
+          <label htmlFor="tour-selector">Selected Tour</label>
           <select
             id="tour-selector"
             className={sharedStyles.input}
@@ -227,7 +238,7 @@ const InstanceManager = () => {
             onClick={() => setIsBlackoutModalOpen(true)}
             disabled={!selectedTourId}
           >
-            Manage Blackouts (Macro)
+            Manage Blackouts (Full Days)
           </button>
         </div>
         <div className={sharedStyles.filterGroup} style={{ justifyContent: 'flex-end' }}>
@@ -237,7 +248,7 @@ const InstanceManager = () => {
             onClick={() => setIsPriceModalOpen(true)}
             disabled={!selectedTourId}
           >
-            Manage Pricing (Macro)
+            Manage Pricing (Full Days)
           </button>
         </div>
       </div>
@@ -251,7 +262,6 @@ const InstanceManager = () => {
             type="date"
             className={sharedStyles.input}
             value={filters.startDate}
-            // --- FIX: Corrected typo ---
             onChange={(e) => setFilters({ ...filters, startDate: e.target.value, endDate: e.target.value })}
           />
         </div>
@@ -290,10 +300,9 @@ const InstanceManager = () => {
               <th className={styles.textLeft}>Date</th>
               <th className={styles.textCenter}>Time</th>
               <th className={styles.textCenter}>Status</th>
-              {/* --- FIX: Corrected typo --- */}
               <th className={styles.textCenter}>Booked</th>
               <th className={styles.textCenter}>Capacity</th>
-              <th className={styles.textCenter}>Actions (Micro)</th>
+              <th className={styles.textCenter}>Actions (per Tour)</th>
             </tr>
           </thead>
           <tbody>
@@ -323,7 +332,6 @@ const InstanceManager = () => {
                   <td className={styles.textCenter}>{instance.capacity}</td>
                   <td className={styles.actionsCell}>
                     
-                    {/* --- NEW: View Manifest Button --- */}
                     {instance.id && instance.booked_seats > 0 && (
                       <button
                         onClick={(e) => handleViewManifest(e, instance.id)}
@@ -336,13 +344,16 @@ const InstanceManager = () => {
                     
                     {instance.status === 'scheduled' && (
                       <>
+                        {/* --- UPDATED: Removed disabled logic --- */}
                         <button
                           onClick={() => handleMicroPriceEdit(instance)}
                           className={sharedStyles.secondaryButtonSmall}
                           style={{ marginRight: '0.5rem' }}
+                          title="Edit prices for this specific instance"
                         >
                           Edit Price
                         </button>
+                        {/* --- END UPDATE --- */}
                         <button
                           onClick={() => handleCancelClick(instance)}
                           className={sharedStyles.destructiveButtonSmall}
@@ -426,6 +437,13 @@ const InstanceManager = () => {
         onClose={() => setIsPriceModalOpen(false)}
         onSuccess={handlePriceSuccess}
         tour={selectedTour}
+      />
+      
+      <MicroPriceEditorModal
+        isOpen={microPriceModal.isOpen}
+        onClose={() => setMicroPriceModal({ isOpen: false, instance: null })}
+        onSuccess={handleMicroPriceSuccess}
+        instance={microPriceModal.instance}
       />
     </div>
   );

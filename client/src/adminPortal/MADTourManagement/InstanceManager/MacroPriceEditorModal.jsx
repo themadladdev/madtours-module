@@ -1,12 +1,14 @@
-// client/src/adminPortal/MADTourManagement/InstanceManager/PriceManagerModal.jsx
+// client/src/adminPortal/MADTourManagement/InstanceManager/MacroPriceEditorModal.jsx
 import React, { useState, useEffect } from 'react';
 import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
 import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
 import * as adminTicketService from '../../../services/admin/adminTicketService.js';
-import styles from './PriceManagerModal.module.css';
+// Updated CSS import
+import styles from './MacroPriceEditorModal.module.css';
 import sharedStyles from '../../adminshared.module.css';
 
-const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
+// Renamed component
+const MacroPriceEditorModal = ({ isOpen, onClose, tour, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState(''); // Form validation error
@@ -39,7 +41,7 @@ const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
             setTicketId(usableTickets[0].id);
           }
         } catch (err) {
-          console.error('[PriceManagerModal] Error loading tickets:', err);
+          console.error('[MacroPriceEditorModal] Error loading tickets:', err);
           setToast({ type: 'error', message: 'Failed to load ticket types.' });
         }
         setLoading(false);
@@ -70,6 +72,23 @@ const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
     }
   }, [toast]);
 
+  // --- NEW: Correct date logic ---
+  const handleStartDateChange = (newStartDate) => {
+    setStartDate(newStartDate);
+    // If end date is now before start date, update end date
+    if (new Date(endDate) < new Date(newStartDate)) {
+      setEndDate(newStartDate);
+    }
+  };
+
+  // --- NEW: Price input handler (removes arrows) ---
+  const handlePriceChange = (value) => {
+    // Allow only numbers and a single decimal point
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setPrice(value);
+    }
+  };
+
   const handleApplyClick = () => {
     // Form Validation
     setError('');
@@ -77,7 +96,7 @@ const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
       setError('A ticket type is required.');
       return;
     }
-    if (price === '' || isNaN(price) || parseFloat(price) < 0) {
+    if (price === '' || isNaN(price) || parseFloat(price) <= 0) {
       setError('A valid, non-negative price is required.');
       return;
     }
@@ -104,19 +123,19 @@ const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
       price: parseFloat(price)
     };
 
-    console.log('[PriceManagerModal] Applying price adjustment:', adjustmentData);
+    console.log('[MacroPriceEditorModal] Applying price adjustment:', adjustmentData);
 
     try {
       const result = await adminTicketService.applyPriceExceptionBatch(adjustmentData);
       
-      console.log('[PriceManagerModal] Success:', result);
+      console.log('[MacroPriceEditorModal] Success:', result);
       
       setLoading(false);
       setIsConfirming(false);
       onSuccess(result); // Tell parent to refresh (or show success)
 
     } catch (err) {
-      console.error('[PriceManagerModal] Error applying adjustment:', err);
+      console.error('[MacroPriceEditorModal] Error applying adjustment:', err);
       setToast({ type: 'error', message: err.message || 'Failed to apply price adjustment.' });
       setError('');
       setLoading(false);
@@ -177,7 +196,8 @@ const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
               id="price-start-date"
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              // --- UPDATED: Use new handler ---
+              onChange={(e) => handleStartDateChange(e.target.value)}
               className={sharedStyles.input}
               disabled={loading}
             />
@@ -189,6 +209,7 @@ const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
               id="price-end-date"
               type="date"
               value={endDate}
+              // --- UPDATED: Min date is now startDate ---
               min={startDate}
               onChange={(e) => setEndDate(e.target.value)}
               className={sharedStyles.input}
@@ -198,13 +219,13 @@ const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
           
           <div className={sharedStyles.formGroup} style={{ flexBasis: '100%' }}>
             <label htmlFor="price-override-price">New Override Price (Required)</label>
+            {/* --- UPDATED: Changed to type="text" --- */}
             <input
               id="price-override-price"
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
+              inputMode="decimal"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => handlePriceChange(e.target.value)}
               className={sharedStyles.input}
               placeholder="e.g., 150.00"
               disabled={loading}
@@ -248,4 +269,5 @@ const PriceManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
   );
 };
 
-export default PriceManagerModal;
+// Renamed default export
+export default MacroPriceEditorModal;
