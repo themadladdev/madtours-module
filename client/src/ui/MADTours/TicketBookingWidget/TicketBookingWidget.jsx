@@ -1,6 +1,8 @@
 // client/src/ui/MADTours/TicketBookingWidget/TicketBookingWidget.jsx
 import React, { useState, useEffect } from 'react';
 import * as tourBookingService from '../../../services/public/tourBookingService.js';
+// --- NEW: Import the toast hook ---
+import { useToast } from '../../toast/useToast.js';
 import styles from './TicketBookingWidget.module.css';
 
 // --- Calendar Helper Functions ---
@@ -10,12 +12,16 @@ const monthNames = ["January", "February", "March", "April", "May", "June", "Jul
 // ---
 
 const TicketBookingWidget = () => {
+  // --- NEW: Use toast hook for errors ---
+  const { showToast } = useToast();
+
   // --- State for data loading ---
   const [tours, setTours] = useState([]);
   const [pricing, setPricing] = useState([]);
   const [availability, setAvailability] = useState({});
   const [loading, setLoading] = useState({ tours: true, availability: false, pricing: false, booking: false });
-  const [error, setError] = useState(null);
+  // --- REMOVED: error state ---
+  // const [error, setError] = useState(null);
 
   // --- State for tour selection ---
   const [selectedTourId, setSelectedTourId] = useState('');
@@ -56,7 +62,8 @@ const TicketBookingWidget = () => {
 
   const totalAmount = ticketSelection.reduce((sum, item) => {
     const priceRule = pricing.find(p => p.ticket_id === item.ticket_id);
-    return sum + ((priceRule ? priceRule.price : 0) * item.quantity);
+    // --- UPDATED: Use 'price' field, which is now the resolved price ---
+    return sum + ((priceRule ? parseFloat(priceRule.price) : 0) * item.quantity);
   }, 0);
 
   const selectedSlot = (selectedDate && availability[selectedDate]?.find(s => s.time.substring(0, 5) === selectedTime)) || null;
@@ -65,39 +72,18 @@ const TicketBookingWidget = () => {
   useEffect(() => {
     const loadTours = async () => {
       setLoading(p => ({ ...p, tours: true }));
-      setError(null);
       try {
         const activeTours = await tourBookingService.getActiveTours();
         setTours(activeTours);
       } catch (err) {
-        setError(err.message);
+        // --- UPDATED: Use toast ---
+        showToast(err.message, 'error');
       } finally {
         setLoading(p => ({ ...p, tours: false }));
       }
     };
     loadTours();
-  }, []);
-
-  // --- Load pricing when tour changes ---
-  useEffect(() => {
-    if (!selectedTourId) {
-      setPricing([]);
-      return;
-    }
-    const loadPricing = async () => {
-      setLoading(p => ({ ...p, pricing: true }));
-      setError(null);
-      try {
-        const pricingData = await tourBookingService.getTourPricing(selectedTourId);
-        setPricing(pricingData);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(p => ({ ...p, pricing: false }));
-      }
-    };
-    loadPricing();
-  }, [selectedTourId]);
+  }, []); // showToast is stable, no need to add as dependency
 
   // --- Load availability when tour, month, or total seats changes ---
   useEffect(() => {
@@ -107,7 +93,6 @@ const TicketBookingWidget = () => {
     }
     const loadAvailability = async () => {
       setLoading(p => ({ ...p, availability: true }));
-      setError(null);
       try {
         const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
         const availableSlots = await tourBookingService.getTourAvailability(
@@ -119,23 +104,22 @@ const TicketBookingWidget = () => {
           const dateKey = slot.date.split('T')[0];
           if (!acc[dateKey]) acc[dateKey] = [];
           acc[dateKey].push({
-            time: slot.time.substring(0, 5),
+            time: slot.time, // e.g., "09:00:00"
             availableSeats: slot.available_seats
           });
           return acc;
         }, {});
         setAvailability(availabilityMap);
       } catch (err) {
-        setError(err.message);
+        // --- UPDATED: Use toast ---
+        showToast(err.message, 'error');
       } finally {
         setLoading(p => ({ ...p, availability: false }));
       }
     };
     
-    if (!loading.pricing) {
-        loadAvailability();
-    }
-  }, [selectedTourId, currentMonth, currentYear, totalSelectedSeats, loading.pricing]);
+    loadAvailability();
+  }, [selectedTourId, currentMonth, currentYear, totalSelectedSeats, showToast]);
 
   // --- Event Handlers ---
 
@@ -144,6 +128,7 @@ const TicketBookingWidget = () => {
     setSelectedDate(null);
     setSelectedTime(null);
     setTicketSelection([]);
+    setPricing([]); // Clear pricing
   };
 
   const handleTourChange = (e) => {
@@ -164,13 +149,37 @@ const TicketBookingWidget = () => {
     if (availability[dateKey]) {
       setSelectedDate(dateKey);
       setSelectedTime(null);
+      setPricing([]); // Clear pricing if new date is selected
+      setStep(1); // Go back to step 1
     }
   };
 
-  const handleTimeClick = (time) => {
-    setSelectedTime(time);
-    setStep(2); // Move to ticket selection
+  // --- UPDATED: Fetches pricing on time selection ---
+  const handleTimeClick = async (time) => { // time is HH:MM:SS
+    const timeShort = time.substring(0, 5); // HH:MM
+    
+    setSelectedTime(timeShort);
+    setLoading(p => ({ ...p, pricing: true })); // Set loading
+    setPricing([]); // Clear old pricing
+    
+    try {
+      // Call the new service function
+      const pricingData = await tourBookingService.getResolvedInstancePricing(
+        selectedTourId,
+        selectedDate,
+        time // Send full HH:MM:SS
+      );
+      setPricing(pricingData); // Set new pricing
+      setStep(2); // Move to ticket selection
+    } catch (err) {
+      // --- UPDATED: Use toast ---
+      showToast(err.message, 'error');
+      setStep(1); // Stay on step 1 if pricing fails
+    } finally {
+      setLoading(p => ({ ...p, pricing: false }));
+    }
   };
+  // --- END UPDATE ---
 
   const handleTicketChange = (ticket_id, quantity) => {
     const qty = Math.max(0, parseInt(quantity, 10) || 0);
@@ -197,7 +206,6 @@ const TicketBookingWidget = () => {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setLoading(p => ({ ...p, booking: true }));
-    setError(null);
 
     let passengerList = [];
     if (isPayerAPassenger) {
@@ -211,7 +219,7 @@ const TicketBookingWidget = () => {
     const bookingData = {
       tourId: selectedTourId,
       date: selectedDate,
-      time: selectedTime,
+      time: selectedTime, // Send HH:MM
       customer: customer,
       tickets: ticketSelection,
       passengers: passengerList, 
@@ -226,11 +234,13 @@ const TicketBookingWidget = () => {
     try {
       const result = await tourBookingService.createTicketBooking(bookingData);
       console.log("Booking STUB success:", result);
-      alert(`STUB: Booking submitted! Client Secret: ${result.payment.clientSecret}`);
+      // --- UPDATED: Use toast ---
+      showToast('Booking submitted! (STUB)', 'success');
       resetSelections();
       
     } catch (err) {
-      setError(err.message);
+      // --- UPDATED: Use toast ---
+      showToast(err.message, 'error');
     } finally {
       setLoading(p => ({ ...p, booking: false }));
     }
@@ -270,10 +280,11 @@ const TicketBookingWidget = () => {
           {availability[selectedDate].map(slot => (
             <button
               key={slot.time}
-              className={`${styles.timeSlotButton} ${selectedTime === slot.time ? styles.selected : ''}`}
+              // --- UPDATED: Pass full HH:MM:SS to handler ---
+              className={`${styles.timeSlotButton} ${selectedTime === slot.time.substring(0, 5) ? styles.selected : ''}`}
               onClick={() => handleTimeClick(slot.time)}
             >
-              <span className={styles.slotTime}>{slot.time}</span>
+              <span className={styles.slotTime}>{slot.time.substring(0, 5)}</span>
               <span className={styles.slotSeats}>{slot.availableSeats} seats</span>
             </button>
           ))}
@@ -308,7 +319,8 @@ const TicketBookingWidget = () => {
           <div key={ticket.ticket_id} className={styles.ticketRow}>
             <div className={styles.ticketInfo}>
               <span className={styles.ticketName}>{ticket.ticket_name}</span>
-              <span className={styles.ticketPrice}>${ticket.price}</span>
+              {/* --- UPDATED: Parse price as float for .toFixed --- */}
+              <span className={styles.ticketPrice}>${parseFloat(ticket.price).toFixed(2)}</span>
             </div>
             <input
               type="number"
@@ -385,7 +397,8 @@ const TicketBookingWidget = () => {
         <h3 className={styles.widgetTitle}>Book Your Tour</h3>
       </div>
       
-      {error && <p className={styles.errorText}>{error}</p>}
+      {/* --- REMOVED: Inline error message --- */}
+      {/* {error && <p className={styles.errorText}>{error}</p>} */}
 
       <div className={styles.tourSelectorGroup}>
         <label htmlFor="tour-select">Select a Tour</label>

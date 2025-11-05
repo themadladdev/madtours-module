@@ -128,6 +128,35 @@ export const getTourPricing = async (req, res, next) => {
 };
 // --- END NEW FUNCTION ---
 
+// --- NEW: Get resolved pricing for a single instance ---
+/**
+ * Get the final, resolved ticket prices for a specific tour instance
+ * GET /api/tours/:id/pricing/instance?date=...&time=...
+ */
+export const getResolvedInstancePricing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { date, time } = req.query;
+
+    if (!id || !date || !time) {
+      return res.status(400).json({ message: 'Tour ID, date, and time are required' });
+    }
+
+    const pricing = await publicTicketService.getResolvedInstancePricing({
+      tourId: parseInt(id, 10),
+      date,
+      time
+    });
+    
+    res.json(pricing);
+  } catch (error) {
+    console.error(`Error fetching resolved pricing for tour ${req.params.id}:`, error);
+    next(error);
+  }
+};
+// --- END NEW FUNCTION ---
+
+
 /**
  * Create a new booking and payment intent using "Just-in-Time" logic
  * POST /api/tours/bookings
@@ -179,7 +208,7 @@ export const createBooking = async (req, res, next) => {
     console.error('Error creating booking:', error);
     // Send specific error message for availability issues
     if (error.message.includes('seats available') || error.message.includes('tour is no longer scheduled')) {
-      return res.status(t09).json({ message: error.message });
+      return res.status(409).json({ message: error.message });
     }
     next(error);
   }

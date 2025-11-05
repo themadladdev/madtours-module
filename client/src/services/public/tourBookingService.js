@@ -31,7 +31,7 @@ export const getTourAvailability = (tourId, month, seats) => {
 
 // --- NEW: Function to get pricing from the Ticket Library ---
 /**
- * Fetches all available ticket prices for a tour.
+ * Fetches all available ticket prices for a tour. (DEPRECATED FOR WIDGET)
  * Corresponds to: GET /api/tours/:id/pricing
  * @param {number} tourId - The ID of the tour.
  */
@@ -75,4 +75,19 @@ export const createTicketBooking = (bookingData) => {
  */
 export const getBookingByReference = (reference) => {
   return publicApiFetch(`/tours/bookings/${reference}`);
+};
+
+/**
+ * --- NEW: Get Resolved Pricing for a Specific Instance ---
+ * Fetches the final, resolved prices (Rule + Exception) for one instance.
+ * Corresponds to: GET /api/tours/:id/pricing/instance
+ * @param {string} tourId - The ID of the tour
+ * @param {string} date - The selected date (YYYY-MM-DD)
+ * @param {string} time - The selected time (HH:MM:SS)
+ */
+// --- THIS IS THE FIX: Added 'export' ---
+export const getResolvedInstancePricing = (tourId, date, time) => {
+  const params = new URLSearchParams({ date, time }).toString();
+  // We use the full HH:MM:SS time from the instance to match the DB
+  return publicApiFetch(`/tours/${tourId}/pricing/instance?${params}`);
 };

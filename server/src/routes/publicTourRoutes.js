@@ -23,10 +23,14 @@ router.post('/ticket-bookings', bookingRateLimit, publicTourController.createTic
 // GET    /api/tours/bookings/:reference
 router.get('/bookings/:reference', publicTourController.getBookingByReference);
 
-// === NEW: Public Pricing (Dynamic route) ===
+// === NEW: Get Resolved Instance Pricing (MUST be before /:id/pricing) ===
+// GET    /api/tours/:id/pricing/instance?date=...&time=...
+router.get('/:id/pricing/instance', publicTourController.getResolvedInstancePricing);
+// === END NEW ROUTE ===
+
+// === Public Pricing (Dynamic route) ===
 // GET    /api/tours/:id/pricing
 router.get('/:id/pricing', publicTourController.getTourPricing);
-// === END NEW ROUTE ===
 
 // === NEW: Availability Indicator (Dynamic route) ===
 // GET /api/tours/:id/instances?date=YYYY-MM-DD
