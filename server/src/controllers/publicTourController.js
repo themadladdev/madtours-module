@@ -192,10 +192,18 @@ export const createBooking = async (req, res, next) => {
  */
 export const createTicketBooking = async (req, res, next) => {
   try {
-    // --- THIS IS NO LONGER A STUB ---
+    // --- DEBUG [2/3] ---
+    console.log('--- DEBUG [SERVER CONTROLLER]: Received req.body ---');
+    console.log(JSON.stringify(req.body, null, 2));
+    // --- END DEBUG ---
     
     // 1. Sanitize the complex data
     const sanitizedData = sanitizeTicketBookingData(req.body);
+
+    // --- DEBUG [2/3] ---
+    console.log('--- DEBUG [SERVER CONTROLLER]: Sanitized passengers array ---');
+    console.log(sanitizedData.passengers);
+    // --- END DEBUG ---
 
     // 2. Call the new, real booking service
     const booking = await bookingService.createTicketBooking(sanitizedData);

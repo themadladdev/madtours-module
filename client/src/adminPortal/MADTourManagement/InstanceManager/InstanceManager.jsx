@@ -18,7 +18,6 @@ const InstanceManager = () => {
   const [tours, setTours] = useState([]);
   const [selectedTourId, setSelectedTourId] = useState('');
   
-  // --- NEW: Re-added toast state ---
   const [toast, setToast] = useState(null);
   
   const today = new Date().toISOString().split('T')[0];
@@ -32,10 +31,17 @@ const InstanceManager = () => {
   const [reInstateDialog, setReInstateDialog] = useState({ instance: null });
   
   const [cancelReason, setCancelReason] = useState('');
-  // --- REMOVED: cancelError state ---
   
   const [isBlackoutModalOpen, setIsBlackoutModalOpen] = useState(false);
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false); 
+
+  // --- NEW: Custom navigation handler ---
+  const handleNavigate = (event, path) => {
+    event.preventDefault();
+    window.history.pushState({}, '', path);
+    const navigationEvent = new CustomEvent('route-change');
+    window.dispatchEvent(navigationEvent);
+  };
 
   useEffect(() => {
     const loadTours = async () => {
@@ -62,7 +68,6 @@ const InstanceManager = () => {
     }
   }, [filters, selectedTourId]);
   
-  // --- NEW: useEffect to clear toast ---
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 4000);
@@ -72,7 +77,7 @@ const InstanceManager = () => {
 
   const loadInstances = async () => {
     setLoading(true);
-    setToast(null); // Clear toast on load
+    setToast(null); 
     try {
       const effectiveFilters = {
         ...filters,
@@ -95,7 +100,6 @@ const InstanceManager = () => {
   const handleCancelClick = (instance) => {
     setCancelDialog({ instance: instance });
     setCancelReason('');
-    // --- REMOVED: setCancelError(null) ---
   };
 
   const handleReInstateClick = (instance) => {
@@ -105,25 +109,27 @@ const InstanceManager = () => {
   const handleCloseDialogs = () => {
     setCancelDialog({ instance: null });
     setReInstateDialog({ instance: null });
-    // --- REMOVED: setCancelError(null) ---
   };
 
   const handleMicroPriceEdit = (instance) => {
-    // This is a stub, but if it failed, it should use toast.
     setToast({ type: 'info', message: 'Price editing is not yet implemented.' });
-    // alert(`STUB: Open modal to edit price for instance ${instance.id}. You can fix this.`);
+  };
+
+  // --- NEW: Manifest button handler ---
+  const handleViewManifest = (e, instanceId) => {
+    e.stopPropagation(); // Stop the row's click event
+    handleNavigate(e, `/admin/tours/manifest/${instanceId}`);
   };
 
   const handleConfirmCancel = async () => {
     const { instance } = cancelDialog;
 
     if (!cancelReason) {
-      // Use toast for validation error
       setToast({ type: 'error', message: 'A cancellation reason is required.' });
       return; 
     }
     
-    setToast(null); // Clear validation toast
+    setToast(null); 
 
     try {
       await operationalCancelInstance({
@@ -140,7 +146,6 @@ const InstanceManager = () => {
 
     } catch (error) {
       console.error('Error performing operational cancellation:', error);
-      // --- FIX: Use toast for API error ---
       setToast({ type: 'error', message: error.message || 'Failed to cancel tour' });
     }
   };
@@ -161,7 +166,6 @@ const InstanceManager = () => {
     } catch (error)
     {
       console.error('Error re-instating tour:', error);
-      // --- FIX: Use toast for API error ---
       setToast({ type: 'error', message: error.message || 'Failed to re-instate tour' });
     }
   };
@@ -170,7 +174,6 @@ const InstanceManager = () => {
     console.log('Blackout success, refreshing instances:', result);
     setIsBlackoutModalOpen(false);
     loadInstances();
-    // --- NEW: Use toast for success ---
     setToast({ type: 'success', message: 'Blackout range has been updated.' });
   };
   
@@ -179,7 +182,6 @@ const InstanceManager = () => {
   return (
     <div className={styles.instanceManager}>
       
-      {/* --- NEW: Toast Notification --- */}
       {toast && (
         <div 
           className={sharedStyles.toastNotification}
@@ -310,6 +312,17 @@ const InstanceManager = () => {
                   <td className={styles.textCenter}>{instance.capacity}</td>
                   <td className={styles.actionsCell}>
                     
+                    {/* --- NEW: View Manifest Button --- */}
+                    {instance.id && instance.booked_seats > 0 && (
+                      <button
+                        onClick={(e) => handleViewManifest(e, instance.id)}
+                        className={sharedStyles.secondaryButtonSmall}
+                        style={{ marginRight: '0.5rem' }}
+                      >
+                        Manifest
+                      </button>
+                    )}
+                    
                     {instance.status === 'scheduled' && (
                       <>
                         <button
@@ -361,7 +374,6 @@ const InstanceManager = () => {
         confirmText="Confirm Cancellation"
         cancelText="Go Back"
         isDestructive={true}
-        // --- REMOVED: errorMessage prop ---
       >
         <div className={styles.cancelForm}>
           <div className={sharedStyles.formGroup}>
@@ -391,6 +403,7 @@ const InstanceManager = () => {
       >
       </ConfirmationDialog>
       
+      {/* --- FIX: Pass the boolean variable directly --- */}
       <BlackoutManagerModal
         isOpen={isBlackoutModalOpen}
         onClose={() => setIsBlackoutModalOpen(false)}

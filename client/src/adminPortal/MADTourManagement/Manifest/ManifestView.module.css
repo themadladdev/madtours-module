@@ -67,6 +67,7 @@
   font-family: monospace;
   font-weight: 600;
   font-size: 0.95rem;
+  vertical-align: top;
 }
 
 .name {
@@ -75,6 +76,7 @@
 
 .contact {
   font-size: 0.9rem;
+  vertical-align: top;
 }
 
 .email {
@@ -86,6 +88,7 @@
   text-align: center;
   font-weight: 600;
   font-size: 1.1rem;
+  vertical-align: top;
 }
 
 .paymentStatus {
@@ -113,7 +116,39 @@
   font-size: 0.9rem;
   max-width: 200px;
   word-break: break-word;
+  vertical-align: top;
 }
+
+/* --- NEW STYLES --- */
+.passengerRow:not(:first-child) td {
+  /* For multi-passenger bookings, add a border for clarity */
+  border-top: 1px dashed var(--grey-300);
+}
+
+/* All rows in a multi-passenger booking (except the first) */
+.passengerRow:nth-child(n+2) {
+  background-color: var(--grey-100);
+}
+
+/* The first row of a multi-passenger booking */
+.passengerRow:first-child td {
+  padding-top: 1rem;
+}
+
+.fallbackRow {
+  background-color: rgba(var(--destructive-rgb), 0.05);
+  border-left: 3px solid var(--destructive);
+}
+
+.fallbackLabel {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--destructive);
+  margin-top: 0.25rem;
+}
+/* --- END NEW STYLES --- */
+
 
 .footer {
   border-top: 2px solid var(--text);
@@ -159,4 +194,19 @@
   .passengerTable td {
     padding: 0.5rem;
   }
+
+  /* --- NEW PRINT STYLES --- */
+  .fallbackRow {
+    background-color: #fff !important;
+    border-left: none;
+  }
+
+  .fallbackLabel {
+    color: #555;
+  }
+
+  .passengerRow:nth-child(n+2) {
+    background-color: #fff !important;
+  }
+  /* --- END NEW PRINT STYLES --- */
 }

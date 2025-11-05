@@ -6,10 +6,6 @@
 import { pool } from '../db/db.js';
 
 export const generateManifest = async (tourInstanceId) => {
-  // --- REFACTORED MANIFEST QUERY ---
-  // This query is now more complex. It first gets the instance and tour details.
-  // Then, it aggregates bookings, and *within* each booking, it aggregates
-  // the passenger list (from the new table) OR falls back to the customer name.
   
   const result = await pool.query(
     `SELECT 
@@ -33,7 +29,6 @@ export const generateManifest = async (tourInstanceId) => {
           'booking_status', b.status,
           
           -- NEW: Passenger List Sub-query
-          -- This finds all passengers in tour_booking_passengers
           'passengers', (
             SELECT json_agg(
               json_build_object(
@@ -54,9 +49,9 @@ export const generateManifest = async (tourInstanceId) => {
             'phone', c.phone
           )
         ) ORDER BY b.created_at
-      ) FILTER (WHERE b.status IN ('confirmed', 'pending_triage')) as bookings 
-      -- We now also include 'pending_triage' in the main manifest
-      -- so the captain knows about unresolved cancellations.
+      ) 
+      -- --- BUG FIX: 'pending_ttriage' corrected to 'pending_triage' ---
+      FILTER (WHERE b.status IN ('confirmed', 'pending_triage')) as bookings 
 
     FROM tour_instances ti
     JOIN tours t ON ti.tour_id = t.id

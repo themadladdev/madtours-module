@@ -219,6 +219,10 @@ const TicketBookingWidget = () => {
       totalSeats: totalSelectedSeats 
     };
 
+    // --- DEBUG [1/3] ---
+    console.log('--- DEBUG [CLIENT WIDGET]: Submitting bookingData ---', bookingData);
+    // --- END DEBUG ---
+
     try {
       const result = await tourBookingService.createTicketBooking(bookingData);
       console.log("Booking STUB success:", result);

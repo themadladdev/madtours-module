@@ -319,9 +319,7 @@
     color: var(--grey-700);
 }
 
-/* --- REMOVED: Passenger Row styles --- */
-
-/* --- NEW: Checkbox Group --- */
+/* --- Checkbox Group --- */
 .checkboxGroup {
     display: flex;
     align-items: center;
@@ -339,4 +337,42 @@
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--text);
+}
+
+/* --- NEW: Passenger Form --- */
+.passengerForm {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.passengerFormTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 1rem 0;
+}
+
+.passengerRow {
+    margin-bottom: 1rem;
+}
+
+.passengerLabel {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--grey-700);
+    margin-bottom: 0.5rem;
+}
+
+.passengerInputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.passengerInputs .input:disabled {
+    background-color: var(--grey-200);
+    color: var(--grey-700);
+    border-color: var(--border-color);
 }

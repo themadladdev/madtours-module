@@ -170,6 +170,11 @@ export const createTicketBooking = async (bookingData) => {
     tickets, // [{ ticket_id, quantity }]
     passengers // [{ firstName, lastName, ticket_type }]
   } = bookingData;
+
+  // --- DEBUG [3/3] ---
+  console.log('--- DEBUG [SERVER SERVICE]: createTicketBooking received passengers ---');
+  console.log(passengers);
+  // --- END DEBUG ---
   
   // We will add the `ticket_summary` column to this INSERT
   // once we've added it to the table. For now, we skip it.
@@ -291,8 +296,13 @@ export const createTicketBooking = async (bookingData) => {
     );
 
     // --- NEW: Step 9: Create passenger records ---
-    // We use a loop for this
+    // --- DEBUG [3/3] ---
+    console.log(`--- DEBUG [SERVER SERVICE]: Looping ${passengers.length} passengers ---`);
+    // --- END DEBUG ---
     for (const passenger of passengers) {
+      // --- DEBUG [3/3] ---
+      console.log('--- DEBUG [SERVER SERVICE]: Inserting passenger ---', passenger.firstName);
+      // --- END DEBUG ---
       await client.query(
         `INSERT INTO tour_booking_passengers (booking_id, first_name, last_name, ticket_type)
          VALUES ($1, $2, $3, $4)`,
