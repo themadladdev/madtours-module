@@ -1,4 +1,8 @@
+// ==========================================
+// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/TourManager/TourManager.jsx
+// ==========================================
+
 import React, { useState, useEffect } from 'react';
 import * as adminTourService from '../../../services/admin/adminTourService.js';
 import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
@@ -115,49 +119,101 @@ const TourManager = () => {
       </div>
 
       <div className={sharedStyles.contentBox}>
-        <table className={sharedStyles.table}>
-          <thead>
-            <tr>
-              <th className={styles.textLeft}>Tour Name</th>
-              <th>Status</th>
-              <th>Duration</th>
-              <th>Base Price</th>
-              <th>Capacity</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tours.length === 0 ? (
+        
+        {/* --- [NEW] Desktop Table --- */}
+        <div className={styles.desktopTable}>
+          <table className={sharedStyles.table}>
+            <thead>
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
-                  No tours found. Click "+ New Tour" to begin.
-                </td>
+                <th className={styles.textLeft}>Tour Name</th>
+                <th>Status</th>
+                <th>Duration</th>
+                <th>Base Price</th>
+                <th>Capacity</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              tours.map(tour => (
-                <tr key={tour.id} className={styles.tourRow} onClick={() => handleOpenEdit(tour)}>
-                  <td className={styles.tourName}>{tour.name}</td>
-                  <td className={styles.textCenter}>
-                    <span className={`${styles.statusBadge} ${tour.active ? styles.active : styles.inactive}`}>
-                      {tour.active ? 'Active' : 'Draft'}
-                    </span>
-                  </td>
-                  <td className={styles.textCenter}>{tour.duration_minutes} min</td>
-                  <td className={styles.textCenter}>${tour.base_price}</td>
-                  <td className={styles.textCenter}>{tour.capacity}</td>
-                  <td className={styles.actionsCell}>
-                    <button
-                      className={sharedStyles.destructiveGhostButtonSmall}
-                      onClick={(e) => handleOpenDelete(e, tour)}
-                    >
-                      Delete
-                    </button>
+            </thead>
+            <tbody>
+              {tours.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
+                    No tours found. Click "+ New Tour" to begin.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                tours.map(tour => (
+                  <tr key={tour.id} className={styles.tourRow} onClick={() => handleOpenEdit(tour)}>
+                    <td className={styles.tourName}>{tour.name}</td>
+                    <td className={styles.textCenter}>
+                      <span className={`${styles.statusBadge} ${tour.active ? styles.active : styles.inactive}`}>
+                        {tour.active ? 'Active' : 'Draft'}
+                      </span>
+                    </td>
+                    <td className={styles.textCenter}>{tour.duration_minutes} min</td>
+                    <td className={styles.textCenter}>${tour.base_price}</td>
+                    <td className={styles.textCenter}>{tour.capacity}</td>
+                    <td className={styles.actionsCell}>
+                      <button
+                        className={sharedStyles.destructiveGhostButtonSmall}
+                        onClick={(e) => handleOpenDelete(e, tour)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* --- [NEW] Mobile Card List --- */}
+        <div className={styles.mobileCardList}>
+          {tours.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              No tours found. Click "+ New Tour" to begin.
+            </div>
+          ) : (
+            tours.map(tour => (
+              <div 
+                key={tour.id} 
+                className={styles.tourCard}
+                onClick={() => handleOpenEdit(tour)}
+              >
+                <div className={styles.cardHeader}>
+                  <span className={styles.tourName}>{tour.name}</span>
+                  <span className={`${styles.statusBadge} ${tour.active ? styles.active : styles.inactive}`}>
+                    {tour.active ? 'Active' : 'Draft'}
+                  </span>
+                </div>
+                
+                <div className={styles.cardDetails}>
+                  <div className={styles.cardDetailItem}>
+                    <label>Price</label>
+                    <span>${tour.base_price}</span>
+                  </div>
+                  <div className={styles.cardDetailItem}>
+                    <label>Duration</label>
+                    <span>{tour.duration_minutes} min</span>
+                  </div>
+                  <div className={styles.cardDetailItem}>
+                    <label>Capacity</label>
+                    <span>{tour.capacity}</span>
+                  </div>
+                </div>
+                
+                <div className={styles.cardActions}>
+                  <button
+                    className={sharedStyles.destructiveGhostButtonSmall}
+                    onClick={(e) => handleOpenDelete(e, tour)}
+                  >
+                    Delete Tour
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <TourEditorModal

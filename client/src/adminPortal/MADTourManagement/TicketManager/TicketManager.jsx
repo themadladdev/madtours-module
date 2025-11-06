@@ -91,7 +91,7 @@ const TicketManager = () => {
       <thead>
         <tr>
           <th>Ticket Name</th>
-          <th>Actions</th>
+          <th className={styles.actionsCell}>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -118,6 +118,33 @@ const TicketManager = () => {
         )}
       </tbody>
     </table>
+  );
+
+  // --- [NEW] Card List Renderer ---
+  const renderCardList = (data) => (
+    <>
+      {data.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          No tickets of this type found.
+        </div>
+      ) : (
+        data.map(ticket => (
+          <div 
+            key={ticket.id} 
+            className={styles.ticketCard}
+            onClick={() => handleOpenEdit(ticket)}
+          >
+            <span className={styles.ticketName}>{ticket.name}</span>
+            <button
+              className={sharedStyles.destructiveGhostButtonSmall}
+              onClick={(e) => handleOpenDelete(e, ticket)}
+            >
+              Delete
+            </button>
+          </div>
+        ))
+      )}
+    </>
   );
 
   return (
@@ -159,7 +186,13 @@ const TicketManager = () => {
           <div className={sharedStyles.loadingContainer}>
             <div className={sharedStyles.spinner}></div>
           </div>
-        ) : renderTable(atomicTickets)}
+        ) : (
+          <>
+            {/* --- [NEW] Desktop/Mobile Switch --- */}
+            <div className={styles.desktopTable}>{renderTable(atomicTickets)}</div>
+            <div className={styles.mobileCardList}>{renderCardList(atomicTickets)}</div>
+          </>
+        )}
       </div>
 
       <h4 className={styles.tableHeading}>Combined Tickets</h4>
@@ -171,7 +204,13 @@ const TicketManager = () => {
           <div className={sharedStyles.loadingContainer}>
             <div className={sharedStyles.spinner}></div>
           </div>
-        ) : renderTable(combinedTickets)}
+        ) : (
+          <>
+            {/* --- [NEW] Desktop/Mobile Switch --- */}
+            <div className={styles.desktopTable}>{renderTable(combinedTickets)}</div>
+            <div className={styles.mobileCardList}>{renderCardList(combinedTickets)}</div>
+          </>
+        )}
       </div>
 
       <TicketEditorModal

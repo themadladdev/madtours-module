@@ -1,9 +1,3 @@
-/* ==========================================
- * UPDATED FILE
- * client/src/adminPortal/MADTourManagement/MADTourManagement.module.css
- * ==========================================
-*/
-
 /* client/src/adminPortal/MADTourManagement/MADTourManagement.module.css
  * Uses variables defined in src/styles/global.css */
 
@@ -46,7 +40,8 @@
     flex-shrink: 0;
 }
 
-.subNavigation {
+/* --- [MODIFIED] Renamed .subNavigation to .desktopSubNav --- */
+.desktopSubNav {
     display: flex;
     gap: 0.5rem;
 }
@@ -100,6 +95,38 @@
 }
 
 /* --- [THIS IS THE FIX] --- */
+
+/* --- [NEW] Mobile Nav Container --- */
+.mobileSubNav {
+    display: none; /* Hidden by default */
+}
+
+/* --- [NEW] Mobile Select Menu (Copied from BookingManager) --- */
+.mobileQuickFilter {
+    width: 100%;
+    padding: 0.75rem 0.8rem; 
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text);
+    font-size: 1rem; 
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%Bxmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2Bwidth%3D%22292.4%22%2Bheight%3D%22292.4%22%3E%3Cpath%2Bfill%3D%22%23333333%22%2Bd%3D%22M287%2B69.4a17.6%2B17.6%2B0%2B0%2B0-13-5.4H18.4c-5%2B0-9.3%2B1.8-13%2B5.4A17.6%2B17.6%2B0%2B0%2B0%2B0%2B82.2c0%2B5%2B1.8%2B9.3%2B5.4%2B13l128%2B128c3.6%2B3.6%2B7.8%2B5.4%2B13%2B5.4s9.4-1.8%2B13-5.4l128-128c3.6-3.6%2B5.4-7.8%2B5.4-13%2B0-5-1.8-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 0.65em auto;
+}
+.mobileQuickFilter:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+
 /* Replaced all @media queries with @container queries 
    to follow the prototype standard. */
 
@@ -113,10 +140,6 @@
         flex-direction: column;
         align-items: stretch;
     }
-
-    .subNavigation {
-        flex-wrap: wrap;
-    }
 }
 
 @container (max-width: 768px) {
@@ -128,6 +151,14 @@
      }
      .contentArea {
          padding: 1rem;
+     }
+     
+     /* --- [NEW] Show/Hide Logic --- */
+     .desktopSubNav {
+         display: none;
+     }
+     .mobileSubNav {
+         display: block;
      }
 }
 /* --- [END OF FIX] --- */

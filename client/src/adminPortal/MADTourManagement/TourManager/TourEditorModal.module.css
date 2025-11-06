@@ -1,3 +1,9 @@
+/* ==========================================
+ * UPDATED FILE
+ * client/src/adminPortal/MADTourManagement/TourManager/TourEditorModal.module.css
+ * ==========================================
+*/
+
 /* client/src/adminPortal/MADTourManagement/TourManager/TourEditorModal.module.css
  * Uses variables from /client/src/styles/global.css
  * Uses styles from /client/src/adminPortal/adminshared.module.css */
@@ -207,4 +213,40 @@
   padding: 1rem;
   background-color: var(--grey-100);
   border-radius: 4px;
+}
+
+
+/* --- [NEW] Responsive Container Query --- */
+@container (max-width: 768px) {
+  /* Stack the main details grid */
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Make day buttons smaller */
+  .dayCheckboxes {
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  }
+
+  /* Stack the pricing list */
+  .priceList {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  /* Stack the price row content */
+  .priceRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .priceRow label {
+    flex-grow: 0;
+  }
+  
+  .priceInputWrapper {
+    width: 100%;
+  }
 }

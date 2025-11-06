@@ -1,4 +1,8 @@
+// ==========================================
+// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/MADTourManagement.jsx
+// ==========================================
+
 import React, { useState, useEffect } from 'react';
 import styles from './MADTourManagement.module.css';
 import sharedStyles from '../adminshared.module.css';
@@ -41,7 +45,12 @@ const MADTourManagement = () => {
 
     // Custom navigation handler
     const handleNavigate = (event, path, tabId) => {
-        event.preventDefault();
+        // Check if event is from a DOM click or select onChange
+        const isSelectEvent = event.target.tagName === 'SELECT';
+        
+        if (!isSelectEvent) {
+            event.preventDefault();
+        }
         
         fetchResolutionCount();
         
@@ -49,6 +58,15 @@ const MADTourManagement = () => {
         window.history.pushState({}, '', path);
         const navigationEvent = new CustomEvent('route-change');
         window.dispatchEvent(navigationEvent);
+    };
+    
+    // --- [NEW] Specific handler for mobile select ---
+    const handleMobileNavChange = (event) => {
+        const selectedTabId = event.target.value;
+        const selectedTab = subTabs.find(tab => tab.id === selectedTabId);
+        if (selectedTab) {
+            handleNavigate(event, selectedTab.path, selectedTab.id);
+        }
     };
 
     const fetchResolutionCount = async () => {
@@ -120,7 +138,8 @@ const MADTourManagement = () => {
              
              {/* --- Sub Navigation Tabs --- */}
              <div className={styles.pageNavWrapper}>
-                <div className={styles.subNavigation}>
+                {/* --- [NEW] Desktop Sub-Nav --- */}
+                <div className={styles.desktopSubNav}>
                     {subTabs.map(tab => (
                         <button
                             key={tab.id}
@@ -134,6 +153,21 @@ const MADTourManagement = () => {
                             )}
                         </button>
                     ))}
+                </div>
+                
+                {/* --- [NEW] Mobile Sub-Nav --- */}
+                <div className={styles.mobileSubNav}>
+                    <select
+                        className={styles.mobileQuickFilter}
+                        value={activeSubTab}
+                        onChange={handleMobileNavChange}
+                    >
+                        {subTabs.map(tab => (
+                            <option key={tab.id} value={tab.id}>
+                                {tab.label} {tab.badge ? `(${tab.badge})` : ''}
+                            </option>
+                        ))}
+                    </select>
                 </div>
              </div>
 

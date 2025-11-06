@@ -1,4 +1,3 @@
-/* client/src/adminPortal/MADTourManagement/TourManager/TourManager.module.css */
 /* Uses variables from /client/src/styles/global.css */
 /* Uses styles from /client/src/adminPortal/adminshared.module.css */
 
@@ -61,4 +60,108 @@
 
 .actionsCell {
   text-align: center;
+}
+
+/* --- [NEW] Responsive Card Styles --- */
+
+.desktopTable {
+  display: table;
+  width: 100%;
+}
+
+.mobileCardList {
+  display: none;
+}
+
+.tourCard {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.tourCard:last-child {
+  border-bottom: none;
+}
+.tourCard:hover {
+  background-color: var(--grey-100);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* Re-use tourName style from table */
+.cardHeader .tourName {
+  font-size: 1.1rem;
+}
+
+.cardDetails {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.cardDetailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cardDetailItem label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--grey-500);
+  text-transform: uppercase;
+}
+
+.cardDetailItem span {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cardActions {
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+}
+
+.cardActions button {
+  /* Make button full-width */
+  flex-grow: 1;
+  text-align: center;
+}
+
+
+/* --- [NEW] Responsive Container Query --- */
+@container (max-width: 768px) {
+  .desktopTable {
+    display: none;
+  }
+  .mobileCardList {
+    display: block;
+  }
+
+  /* --- Mobile-specific header --- */
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .header h3 {
+    text-align: center;
+  }
+  .header button {
+    width: 100%;
+  }
+
+  /* --- Mobile card tweaks --- */
+  .cardHeader .tourName {
+    font-size: 1rem;
+  }
 }
