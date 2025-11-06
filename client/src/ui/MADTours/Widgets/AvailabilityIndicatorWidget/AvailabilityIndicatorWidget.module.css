@@ -35,7 +35,6 @@
   flex-grow: 1;
   text-align: center;
   cursor: pointer;
-  /* Remove pointer-events if you added it */
 }
 
 /* 2. The Display: The visible, styled text layer (bottom) */
@@ -52,6 +51,11 @@
   position: relative; 
   z-index: 1;
   pointer-events: none; /* Keep this */
+
+  /* --- NEW: Prevent ugly text wrapping --- */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dateInputContainer:hover .dateInputDisplay {
@@ -79,7 +83,6 @@
 }
 
 /* Hides the calendar picker icon in WebKit (Chrome, Safari) */
-/* The clickable area still exists */
 .dateInput::-webkit-calendar-picker-indicator {
   opacity: 0;
   cursor: pointer;
@@ -201,3 +204,25 @@
   border-color: var(--text);
 }
 
+/* --- NEW: Responsive Styles --- */
+@container (max-width: 300px) {
+  .controls {
+    /* Allow wrapping and center the buttons */
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .dateInputContainer {
+    /* Make date picker full width and appear first */
+    width: 100%;
+    order: 1;
+  }
+
+  .navButton {
+    /* Make nav buttons appear after and share the row */
+    order: 2;
+    flex-basis: 100px;
+    flex-grow: 1;
+  }
+}

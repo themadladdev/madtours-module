@@ -9,6 +9,9 @@
     display: grid;
     grid-template-columns: 1fr; /* Single column layout for mobile */
     gap: 2rem;
+
+    /* --- NEW: Enable container queries for this component's layout --- */
+    container-type: inline-size;
 }
 
 /* --- Status States (for loading/error) --- */
@@ -44,7 +47,8 @@
 
 /* --- Info Column (Left) --- */
 .infoColumn {
-    max-width: 650px;
+    /* --- NEW: Prevent content from shrinking to zero width --- */
+    min-width: 0;
 }
 
 .tourName {
@@ -90,14 +94,16 @@
 
 /* --- Widget Column (Right) --- */
 .widgetColumn {
-    /* This will be handled by the BookingCalendar's own styles */
     /* We add a sticky top for desktop */
     position: sticky;
     top: 2rem;
+    /* --- NEW: Prevent content from shrinking to zero width --- */
+    min-visible: 0;
 }
 
 /* --- Responsive Layout --- */
-@media (min-width: 900px) {
+/* --- MODIFIED: Replaced @media with @container --- */
+@container (min-width: 900px) {
     .pageContainer {
         /* Two-column layout for desktop */
         grid-template-columns: 2fr 1fr;

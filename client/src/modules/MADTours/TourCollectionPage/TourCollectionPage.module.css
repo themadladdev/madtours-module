@@ -6,6 +6,9 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
+    
+    /* --- NEW: Enable container queries for children --- */
+    container-type: inline-size;
 }
 
 .pageHeader {
@@ -153,14 +156,15 @@
 }
 
 /* --- Responsive Grid --- */
-@media (min-width: 768px) {
+/* --- MODIFIED: Replaced @media with @container --- */
+@container (min-width: 768px) {
     .tourGrid {
         /* 2 columns on tablets */
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-@media (min-width: 1024px) {
+@container (min-width: 1024px) {
     .tourGrid {
         /* 3 columns on desktops */
         grid-template-columns: repeat(3, 1fr);

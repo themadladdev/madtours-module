@@ -28,7 +28,7 @@
   margin-top: 1rem;
 }
 
-.checkboxGroup input[type="checkbox"] {
+.checkboxGroup input[type='checkbox'] {
   width: 16px;
   height: 16px;
   margin: 0;
@@ -38,4 +38,12 @@
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text);
+}
+
+/* --- NEW: Responsive Styles --- */
+@container (max-width: 500px) {
+  .formGrid {
+    /* Stack the form into a single column on small screens */
+    grid-template-columns: 1fr;
+  }
 }

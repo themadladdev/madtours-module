@@ -1,21 +1,15 @@
-// client/src/modules/MADTours/Widgets/BookingCalendar/BookingCalendar.jsx
+// client/src/modules/MADTours/Widgets/BookingCalendarWidget/BookingCalendarWidget.jsx
 import React, { useState, useEffect } from 'react';
 import { getTourAvailability } from '../../../../services/public/tourBookingService.js';
-import styles from './BookingCalendar.module.css';
+import styles from './BookingCalendarWidget.module.css';
 
-// Helper to get days in a month for the calendar grid
-const getDaysInMonth = (year, month) => {
-    return new Date(year, month + 1, 0).getDate();
-};
-
-// Helper to get the first day of the week (0=Sun, 1=Mon)
-const getFirstDayOfMonth = (year, month) => {
-    return new Date(year, month, 1).getDay();
-};
+// --- Import "Dumb" UI Components ---
+import DumbBookingCalendar from '../../WidgetComponents/BookingCalendar/BookingCalendar.jsx';
+import TimeSlotSelector from '../../WidgetComponents/TimeSlotSelector/TimeSlotSelector.jsx';
 
 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-const BookingCalendar = ({ tourId, basePrice, defaultDate, defaultGuests }) => {
+const BookingCalendarWidget = ({ tourId, basePrice, defaultDate, defaultGuests }) => {
     const [availability, setAvailability] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -83,6 +77,7 @@ const BookingCalendar = ({ tourId, basePrice, defaultDate, defaultGuests }) => {
         setSelectedTime(null);
     };
 
+    // This handler now receives just the 'day' number from the dumb component
     const handleDateClick = (day) => {
         const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         if (availability[dateKey]) {
@@ -112,34 +107,8 @@ const BookingCalendar = ({ tourId, basePrice, defaultDate, defaultGuests }) => {
         handleNavigate(event, '/tours/book');
     };
 
-    // --- Calendar Grid Generation ---
-    const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-    const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
-    const calendarGrid = [];
-    
-    // Add empty cells for the start of the month
-    for (let i = 0; i < firstDay; i++) {
-        calendarGrid.push(<div key={`empty-${i}`} className={styles.calendarDayEmpty}></div>);
-    }
-    
-    // Add cells for each day
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const isAvailable = !!availability[dateKey];
-        const isSelected = selectedDate === dateKey;
-        
-        calendarGrid.push(
-            <button
-                key={`day-${day}`}
-                className={`${styles.calendarDay} ${isAvailable ? styles.available : ''} ${isSelected ? styles.selected : ''}`}
-                onClick={() => handleDateClick(day)}
-                disabled={!isAvailable}
-            >
-                {day}
-            </button>
-        );
-    }
-    // --- End Grid Generation ---
+    // --- RENDER ---
+    // The logic is now clean. This component fetches data and passes it to "dumb" components.
 
     return (
         <div className={styles.widgetContainer}>
@@ -159,47 +128,27 @@ const BookingCalendar = ({ tourId, basePrice, defaultDate, defaultGuests }) => {
                 </div>
             </div>
 
-            {/* --- Calendar Navigation --- */}
-            <div className={styles.monthNavigator}>
-                <button onClick={() => handleMonthChange(-1)}>&larr;</button>
-                <span className={styles.monthName}>
-                    {monthNames[currentMonth]} {currentYear}
-                </span>
-                <button onClick={() => handleMonthChange(1)}>&rarr;</button>
-            </div>
-            
-            {/* --- Calendar Grid --- */}
-            <div className={styles.calendarGrid}>
-                <div className={styles.calendarHeader}>Sun</div>
-                <div className={styles.calendarHeader}>Mon</div>
-                <div className={styles.calendarHeader}>Tue</div>
-                <div className={styles.calendarHeader}>Wed</div>
-                <div className={styles.calendarHeader}>Thu</div>
-                <div className={styles.calendarHeader}>Fri</div>
-                <div className={styles.calendarHeader}>Sat</div>
-                {calendarGrid}
-            </div>
+            {/* --- REFACTORED: Use "Dumb" Calendar --- */}
+            {/* This component just displays the grid and bubbles up events */}
+            <DumbBookingCalendar
+                currentMonth={currentMonth}
+                currentYear={currentYear}
+                availability={availability}
+                selectedDate={selectedDate}
+                onDateClick={handleDateClick}
+                onMonthChange={handleMonthChange}
+            />
             
             {loading && <div className={styles.spinnerSmall}></div>}
             {error && <p className={styles.errorText}>{error}</p>}
 
-            {/* --- Time Slot Selector --- */}
+            {/* --- REFACTORED: Use "Dumb" Time Slot Selector --- */}
             {selectedDate && availability[selectedDate] && (
-                <div className={styles.timeSlotSection}>
-                    <h4 className={styles.timeSlotTitle}>Select a Time for {new Date(selectedDate + 'T00:00:00').toLocaleDateString()}</h4>
-                    <div className={styles.timeSlotGrid}>
-                        {availability[selectedDate].map(slot => (
-                            <button
-                                key={slot.time}
-                                className={`${styles.timeSlotButton} ${selectedTime === slot.time ? styles.selected : ''}`}
-                                onClick={() => setSelectedTime(slot.time)}
-                            >
-                                <span className={styles.slotTime}>{slot.time}</span>
-                                <span className={styles.slotSeats}>{slot.availableSeats} seats</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <TimeSlotSelector
+                    slots={availability[selectedDate]}
+                    selectedTime={selectedTime}
+                    onTimeClick={setSelectedTime} // Pass the state setter directly
+                />
             )}
             
             {/* --- Booking Button --- */}
@@ -223,4 +172,4 @@ const BookingCalendar = ({ tourId, basePrice, defaultDate, defaultGuests }) => {
     );
 };
 
-export default BookingCalendar;
+export default BookingCalendarWidget;

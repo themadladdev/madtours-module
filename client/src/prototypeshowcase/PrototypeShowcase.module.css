@@ -34,7 +34,6 @@
   font-family: monospace;
 }
 
-/* --- NEW: Heading for sidebar lists --- */
 .listHeading {
   font-size: 0.75rem;
   font-weight: 600;
@@ -89,11 +88,98 @@
   border-radius: 4px;
   padding: 2rem;
   min-height: 100%;
-  /* --- MODIFICATION: Transition now applies to max-width and border style --- */
   transition: max-width 0.3s ease-in-out, border-style 0.3s, box-shadow 0.3s;
-  /* --- NEW: Center the sandbox when it's not fluid --- */
   margin-left: auto;
   margin-right: auto;
+
+  /* --- THIS IS THE FIX --- */
+  /* This enables container queries for all children */
+  container-type: inline-size;
 }
 
-/* --- REMOVED: .widgetMode class is no longer needed --- */
+/* --- Mobile Menu (Hidden by default) --- */
+.mobileMenuContainer {
+  display: none; /* Hidden on desktop */
+  padding: 1rem 1rem 1.5rem 1rem;
+  background-color: var(--background);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.mobileMenuTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.75rem 0;
+}
+
+.mobileMenuSelect {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  background-color: var(--grey-100);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  /* Simple inline SVG for a B&W-friendly dropdown arrow */
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20xmlns%3D%22http%3F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%207.5L10%2012.5L15%207.5%22%20stroke%3D%22%234B5563%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.25em 1.25em;
+  cursor: pointer;
+}
+
+.mobileMenuSelect:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--grey-200);
+}
+
+/* --- Responsive Overrides --- */
+@media (max-width: 768px) {
+  .showcaseContainer {
+    /* Stack content below menu */
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  /* 1. Hide desktop sidebar */
+  .sidebar {
+    display: none;
+  }
+
+  /* 2. Show mobile menu */
+  .mobileMenuContainer {
+    display: block;
+  }
+
+  /* 3. Make content full width */
+  .content {
+    padding: 0;
+    /* Allow content to grow and fill remaining space */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 4. Make sandbox full width and remove all chrome */
+  .sandbox {
+    background-color: var(--background);
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    max-width: 100%;
+    box-shadow: none;
+    border-style: none;
+    /* Allow sandbox to fill remaining height */
+    flex-grow: 1;
+    min-height: auto;
+  }
+}

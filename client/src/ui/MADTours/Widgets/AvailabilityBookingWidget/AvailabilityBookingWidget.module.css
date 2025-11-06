@@ -6,8 +6,8 @@
     border: 1px solid var(--border-color);
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(var(--text-rgb), 0.08);
-    max-width: 400px;
-    margin: 1rem auto;
+    /* REMOVED: max-width and margin to make it fluid */
+    width: 100%;
 }
 
 .widgetHeader {
@@ -75,89 +75,8 @@
     text-align: center;
 }
 
-/* --- Month Navigator --- */
-.monthNavigator {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-}
-
-.monthNavigator button {
-    background: none;
-    border: 1px solid var(--border-color);
-    color: var(--text);
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    border-radius: 4px;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.monthNavigator button:hover {
-    background-color: var(--grey-100);
-    border-color: var(--grey-300);
-}
-
-.monthName {
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-/* --- Calendar Grid --- */
-.calendarGrid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 1px; /* Creates thin grid lines */
-    background-color: var(--border-color);
-    border-top: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.calendarHeader {
-    text-align: center;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--grey-700);
-    padding: 0.5rem 0;
-    background-color: var(--grey-100);
-}
-
-.calendarDay, .calendarDayEmpty {
-    background-color: var(--background);
-    padding: 0.75rem 0;
-    text-align: center;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.calendarDay {
-    border: none;
-    cursor: not-allowed;
-    color: var(--grey-300);
-    position: relative;
-}
-
-.calendarDay.available {
-    color: var(--text);
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.2s ease;
-}
-
-.calendarDay.available:hover {
-    background-color: var(--grey-100);
-}
-
-.calendarDay.selected {
-    background-color: var(--primary);
-    color: var(--primary-text);
-}
+/* --- DELETED: All .monthNavigator, .calendarGrid, and .calendarDay styles --- */
+/* They now live in the "dumb" BookingCalendar component */
 
 /* --- Loading/Error --- */
 .spinnerSmall {
@@ -185,61 +104,14 @@
 
 /* --- Time Slot Selection --- */
 .timeSlotSection {
+    /* This wrapper is kept to provide padding and a border */
     padding: 1.5rem;
     border-top: 1px solid var(--border-color);
     background-color: var(--grey-100);
 }
 
-.timeSlotTitle {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0 0 1rem 0;
-}
-
-.timeSlotGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 0.75rem;
-}
-
-.timeSlotButton {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0.75rem;
-    background-color: var(--background);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.timeSlotButton:hover {
-    border-color: var(--grey-500);
-}
-
-.timeSlotButton.selected {
-    border-color: var(--primary);
-    background-color: var(--primary);
-    color: var(--primary-text);
-    box-shadow: 0 0 0 2px rgba(var(--text-rgb), 0.2);
-}
-
-.timeSlotButton.selected .slotSeats {
-    color: var(--primary-text);
-}
-
-.slotTime {
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.slotSeats {
-    font-size: 0.8rem;
-    color: var(--grey-700);
-    transition: color 0.2s ease;
-}
+/* --- DELETED: All .timeSlotGrid, .timeSlotButton, and .slot* styles --- */
+/* They now live in the "dumb" TimeSlotSelector component */
 
 /* --- Booking Footer --- */
 .bookingFooter {
@@ -250,6 +122,8 @@
     border-top: 1px solid var(--border-color);
     background-color: var(--background);
     border-radius: 0 0 4px 4px;
+    /* NEW: Gap for stacking */
+    gap: 1rem;
 }
 
 .priceSummary {
@@ -282,9 +156,35 @@
     border: 1px solid var(--primary);
     background-color: var(--primary);
     color: var(--primary-text);
+    /* NEW: Allow button to shrink */
+    flex-shrink: 0;
 }
 
 .bookButton:hover {
     background-color: var(--secondary);
     color: var(--secondary-text);
+}
+
+/* --- NEW: Responsive Styles --- */
+/* Stacks the footer on small containers */
+@container (max-width: 400px) {
+    .bookingFooter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bookButton {
+        text-align: center;
+    }
+
+    .priceSummary {
+        align-items: center;
+    }
+
+    .guestSelector {
+        /* Stack guest selector on smallest screens */
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
 }
