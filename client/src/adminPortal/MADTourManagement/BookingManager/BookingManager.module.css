@@ -1,5 +1,12 @@
-/* client/src/adminPortal/MADTourManagement/BookingManager/BookingManager.module.css */
-/* Uses variables defined in src/styles/global.css and adminshared.module.css */
+/* ==========================================
+ * UPDATED FILE
+ * client/src/adminPortal/MADTourManagement/BookingManager/BookingManager.module.css
+ * ==========================================
+*/
+
+.textLeft   { text-align: left; }
+.textCenter { text-align: center; }
+.textRight  { text-align: right; }
 
 .bookingManager {
     width: 100%;
@@ -8,10 +15,11 @@
 /* --- Quick Filter Navigation --- */
 .quickFilterNav {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem; /* Reduced margin */
 }
 
 .navButton {
@@ -50,15 +58,8 @@
     color: var(--grey-700);
 }
 
-.email {
+.subText {
     font-size: 0.85rem;
-    /* --- FIX: Use existing variable --- */
-    color: var(--grey-500);
-}
-
-.time {
-    font-size: 0.85rem;
-    /* --- FIX: Use existing variable --- */
     color: var(--grey-500);
 }
 
@@ -78,6 +79,8 @@
     text-transform: uppercase;
     background-color: var(--grey-200);
     color: var(--grey-700);
+    margin: 0.1rem;
+    display: inline-block; 
 }
 
 .badge.confirmed,
@@ -94,7 +97,6 @@
 .badge.cancelled,
 .badge.refunded {
     background-color: var(--grey-100);
-    /* --- FIX: Use existing variable --- */
     color: var(--grey-500);
     text-decoration: line-through;
 }
@@ -102,11 +104,6 @@
 .badge.pending_triage {
     background-color: var(--destructive);
     color: var(--background);
-}
-
-.actions {
-    text-align: right;
-    min-width: 100px;
 }
 
 .reason {
@@ -118,7 +115,6 @@
     text-overflow: ellipsis;
 }
 
-/* --- Styles for the form inside the confirmation dialog --- */
 .refundForm {
     margin-top: 1.5rem;
     padding-top: 1rem;
@@ -128,6 +124,339 @@
 .refundForm small {
     display: block;
     margin-top: 0.25rem;
-    /* --- FIX: Use existing variable --- */
     color: var(--grey-500);
 }
+
+/* * ========================================
+ * --- [REFACTORED] HYBRID & MOBILE STYLES ---
+ * ========================================
+*/
+
+/* --- 1. The Container Query Switch --- */
+.mobileCardList {
+  display: none;
+}
+.desktopTable {
+  display: table;
+  width: 100%;
+}
+.mobileNav {
+  display: none;
+}
+.desktopNav {
+  display: flex;
+}
+
+/* --- [MODIFIED] Filter Layout Styles --- */
+
+/* --- [FIX] Make child sections 100% wide inside .filterBox --- */
+.filterRow,
+.searchToggleRow,
+.collapsibleSearch {
+    flex-basis: 100%;
+    width: 100%;
+}
+/* --- [END FIX] --- */
+
+.filterRow {
+    display: flex;
+    flex-wrap: wrap; /* Allows desktop wrapping */
+    gap: 1rem;
+    align-items: center;
+}
+.filterItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-grow: 1; /* Allows items to grow */
+    flex-basis: 200px; /* Base width */
+}
+.filterItem label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+/* Override shared .input 'width: 100%' to work inside flexbox */
+.filterItem input[type="date"] {
+    flex-grow: 1;
+    min-width: 100px; /* Reduced for small screens */
+    width: auto; /* This is the fix for overflow */
+    cursor: pointer;
+}
+/* [NEW] Fix for text input overflow */
+.filterItem input[type="text"] {
+    flex-grow: 1;
+    min-width: 100px;
+    width: auto;
+}
+
+
+/* --- [NEW] Toggle button container --- */
+.toggleItem {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-grow: 0;
+    flex-basis: auto;
+}
+
+/* --- [NEW] Refactored Toggle Button --- */
+.advancedSearchToggle {
+    background: var(--grey-100);
+    border: 1px solid var(--border-color);
+    color: var(--grey-700);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.4rem 0.6rem; /* Tighter padding */
+    border-radius: 4px;
+    line-height: 1;
+    transition: background-color 0.2s ease;
+}
+.advancedSearchToggle:hover {
+    background: var(--grey-200);
+    color: var(--text);
+}
+
+/* --- [BUG FIX #2] Collapsible Area Styling --- */
+.collapsibleSearch {
+    display: grid;
+    grid-template-rows: 0fr; /* Collapsed state */
+    overflow: hidden;
+    
+    /* [MODIFIED] Removed margin-top from transition */
+    transition: grid-template-rows 0.3s ease-in-out, 
+                padding-top 0.3s ease-in-out, 
+                border-color 0.3s ease-in-out;
+    
+    padding-top: 0;
+    margin-top: 0; /* Margin is now static, not animated */
+    border-top: 1px solid transparent;
+}
+
+/* This is the direct child of the grid, required for the animation */
+.collapsibleSearch > .searchActionRow {
+    min-height: 0; /* Prevents content from breaking animation */
+}
+
+.collapsibleSearch.open {
+    grid-template-rows: 1fr; /* Expanded state */
+    
+    /* [MODIFIED] Removed margin-top */
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+/* --- [NEW] Container for search input + buttons --- */
+.searchActionRow {
+    display: flex;
+    flex-wrap: wrap; /* Allows mobile stacking */
+    gap: 1rem;
+    align-items: center;
+}
+
+/* --- [MODIFIED] Button panel (simpler) --- */
+.filterPanelActions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    flex-grow: 0; /* Don't grow */
+    flex-shrink: 0; /* Don't shrink */
+    flex-basis: auto; /* Fit content */
+}
+
+/* --- [THIS IS THE FIX] --- */
+/* Mobile Switch (Breakpoint from MADPrototypeShowcase.md) */
+@container (max-width: 768px) {
+  .desktopTable {
+    display: none;
+  }
+  .mobileCardList {
+    display: block;
+  }
+  .desktopNav {
+    display: none;
+  }
+  .mobileNav {
+    display: block;
+    margin-bottom: 1rem; /* Reduced margin */
+  }
+
+  /* --- [FIX 1] Stack date pickers --- */
+  .filterRow .filterItem {
+    flex-basis: 100%; /* Make each item full width */
+    flex-direction: column; /* Stack label/input */
+    align-items: stretch; /* Make children full-width */
+  }
+  .filterRow .filterItem label {
+    min-width: 0; /* Remove 40px min-width */
+    white-space: normal; /* Allow label to wrap if needed */
+    text-align: left; /* Ensure label is left-aligned */
+    margin-bottom: 0.5rem; /* Add space between stacked label and input */
+  }
+  .filterRow .filterItem input[type="date"] {
+    width: 100%;
+  }
+  
+  /* --- [FIX 2] Stack the entire search area --- */
+  
+  /* Stacks the search input on top of the button panel */
+  .searchActionRow {
+    align-items: stretch;
+    gap: 0.75rem; /* Compact gap */
+    
+    /* Override desktop padding/border */
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  /* Stacks the label on top of the search input */
+  .searchActionRow .filterItem {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem; /* Space between label and input */
+  }
+  
+  .searchActionRow .filterItem label {
+    text-align: left;
+    min-width: 0;
+  }
+  
+  .searchActionRow .filterItem input[type="text"] {
+    width: 100%;
+  }
+
+  /* Stacks the buttons on top of each other */
+  .filterPanelActions {
+    display: flex; /* Ensure flex is defined */
+    flex-direction: column-reverse;
+    align-items: stretch; 
+    flex-basis: 100%; /* Make container full-width */
+    gap: 0.75rem; /* Add gap between stacked buttons */
+  }
+  
+  .filterPanelActions button {
+      width: 100%; /* Make buttons full-width */
+  }
+  
+  /* --- [END FIX 2] --- */
+
+  .toggleItem {
+    flex-basis: 100%;
+    justify-content: center; /* Center the toggle button */
+  }
+  .advancedSearchToggle {
+    width: 100%;
+  }
+}
+/* --- [END OF FIX] --- */
+
+
+/* --- 2. Desktop Clickable Row --- */
+.clickableRow {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.clickableRow:hover {
+    background-color: var(--grey-100);
+}
+
+/* --- 3. Mobile "Ship Captain" Select Menu --- */
+.mobileQuickFilter {
+    width: 100%;
+    padding: 0.75rem 0.8rem; 
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text);
+    font-size: 1rem; 
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%Bxmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2Bwidth%3D%22292.4%22%2Bheight%3D%22292.4%22%3E%3Cpath%2Bfill%3D%22%23333333%22%2Bd%3D%22M287%2B69.4a17.6%2B17.6%2B0%2B0%2B0-13-5.4H18.4c-5%2B0-9.3%2B1.8-13%2B5.4A17.6%2B17.6%2B0%2B0%2B0%2B0%2B82.2c0%2B5%2B1.8%2B9.3%2B5.4%2B13l128%2B128c3.6%2B3.6%2B7.8%2B5.4%2B13%2B5.4s9.4-1.8%2B13-5.4l128-128c3.6-3.6%2B5.4-7.8%2B5.4-13%2B0-5-1.8-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 0.65em auto;
+}
+.mobileQuickFilter:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+
+/* --- 4. Mobile "Ship Captain" Card Styles (TIGHTENED) --- */
+
+.bookingCard {
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 1rem; /* Tighter padding */
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.bookingCard:last-child {
+    border-bottom: none;
+}
+.bookingCard:hover {
+    background-color: var(--grey-100);
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.1rem; /* Tighter spacing */
+}
+
+.cardRef {
+    font-family: monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.cardSeats {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--grey-700);
+}
+
+.cardName {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem; /* Tighter spacing */
+}
+
+.cardTour {
+    font-size: 0.85rem;
+    color: var(--grey-700);
+    margin-bottom: 0.75rem; /* Tighter spacing */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- [THIS IS THE FIX] --- */
+/* Replaced .cardStatusRow */
+.cardStatusGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    text-align: center;
+}
+
+.cardStatusItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem; /* Space between label and badge */
+}
+
+.cardStatusItem label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--grey-500);
+    text-transform: uppercase;
+}
+/* --- [END FIX] --- */

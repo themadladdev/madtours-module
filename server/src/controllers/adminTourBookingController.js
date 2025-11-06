@@ -9,7 +9,8 @@ import { processRefund } from '../services/tourStripeService.js';
 
 export const getAllBookings = async (req, res, next) => {
   try {
-    const { status, startDate, endDate } = req.query;
+    // --- [NEW] Add searchTerm ---
+    const { status, startDate, endDate, searchTerm } = req.query;
     
     let query = `
       SELECT 
@@ -45,6 +46,20 @@ export const getAllBookings = async (req, res, next) => {
       query += ` AND ti.date <= $${paramCount++}`;
       params.push(endDate);
     }
+
+    // --- [NEW] Add search term logic ---
+    if (searchTerm) {
+      const searchPattern = `%${searchTerm}%`;
+      query += ` AND (
+        c.first_name ILIKE $${paramCount} OR 
+        c.last_name ILIKE $${paramCount} OR 
+        b.booking_reference ILIKE $${paramCount}
+      )`;
+      // Add the same param three times
+      params.push(searchPattern, searchPattern, searchPattern);
+      paramCount++;
+    }
+    // --- [END NEW] ---
 
     query += ' ORDER BY ti.date DESC, ti.time DESC, b.created_at DESC';
 
@@ -92,6 +107,9 @@ export const getBookingById = async (req, res, next) => {
   }
 };
 
+/**
+ * Handles Triage/Refund cancellation.
+ */
 export const cancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -153,10 +171,6 @@ export const getDashboardStats = async (req, res, next) => {
   }
 };
 
-// --- NEW CONTROLLER FUNCTION ---
-/**
- * Handles updating the passenger list for a booking from the Manifest Editor.
- */
 export const updateBookingPassengers = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -175,4 +189,65 @@ export const updateBookingPassengers = async (req, res, next) => {
     next(error);
   }
 };
-// --- END NEW FUNCTION ---
+
+// --- [CONTROLLER FUNCTIONS] ---
+
+/**
+ * Manually confirms a 'pending' booking.
+ */
+export const manualConfirmBooking = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = req.user.id;
+    
+    const updatedBooking = await bookingService.manualConfirmBooking(id, reason, adminId);
+    res.json({ message: 'Booking manually confirmed', booking: updatedBooking });
+    
+  } catch (error) {
+    console.error(`Error manually confirming booking ${req.params.id}:`, error);
+    next(error);
+  }
+};
+
+/**
+ * Manually marks a booking as 'paid'.
+ */
+export const manualMarkAsPaid = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = req.user.id;
+    
+    const updatedBooking = await bookingService.manualMarkAsPaid(id, reason, adminId);
+    res.json({ message: 'Booking manually marked as paid', booking: updatedBooking });
+
+  } catch (error) {
+    console.error(`Error manually marking booking ${req.params.id} as paid:`, error);
+    next(error);
+  }
+};
+
+/**
+ * Manually cancels a 'pending' booking and releases inventory.
+ */
+export const manualCancelBooking = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = req.user.id;
+
+    if (!reason) {
+      return res.status(400).json({ message: 'Cancellation reason is required' });
+    }
+    
+    const cancelledBooking = await bookingService.cancelBooking(id, reason, adminId);
+    
+    res.json({ message: 'Booking cancelled successfully', booking: cancelledBooking });
+    
+  } catch (error) {
+    console.error(`Error manually cancelling booking ${req.params.id}:`, error);
+    next(error);
+  }
+};
+// --- [END FUNCTIONS] ---

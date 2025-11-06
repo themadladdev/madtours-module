@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './MADTourManagement.module.css';
 import sharedStyles from '../adminshared.module.css';
-// --- FIX: Corrected import path from 3 dots to 2 ---
 import { getAllBookings } from '../../services/admin/adminBookingService.js';
 
 // Import sub-page components
@@ -10,7 +9,6 @@ import TourDashboard from './Dashboard/TourDashboard.jsx';
 import BookingManager from './BookingManager/BookingManager.jsx';
 import InstanceManager from './InstanceManager/InstanceManager.jsx';
 import TourManager from './TourManager/TourManager.jsx';
-// --- NEW: Import Ticket Manager ---
 import TicketManager from './TicketManager/TicketManager.jsx';
 
 

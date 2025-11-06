@@ -1,3 +1,9 @@
+/* ==========================================
+ * UPDATED FILE
+ * client/src/adminPortal/MADTourManagement/MADTourManagement.module.css
+ * ==========================================
+*/
+
 /* client/src/adminPortal/MADTourManagement/MADTourManagement.module.css
  * Uses variables defined in src/styles/global.css */
 
@@ -86,9 +92,18 @@
     overflow-y: auto;
     background-color: var(--grey-100);
     padding: 1.5rem;
+    
+    /* --- [THIS REMAINS] --- */
+    /* This makes the content area a container, allowing
+       @container queries in child components to work. */
+    container-type: inline-size;
 }
 
-@media (max-width: 900px) { 
+/* --- [THIS IS THE FIX] --- */
+/* Replaced all @media queries with @container queries 
+   to follow the prototype standard. */
+
+@container (max-width: 900px) { 
     .topHeaderBar {
         flex-direction: column;
         align-items: stretch;
@@ -104,7 +119,7 @@
     }
 }
 
-@media (max-width: 768px) {
+@container (max-width: 768px) {
      .topHeaderBar {
          padding: 1rem;
      }
@@ -115,6 +130,8 @@
          padding: 1rem;
      }
 }
+/* --- [END OF FIX] --- */
+
 
 /* --- Resolution Triage ---- */
 

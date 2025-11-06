@@ -9,18 +9,28 @@ import adminApiFetch from '../adminApiFetch.js';
 const API_PREFIX = '/admin/bookings';
 
 export const getAllBookings = async (filters = {}) => {
-  const params = new URLSearchParams(filters).toString();
-  // MODIFIED: Added prefix
-  return await adminApiFetch(`${API_PREFIX}?${params}`);
+  // --- [MODIFIED] Pass all filters directly ---
+  const params = new URLSearchParams();
+  
+  // Clean up filters to avoid sending empty strings
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.append(key, value);
+    }
+  });
+
+  return await adminApiFetch(`${API_PREFIX}?${params.toString()}`);
 };
 
 export const getBookingById = async (id) => {
-  // MODIFIED: Added prefix
   return await adminApiFetch(`${API_PREFIX}/${id}`);
 };
 
+/**
+ * Used by Triage/Refund flow.
+ * This is tied to the refund endpoint and implies a financial action.
+ */
 export const cancelBooking = async (id, reason) => {
-  // MODIFIED: Added prefix
   return await adminApiFetch(`${API_PREFIX}/${id}/cancel`, {
     method: 'POST',
     body: JSON.stringify({ reason })
@@ -28,7 +38,6 @@ export const cancelBooking = async (id, reason) => {
 };
 
 export const refundBooking = async (id, amount, reason) => {
-  // MODIFIED: Added prefix
   return await adminApiFetch(`${API_PREFIX}/${id}/refund`, {
     method: 'POST',
     body: JSON.stringify({ amount, reason })
@@ -36,21 +45,51 @@ export const refundBooking = async (id, amount, reason) => {
 };
 
 export const getDashboardStats = async () => {
-  // MODIFIED: Added prefix
   return await adminApiFetch(`${API_PREFIX}/dashboard/stats`);
 };
 
-// --- NEW FUNCTION ---
-/**
- * Updates the passenger list for a specific booking.
- * @param {number} bookingId - The ID of the booking to update
- * @param {Array} passengers - The full list of passenger objects
- * { id: (number|null), first_name: string, last_name: string, ticket_type: string }
- */
 export const updateBookingPassengers = async (bookingId, passengers) => {
   return await adminApiFetch(`${API_PREFIX}/${bookingId}/passengers`, {
     method: 'PUT',
     body: JSON.stringify({ passengers })
   });
 };
-// --- END NEW FUNCTION ---
+
+// --- [FUNCTIONS FOR MANUAL ADMIN ACTIONS] ---
+
+/**
+ * Manually confirms a booking (e.g., phone booking).
+ * Sets status = 'confirmed'. Does NOT affect payment_status.
+ */
+export const manualConfirmBooking = async (bookingId) => {
+  return await adminApiFetch(`${API_PREFIX}/${bookingId}/manual-confirm`, {
+    method: 'PUT',
+    body: JSON.stringify({ reason: 'Manual admin confirmation' })
+  });
+};
+
+/**
+ * Manually marks a booking as paid (e.g., cash payment).
+ * Sets payment_status = 'paid'. Does NOT affect status.
+ */
+export const manualMarkAsPaid = async (bookingId) => {
+  return await adminApiFetch(`${API_PREFIX}/${bookingId}/manual-pay`, {
+    method: 'PUT',
+    body: JSON.stringify({ reason: 'Manual admin payment received' })
+  });
+};
+
+/**
+ * Manually cancels a 'pending' booking.
+ * Sets status = 'cancelled' and DECREMENTS booked_seats.
+ */
+export const adminCancelBooking = async (bookingId, reason) => {
+  if (!reason) {
+    reason = 'Manual admin cancellation';
+  }
+  return await adminApiFetch(`${API_PREFIX}/${bookingId}/manual-cancel`, {
+    method: 'PUT',
+    body: JSON.stringify({ reason })
+  });
+};
+// --- [END NEW FUNCTIONS] ---

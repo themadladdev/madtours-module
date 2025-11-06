@@ -2,6 +2,10 @@
  * Uses variables from /client/src/styles/global.css
  * Uses styles from /client/src/adminPortal/adminshared.module.css */
 
+.textLeft   { text-align: left; }
+.textCenter { text-align: center; }
+.textRight  { text-align: right; }
+
 .blackoutForm {
   padding: 0;
   display: flex;

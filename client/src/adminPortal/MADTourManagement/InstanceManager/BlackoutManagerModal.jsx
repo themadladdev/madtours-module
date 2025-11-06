@@ -1,7 +1,6 @@
 // client/src/adminPortal/MADTourManagement/InstanceManager/BlackoutManagerModal.jsx
 import React, { useState, useEffect } from 'react';
 import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
-// NEW: Import the standard ConfirmationDialog
 import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
 import * as adminTourService from '../../../services/admin/adminTourService.js';
 import styles from './BlackoutManagerModal.module.css';
@@ -10,17 +9,17 @@ import sharedStyles from '../../adminshared.module.css';
 const BlackoutManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   
-  // --- FIX: Re-instating Toast Notification for errors ---
+  // --- Toast Notification for errors ---
   const [toast, setToast] = useState(null); 
   const [error, setError] = useState(''); // This is for form validation only
   
-  // --- NEW: State for the blackout form ---
+  // --- State for the blackout form ---
   const today = new Date().toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [reason, setReason] = useState('');
   
-  // --- NEW: State for the confirmation dialog ---
+  // --- State for the confirmation dialog ---
   const [isConfirming, setIsConfirming] = useState(false);
 
   useEffect(() => {
@@ -36,16 +35,15 @@ const BlackoutManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
     }
   }, [isOpen]);
 
-  // --- FIX: Add back useEffect to clear toast ---
+  // --- Add back useEffect to clear toast ---
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 3000);
       return () => clearTimeout(timer);
     }
   }, [toast]);
-  // --- END FIX ---
 
-  // --- NEW: Handle opening the confirmation dialog ---
+  // --- Handle opening the confirmation dialog ---
   const handleApplyClick = () => {
     if (!reason) {
       setError('A reason is required to apply a blackout.');
@@ -63,7 +61,7 @@ const BlackoutManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
     setIsConfirming(false);
   };
 
-  // --- NEW: This is the real submission logic ---
+  // --- This is the real submission logic ---
   const handleConfirmBlackout = async () => {
     setLoading(true);
     setError('');
@@ -82,18 +80,18 @@ const BlackoutManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
       
       console.log('[BlackoutManager] Success:', result);
       
-      // --- START FIX: Close self *before* calling parent ---
+      // --- Close self *before* calling parent ---
       setLoading(false);
       setIsConfirming(false);
       onSuccess(result); // Tell parent to refresh
-      // --- END FIX ---
+      // --- END ---
 
     } catch (err) {
       console.error('[BlackoutManager] Error applying blackout:', err);
-      // --- FIX: Use toast for API errors, not inline ---
+      // --- Use toast for API errors, not inline ---
       setToast({ type: 'error', message: err.message || 'Failed to apply blackout.' });
       setError(''); // Clear form validation
-      // --- END FIX ---
+      // --- END ---
       setLoading(false); // Keep modal open to show error
       setIsConfirming(false); // Close confirmation dialog
     }
@@ -107,7 +105,7 @@ const BlackoutManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
         title={`Apply Blackout for ${tour?.name}`}
       >
         
-        {/* --- FIX: Re-instated Toast Notification --- */}
+        {/* --- Re-instated Toast Notification --- */}
         {toast && (
           <div 
             className={sharedStyles.toastNotification}
@@ -167,7 +165,7 @@ const BlackoutManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
           </div>
         </div>
 
-        {/* --- FIX: This is now for FORM validation only --- */}
+        {/* --- This is now for FORM validation only --- */}
         {error && <p className={sharedStyles.errorText} style={{ marginTop: '1rem' }}>{error}</p>}
 
         <div className={sharedStyles.formFooter}>
@@ -190,7 +188,7 @@ const BlackoutManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
         </div>
       </AdminFormModal>
       
-      {/* --- NEW: Confirmation Dialog --- */}
+      {/* --- Confirmation Dialog --- */}
       <ConfirmationDialog
         isOpen={isConfirming}
         onClose={handleCloseConfirm}

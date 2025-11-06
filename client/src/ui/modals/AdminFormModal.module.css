@@ -68,3 +68,33 @@
   overflow-y: auto;
   color: var(--grey-900);
 }
+
+/* --- [CORRECTED] Responsive Fix --- */
+/*
+ * This uses @media, not @container, because this component
+ * uses 'position: fixed' and escapes the PrototypeShowcase container.
+ * This rule will apply when the *browser viewport* is shrunk
+ * or when viewed on a real mobile device.
+*/
+@media (max-width: 768px) {
+  .modalContent {
+    /* Use 95% of viewport width */
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .modalHeader {
+    /* Reduce padding */
+    padding: 1rem;
+  }
+
+  .modalTitle {
+    font-size: 1.1rem;
+  }
+
+  .modalBody {
+    /* Reduce padding */
+    padding: 1rem;
+  }
+}
+/* --- [END CORRECTED] --- */

@@ -1,0 +1,97 @@
+/* ==========================================
+ * UPDATED FILE
+ * client/src/adminPortal/MADTourManagement/BookingManager/BookingActionModal.module.css
+ * ==========================================
+*/
+
+/* --- [DELETED] .modalBackdrop, .modalContent, .modalHeader, .closeButton --- */
+/* All wrapper styles are now provided by ui/modals/AdminFormModal.module.css */
+
+/* [RENAMED] from .modalBody */
+.detailsBody {
+    /* The 1.5rem padding is provided by AdminFormModal's .modalBody */
+    /* We just define the content layout */
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.detailRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    font-size: 0.9rem;
+}
+
+.detailRow strong {
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.detailRow span {
+    color: var(--grey-700);
+    text-align: right;
+}
+
+.detailRow .reference {
+    font-family: monospace;
+    font-weight: 600;
+    color: var(--grey-700);
+}
+
+/* --- Badge styles (Unchanged) --- */
+.badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: var(--grey-200);
+    color: var(--grey-700);
+    margin: 0.1rem;
+    display: inline-block;
+}
+.badge.confirmed,
+.badge.paid {
+    background-color: var(--grey-900);
+    color: var(--background);
+}
+.badge.pending {
+    background-color: var(--grey-200);
+    color: var(--grey-700);
+}
+.badge.cancelled,
+.badge.refunded {
+    background-color: var(--grey-100);
+    color: var(--grey-500);
+    text-decoration: line-through;
+}
+.badge.pending_triage {
+    background-color: var(--destructive);
+    color: var(--background);
+}
+/* --- End badge styles --- */
+
+
+/* [RENAMED] from .modalFooter */
+.actionsFooter {
+    /* This sits *inside* the .modalBody padding of the parent */
+    /* We add a border and padding on top */
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.actionsFooter button {
+    width: 100%;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
