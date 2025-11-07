@@ -1,4 +1,7 @@
+// ==========================================
 // client/src/ui/MADTours/Widgets/TicketBookingWidget/TicketBookingWidget.jsx
+// ==========================================
+
 import React, { useState, useEffect } from 'react';
 import * as tourBookingService from '../../../../services/public/tourBookingService.js';
 import { useToast } from '../../../toast/useToast.js';
@@ -42,7 +45,10 @@ const TicketBookingWidget = () => {
   const [customer, setCustomer] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [isPayerAPassenger, setIsPayerAPassenger] = useState(true);
 
-  // --- Calculated values ---
+  // --- [NEW] State for customer notes ---
+  const [customerNotes, setCustomerNotes] = useState('');
+
+  // --- Calculated values (Unchanged) ---
 
   const totalSelectedSeats = ticketSelection.reduce((sum, item) => {
     const ticketDef = pricing.find(p => p.ticket_id === item.ticket_id);
@@ -64,7 +70,7 @@ const TicketBookingWidget = () => {
 
   const selectedSlot = (selectedDate && availability[selectedDate]?.find(s => s.time === selectedTimeFull)) || null;
 
-  // --- Load all active tours on mount ---
+  // --- Load all active tours on mount (Unchanged) ---
   useEffect(() => {
     const loadTours = async () => {
       setLoading(p => ({ ...p, tours: true }));
@@ -80,7 +86,7 @@ const TicketBookingWidget = () => {
     loadTours();
   }, [showToast]);
 
-  // --- Load availability when tour, month, or total seats changes ---
+  // --- Load availability when tour, month, or total seats changes (Unchanged) ---
   useEffect(() => {
     if (!selectedTourId) {
       setAvailability({});
@@ -123,7 +129,8 @@ const TicketBookingWidget = () => {
     setSelectedTime(null);
     setSelectedTimeFull(null);
     setTicketSelection([]);
-    setPricing([]); // Clear pricing
+    setPricing([]);
+    setCustomerNotes(''); // --- [NEW] Reset notes
   };
 
   const handleTourChange = (e) => {
@@ -146,8 +153,8 @@ const TicketBookingWidget = () => {
       setSelectedDate(dateKey);
       setSelectedTime(null);
       setSelectedTimeFull(null);
-      setPricing([]); // Clear pricing if new date is selected
-      setStep(1); // Go back to step 1
+      setPricing([]);
+      setStep(1);
     }
   };
 
@@ -195,6 +202,7 @@ const TicketBookingWidget = () => {
     setCustomer(p => ({ ...p, [name]: value }));
   };
 
+  // --- [MODIFIED] Booking Submission ---
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setLoading(p => ({ ...p, booking: true }));
@@ -216,7 +224,8 @@ const TicketBookingWidget = () => {
       tickets: ticketSelection,
       passengers: passengerList, 
       totalAmount: totalAmount,
-      totalSeats: totalSelectedSeats 
+      totalSeats: totalSelectedSeats,
+      customerNotes: customerNotes // --- [NEW] Add notes to payload ---
     };
 
     console.log('--- DEBUG [CLIENT WIDGET]: Submitting bookingData ---', bookingData);
@@ -301,12 +310,15 @@ const TicketBookingWidget = () => {
             />
           )}
 
+          {/* --- [MODIFIED] Pass new props to form --- */}
           {step >= 3 && (
             <CustomerDetailsForm
               customer={customer}
               onCustomerChange={handleCustomerChange}
               isPayerAPassenger={isPayerAPassenger}
               onPayerToggle={(e) => setIsPayerAPassenger(e.target.checked)}
+              customerNotes={customerNotes}
+              onCustomerNotesChange={setCustomerNotes}
               onSubmit={handleBookingSubmit}
               totalAmount={totalAmount}
               isLoading={loading.booking}

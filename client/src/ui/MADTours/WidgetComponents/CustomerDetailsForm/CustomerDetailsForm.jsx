@@ -1,13 +1,23 @@
+// ==========================================
+// UPDATED FILE
 // client/src/ui/MADTours/WidgetComponents/CustomerDetailsForm/CustomerDetailsForm.jsx
+// ==========================================
+
 import React from 'react';
+// --- [NEW] Import the Markdown Editor ---
+import MarkdownEditor from '../../../MarkdownEditor/MarkdownEditor.jsx';
 import styles from './CustomerDetailsForm.module.css';
-import sharedStyles from '../../Widgets/TicketBookingWidget/TicketBookingWidget.module.css'; // Borrowing some styles
+import sharedStyles from '../../Widgets/TicketBookingWidget/TicketBookingWidget.module.css';
 
 const CustomerDetailsForm = ({ 
   customer, 
   onCustomerChange, 
   isPayerAPassenger, 
   onPayerToggle, 
+  // --- [NEW] Add new props for notes ---
+  customerNotes,
+  onCustomerNotesChange,
+  // ---
   onSubmit, 
   totalAmount, 
   isLoading 
@@ -15,6 +25,8 @@ const CustomerDetailsForm = ({
   return (
     <div className={sharedStyles.stepContent}>
       <h4 className={sharedStyles.stepTitle}>Your Details</h4>
+      
+      {/* --- Customer Form Grid (Unchanged) --- */}
       <div className={styles.formGrid}>
         <div className={styles.formGroup}>
           <label>First Name</label>
@@ -34,6 +46,18 @@ const CustomerDetailsForm = ({
         </div>
       </div>
 
+      {/* --- [NEW] Customer Notes Editor --- */}
+      <div className={styles.formGroup} style={{ marginTop: '1.5rem' }}>
+        <label>Notes / Special Requests (Optional)</label>
+        <MarkdownEditor
+          value={customerNotes}
+          onChange={onCustomerNotesChange}
+          disabled={isLoading}
+        />
+      </div>
+      {/* --- [END NEW] --- */}
+
+      {/* --- Checkbox (Unchanged) --- */}
       <div className={styles.checkboxGroup}>
         <input
           type="checkbox"
@@ -44,6 +68,7 @@ const CustomerDetailsForm = ({
         <label htmlFor="isPayerAPassenger">I am one of the passengers</label>
       </div>
 
+      {/* --- Submit Button (Unchanged) --- */}
       <button 
         className={sharedStyles.bookButton} 
         onClick={onSubmit}

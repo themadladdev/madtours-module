@@ -1,4 +1,7 @@
+// ==========================================
 // server/src/services/tourBookingService.js
+// ==========================================
+
 import { pool } from '../db/db.js';
 import { randomBytes } from 'crypto';
 import { sendBookingConfirmation, sendBookingCancellation } from './tourEmailService.js';
@@ -161,10 +164,11 @@ export const createTicketBooking = async (bookingData) => {
     totalAmount,
     customer, // { email, firstName, lastName, phone }
     tickets, // [{ ticket_id, quantity }]
-    passengers // [{ firstName, lastName, ticket_type }]
+    passengers, // [{ firstName, lastName, ticket_type }]
+    customerNotes // --- [NEW] Destructure notes ---
   } = bookingData;
 
-  const ticketSummaryJson = JSON.stringify(tickets);
+  // const ticketSummaryJson = JSON.stringify(tickets); // This isn't used, removing
 
   const client = await pool.connect();
 
@@ -246,18 +250,20 @@ export const createTicketBooking = async (bookingData) => {
     }
 
     // Step 6: Create booking
+    // --- [MODIFIED] Add customer_notes to query ---
     const bookingResult = await client.query(
       `INSERT INTO tour_bookings 
        (booking_reference, tour_instance_id, customer_id, seats, total_amount, 
-        status, payment_status)
-       VALUES ($1, $2, $3, $4, $5, 'pending', 'pending')
+        status, payment_status, customer_notes)
+       VALUES ($1, $2, $3, $4, $5, 'pending', 'pending', $6)
        RETURNING *`,
       [
         reference,
         tourInstanceId,
         customerId,
         totalSeats, 
-        totalAmount
+        totalAmount,
+        customerNotes || null // --- [NEW] Add new parameter ---
       ]
     );
 
@@ -299,6 +305,9 @@ export const createTicketBooking = async (bookingData) => {
   }
 };
 
+// --- (Unchanged functions: getBookingByReference, updateBookingPaymentIntent, confirmBooking, cancelBooking, updateBookingPassengers, manualConfirmBooking, manualMarkAsPaid) ---
+// ... (Keep all existing functions from here down) ...
+
 export const getBookingByReference = async (reference) => {
   const result = await pool.query(
     `SELECT 
@@ -333,10 +342,6 @@ export const updateBookingPaymentIntent = async (bookingId, paymentIntentId) => 
   return result.rows[0];
 };
 
-/**
- * Confirms a booking, setting status='confirmed' and payment_status='paid'.
- * Used by the Stripe webhook upon successful payment.
- */
 export const confirmBooking = async (bookingId) => {
   const client = await pool.connect();
 
@@ -394,10 +399,6 @@ export const confirmBooking = async (bookingId) => {
   }
 };
 
-/**
- * Cancels a booking, setting status='cancelled' and decrementing booked_seats
- * if the booking was 'pending' or 'confirmed'.
- */
 export const cancelBooking = async (bookingId, reason, adminId = null) => {
   const client = await pool.connect();
 
@@ -421,10 +422,9 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
 
     const booking = bookingResult.rows[0];
     
-    // Do not cancel a booking that is already cancelled
     if (booking.status === 'cancelled') {
         client.release();
-        return booking; // Return the already-cancelled booking
+        return booking;
     }
 
     const result = await client.query(
@@ -438,7 +438,6 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
       [reason, bookingId]
     );
 
-    // Decrement seats if booking was 'confirmed' OR 'pending' (hostage)
     if (booking.status === 'confirmed' || booking.status === 'pending') {
       await client.query(
         `UPDATE tour_instances 
@@ -457,7 +456,6 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
 
     await client.query('COMMIT');
 
-    // Send cancellation email (only if it was 'confirmed')
     if (booking.status === 'confirmed') {
       sendBookingCancellation(
         booking,
@@ -484,13 +482,11 @@ export const updateBookingPassengers = async (bookingId, passengers) => {
   try {
     await client.query('BEGIN');
 
-    // Step 1: Delete all existing passengers for this booking
     await client.query(
       'DELETE FROM tour_booking_passengers WHERE booking_id = $1',
       [bookingId]
     );
 
-    // Step 2: Insert the new list of passengers
     for (const passenger of passengers) {
       await client.query(
         `INSERT INTO tour_booking_passengers 
@@ -511,19 +507,12 @@ export const updateBookingPassengers = async (bookingId, passengers) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error(`Error in updateBookingPassengers transaction:`, error);
-    throw error; // Re-throw to be caught by the controller
+    throw error;
   } finally {
     client.release();
   }
 };
 
-// --- [NEW SERVICE FUNCTIONS] ---
-
-/**
- * Manually confirms a booking. Sets status to 'confirmed'.
- * Does NOT affect payment_status.
- * Sends confirmation email.
- */
 export const manualConfirmBooking = async (bookingId, reason, adminId) => {
   const client = await pool.connect();
 
@@ -557,7 +546,6 @@ export const manualConfirmBooking = async (bookingId, reason, adminId) => {
 
     await client.query('COMMIT');
     
-    // Fetch full booking details for email
     const bookingDetails = await client.query(
       `SELECT 
         b.*,
@@ -573,7 +561,6 @@ export const manualConfirmBooking = async (bookingId, reason, adminId) => {
     );
     const booking = bookingDetails.rows[0];
 
-    // Send confirmation email (don't await, let it run async)
     sendBookingConfirmation(
       booking,
       { first_name: booking.first_name, last_name: booking.last_name, email: booking.email },
@@ -591,10 +578,6 @@ export const manualConfirmBooking = async (bookingId, reason, adminId) => {
   }
 };
 
-/**
- * Manually marks a booking as paid. Sets payment_status to 'paid'.
- * Does NOT affect booking status.
- */
 export const manualMarkAsPaid = async (bookingId, reason, adminId) => {
   const client = await pool.connect();
   
@@ -619,7 +602,6 @@ export const manualMarkAsPaid = async (bookingId, reason, adminId) => {
       throw new Error('Booking not found or already paid');
     }
     
-    // We can reuse the history table for this
     await client.query(
       `INSERT INTO tour_booking_history 
        (booking_id, previous_status, new_status, changed_by_admin, reason)
@@ -637,4 +619,3 @@ export const manualMarkAsPaid = async (bookingId, reason, adminId) => {
     client.release();
   }
 };
-// --- [END NEW SERVICE FUNCTIONS] ---

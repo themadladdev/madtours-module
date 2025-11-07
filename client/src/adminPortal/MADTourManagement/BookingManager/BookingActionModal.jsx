@@ -3,39 +3,51 @@
 // client/src/adminPortal/MADTourManagement/BookingManager/BookingActionModal.jsx
 // ==========================================
 
-import React from 'react';
-// --- [NEW] Import the standardized modal wrapper ---
+import React, { useState } from 'react';
 import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
+import MarkdownRenderer from '../../../ui/MarkdownEditor/MarkdownRenderer.jsx';
+import MarkdownEditor from '../../../ui/MarkdownEditor/MarkdownEditor.jsx';
+import { updateAdminNotes } from '../../../services/admin/adminBookingService.js';
 import styles from './BookingActionModal.module.css';
 import sharedStyles from '../../adminshared.module.css';
 
-/**
- * A modal to display booking details and all available actions.
- * This component now renders *inside* the standardized AdminFormModal.
- *
- * @param {object} booking - The booking object to display.
- * @param {function} onClose - Function to call when the modal should close.
- * @param {function} onTriggerAction - Function to pass actionType and booking to.
- * @param {boolean} isResolutionView - If true, shows Triage actions.
- */
 const BookingActionModal = ({ booking, onClose, onTriggerAction, isResolutionView }) => {
-  // --- [REMOVED] All wrapper logic (backdrop, esc key) ---
+
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [adminNotes, setAdminNotes] = useState(booking.admin_notes || '');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [notesError, setNotesError] = useState(null);
 
   if (!booking) {
     return null;
   }
+  
+  const handleSaveNotes = async () => {
+    setIsSavingNotes(true);
+    setNotesError(null);
+    try {
+      await updateAdminNotes(booking.id, adminNotes);
+      booking.admin_notes = adminNotes; 
+      setIsEditingNotes(false);
+    } catch (err) {
+      console.error('Failed to save admin notes:', err);
+      setNotesError(`Failed to save: ${err.message}`);
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
 
   return (
-    // --- [NEW] Use the AdminFormModal as the wrapper ---
     <AdminFormModal
       isOpen={true}
       onClose={onClose}
       title="Booking Actions"
     >
-      {/* This 'children' prop contains the modal's body and our custom footer */}
-      <div>
+      {/* --- [THIS IS THE FIX] --- */}
+      {/* This wrapper div is required for the modal's flex layout to work. */}
+      <div className={styles.modalLayoutWrapper}>
+      
         {/* --- Body (Details) --- */}
-        {/* [MODIFIED] Using .detailsBody class to avoid conflicts */}
         <div className={styles.detailsBody}>
           <div className={styles.detailRow}>
             <strong>Reference:</strong>
@@ -68,7 +80,6 @@ const BookingActionModal = ({ booking, onClose, onTriggerAction, isResolutionVie
             <span>${booking.total_amount}</span>
           </div>
           
-          {/* --- [THIS IS THE FIX] --- */}
           <div className={styles.detailRow}>
             <strong>Booking Status:</strong>
             <div>
@@ -85,12 +96,75 @@ const BookingActionModal = ({ booking, onClose, onTriggerAction, isResolutionVie
               </span>
             </div>
           </div>
-          {/* --- [END FIX] --- */}
 
+          {/* --- Customer Notes Section --- */}
+          {booking.customer_notes && (
+            <div className={styles.detailBlock}>
+              <strong>Customer Notes:</strong>
+              <div className={styles.notesContainer}>
+                <MarkdownRenderer markdown={booking.customer_notes} />
+              </div>
+            </div>
+          )}
+          
+          {/* --- Admin Notes Section --- */}
+          <div className={styles.detailBlock}>
+            <div className={styles.notesHeader}>
+              <strong>Admin Notes:</strong>
+              {!isEditingNotes && (
+                <button 
+                  // --- [THIS IS THE FIX] ---
+                  className={sharedStyles.secondaryButtonSmall}
+                  // ---
+                  onClick={() => setIsEditingNotes(true)}
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+            
+            {isEditingNotes ? (
+              <div className={styles.notesEditorWrapper}>
+                <MarkdownEditor
+                  value={adminNotes}
+                  onChange={setAdminNotes}
+                  disabled={isSavingNotes}
+                />
+                {notesError && <p className={styles.notesError}>{notesError}</p>}
+                <div className={styles.notesActions}>
+                  <button
+                    className={sharedStyles.secondaryButton}
+                    onClick={() => {
+                      setIsEditingNotes(false);
+                      setAdminNotes(booking.admin_notes || '');
+                      setNotesError(null);
+                    }}
+                    disabled={isSavingNotes}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className={sharedStyles.primaryButton}
+                    onClick={handleSaveNotes}
+                    disabled={isSavingNotes}
+                  >
+                    {isSavingNotes ? 'Saving...' : 'Save Notes'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.notesContainer}>
+                {booking.admin_notes ? (
+                  <MarkdownRenderer markdown={booking.admin_notes} />
+                ) : (
+                  <span className={styles.notesPlaceholder}>No admin notes added.</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         
         {/* --- Footer (Actions) --- */}
-        {/* [MODIFIED] Using .actionsFooter class */}
         <div className={styles.actionsFooter}>
           {isResolutionView ? (
             <>
@@ -145,6 +219,7 @@ const BookingActionModal = ({ booking, onClose, onTriggerAction, isResolutionVie
           )}
         </div>
       </div>
+      {/* --- [END FIX] --- */}
     </AdminFormModal>
   );
 };

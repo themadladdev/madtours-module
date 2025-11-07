@@ -9,10 +9,8 @@ import adminApiFetch from '../adminApiFetch.js';
 const API_PREFIX = '/admin/bookings';
 
 export const getAllBookings = async (filters = {}) => {
-  // --- [MODIFIED] Pass all filters directly ---
   const params = new URLSearchParams();
   
-  // Clean up filters to avoid sending empty strings
   Object.entries(filters).forEach(([key, value]) => {
     if (value) {
       params.append(key, value);
@@ -92,4 +90,15 @@ export const adminCancelBooking = async (bookingId, reason) => {
     body: JSON.stringify({ reason })
   });
 };
-// --- [END NEW FUNCTIONS] ---
+
+// --- [NEW] Admin Notes Function ---
+/**
+ * Updates the admin-only notes for a booking.
+ */
+export const updateAdminNotes = async (bookingId, adminNotes) => {
+  return await adminApiFetch(`${API_PREFIX}/${bookingId}/notes`, {
+    method: 'PUT',
+    body: JSON.stringify({ adminNotes })
+  });
+};
+// --- [END NEW FUNCTION] ---

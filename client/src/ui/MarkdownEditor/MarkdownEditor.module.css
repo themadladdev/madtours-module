@@ -1,0 +1,75 @@
+/* client/src/ui/MarkdownEditor/MarkdownEditor.module.css */
+
+.editorContainer {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: rgba(var(--text-rgb), 0.05);
+  border: 1px solid rgba(var(--text-rgb), 0.1);
+  border-bottom: none;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.toolbar button {
+  background-color: var(--background);
+  color: var(--accent);
+  border: 1px solid rgba(var(--text-rgb), 0.2);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1; 
+  display: flex; /* Added for alignment */
+  align-items: center; /* Added for alignment */
+  justify-content: center; /* Added for alignment */
+}
+
+.toolbar button:hover:not(:disabled) {
+  background-color: rgba(var(--primary-rgb), 0.1);
+  border-color: var(--primary);
+}
+
+.toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.linkButton svg {
+    display: block;
+}
+
+.editTextarea {
+  flex-grow: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--primary);
+  border-top: none;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--background);
+  color: var(--text);
+  resize: vertical;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  min-height: 200px;
+}
+
+.editTextarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.markdownHelp {
+  color: rgba(var(--text-rgb), 0.7);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}

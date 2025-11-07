@@ -4,19 +4,40 @@
  * ==========================================
 */
 
-/* --- [DELETED] .modalBackdrop, .modalContent, .modalHeader, .closeButton --- */
-/* All wrapper styles are now provided by ui/modals/AdminFormModal.module.css */
+/* --- [THIS IS THE FIX] --- */
+/* This wrapper ensures our body/footer flex layout works
+   inside the AdminFormModal's <AdminFormModalBody> slot. */
+.modalLayoutWrapper {
+  display: flex;
+  flex-direction: column;
+  /* This forces the wrapper to obey the parent's height */
+  height: 100%;
+  min-height: 0; /* Prevents flex content from overflowing parent */
+}
 
-/* [RENAMED] from .modalBody */
+/* The body now expands to fill available space, and *it* scrolls */
 .detailsBody {
-    /* The 1.5rem padding is provided by AdminFormModal's .modalBody */
-    /* We just define the content layout */
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    max-height: 60vh;
-    overflow-y: auto;
+    gap: .75rem;
+    flex: 1 1 auto; /* This is the key: take up all available vertical space */
+    overflow-y: auto; /* This is the key: only this element scrolls */
+    min-height: 0; /* Prevents flex overflow */
+    padding: 0 0.25rem;
 }
+
+/* The footer is no longer part of the scrolling content */
+.actionsFooter {
+    flex-shrink: 0; /* Prevents footer from shrinking */
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: row;
+    gap: 0.75rem;
+}
+/* --- [END FIX] --- */
+
 
 .detailRow {
     display: flex;
@@ -25,25 +46,83 @@
     gap: 1rem;
     font-size: 0.9rem;
 }
-
 .detailRow strong {
     font-weight: 600;
     color: var(--text);
     white-space: nowrap;
 }
-
 .detailRow span {
     color: var(--grey-700);
     text-align: right;
 }
-
 .detailRow .reference {
     font-family: monospace;
     font-weight: 600;
     color: var(--grey-700);
 }
 
-/* --- Badge styles (Unchanged) --- */
+.detailBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+.detailBlock strong {
+    font-weight: 600;
+    color: var(--text);
+}
+.notesContainer {
+    background-color: var(--grey-100);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: var(--text);
+}
+.notesContainer > div > p {
+    margin: 0 0 0.5rem 0;
+    line-height: 1.6;
+}
+
+/* Admin Notes Editor Styles */
+.notesHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* --- [THIS IS THE FIX] --- */
+/* We remove the padding/font-size override.
+   The .sharedStyles.secondaryButtonSmall class will now apply correctly. */
+.notesHeader button {
+   /* No overrides needed */
+}
+
+.notesPlaceholder {
+    font-style: italic;
+    color: var(--grey-500);
+}
+.notesEditorWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+.notesActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+.notesActions button {
+    padding: 0.5rem 1rem;
+}
+.notesError {
+    font-size: 0.85rem;
+    color: var(--destructive);
+    margin: 0;
+}
+
+/* .badge (Unchanged) */
 .badge {
     padding: 0.2rem 0.6rem;
     border-radius: 4px;
@@ -74,21 +153,8 @@
     background-color: var(--destructive);
     color: var(--background);
 }
-/* --- End badge styles --- */
 
-
-/* [RENAMED] from .modalFooter */
-.actionsFooter {
-    /* This sits *inside* the .modalBody padding of the parent */
-    /* We add a border and padding on top */
-    padding-top: 1.5rem;
-    margin-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
+/* .actionsFooter button (Unchanged) */
 .actionsFooter button {
     width: 100%;
     padding: 0.6rem 1.2rem;

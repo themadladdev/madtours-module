@@ -21,7 +21,7 @@ const PrototypeShowcase = lazy(() => import('./prototypeshowcase/PrototypeShowca
 const TourCollectionPage = lazy(() => import('./modules/MADTours/TourCollectionPage/TourCollectionPage.jsx'));
 const TourDetailPage = lazy(() => import('./modules/MADTours/TourDetailPage/TourDetailPage.jsx'));
 // --- NEW: Add the BookingPage ---
-const BookingPage = lazy(() => import('./modules/MADTours/BookingPage/BookingPage.jsx'));
+const BookingPage = lazy(() => import('./modules/MADTours/BookingPage/BookingPage.old.jsx'));
 
 
 // A simple loading component

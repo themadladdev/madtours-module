@@ -33,7 +33,6 @@ router.post('/:id/refund', adminBookingController.refundBooking);
 // (Used by the Manifest Editor)
 router.put('/:id/passengers', adminBookingController.updateBookingPassengers);
 
-// --- [THIS IS THE FIX] ---
 // === Manual Admin Actions ===
 
 // PUT    /api/admin/bookings/:id/manual-confirm
@@ -44,6 +43,10 @@ router.put('/:id/manual-pay', adminBookingController.manualMarkAsPaid);
 
 // PUT    /api/admin/bookings/:id/manual-cancel
 router.put('/:id/manual-cancel', adminBookingController.manualCancelBooking);
-// --- [END FIX] ---
+
+// --- [NEW] Admin Notes ---
+// PUT    /api/admin/bookings/:id/notes
+router.put('/:id/notes', adminBookingController.updateAdminNotes);
+// --- [END NEW] ---
 
 export default router;

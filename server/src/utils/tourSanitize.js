@@ -1,5 +1,4 @@
 // ==========================================
-// SECURITY: Input Sanitization
 // server/src/utils/tourSanitize.js
 // ==========================================
 
@@ -23,15 +22,13 @@ export const sanitizeBookingData = (data) => {
     seats: parseInt(data.seats),
     tourInstanceId: parseInt(data.tourInstanceId),
     totalAmount: parseFloat(data.totalAmount),
-    // --- NEW: Added missing fields from createBooking ---
     tourId: parseInt(data.tourId),
     date: sanitizeInput(data.date), // Dates are strings
     time: sanitizeInput(data.time), // Times are strings
-    // --- END NEW ---
   };
 };
 
-// --- NEW: Sanitizer for the TicketBookingWidget ---
+// --- [MODIFIED] Sanitizer for the TicketBookingWidget ---
 export const sanitizeTicketBookingData = (data) => {
   // 1. Sanitize simple fields
   const tourId = parseInt(data.tourId);
@@ -39,6 +36,9 @@ export const sanitizeTicketBookingData = (data) => {
   const time = sanitizeInput(data.time);
   const totalAmount = parseFloat(data.totalAmount);
   const totalSeats = parseInt(data.totalSeats);
+  
+  // --- [NEW] Sanitize customer notes ---
+  const customerNotes = sanitizeInput(data.customerNotes);
 
   // 2. Sanitize Customer object
   const customer = {
@@ -70,6 +70,7 @@ export const sanitizeTicketBookingData = (data) => {
     customer,
     tickets,
     passengers,
+    customerNotes // --- [NEW] Add to returned object ---
   };
 };
-// --- END NEW FUNCTION ---
+// --- END MODIFIED FUNCTION ---

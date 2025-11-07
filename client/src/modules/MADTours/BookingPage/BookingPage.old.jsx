@@ -1,6 +1,6 @@
 // client/src/modules/MADTours/BookingPage/BookingPage.jsx
 import React, { useState, useEffect } from 'react';
-import styles from './BookingPage.module.css';
+import styles from './BookingPage.old.module.css';
 
 const BookingPage = () => {
   const [bookingDetails, setBookingDetails] = useState(null);

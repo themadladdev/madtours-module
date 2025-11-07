@@ -1,25 +1,28 @@
 // ==========================================
-// UPDATED FILE
 // server/src/controllers/adminTourBookingController.js
 // ==========================================
 
 import { pool } from '../db/db.js';
 import * as bookingService from '../services/tourBookingService.js';
 import { processRefund } from '../services/tourStripeService.js';
+// --- [NEW] Import a basic sanitizer ---
+import { sanitizeInput } from '../utils/tourSanitize.js';
 
 export const getAllBookings = async (req, res, next) => {
   try {
     const { status, startDate, endDate, searchTerm } = req.query;
     
+    // --- [MODIFIED] Explicitly listed all columns to add customer_notes/admin_notes ---
     let query = `
       SELECT 
-        b.*,
-        c.first_name,
-        c.last_name,
-        c.email,
-        c.phone,
-        ti.date,
-        ti.time,
+        b.id, b.booking_reference, b.tour_instance_id, b.customer_id, b.seats,
+        b.total_amount, b.status, b.special_requests, b.payment_intent_id,
+        b.payment_status, b.refund_amount, b.refunded_at, b.cancelled_at,
+        b.cancellation_reason, b.created_at, b.updated_at, b.reminder_sent,
+        b.customer_notes, 
+        b.admin_notes, -- [NEW]
+        c.first_name, c.last_name, c.email, c.phone,
+        ti.date, ti.time,
         t.name as tour_name
       FROM tour_bookings b
       JOIN tour_customers c ON b.customer_id = c.id
@@ -27,6 +30,7 @@ export const getAllBookings = async (req, res, next) => {
       JOIN tours t ON ti.tour_id = t.id
       WHERE 1=1
     `;
+    // --- [END MODIFICATION] ---
     
     const params = [];
     let paramCount = 1;
@@ -46,21 +50,16 @@ export const getAllBookings = async (req, res, next) => {
       params.push(endDate);
     }
 
-    // --- [THIS IS THE FIX] ---
     if (searchTerm) {
       const searchPattern = `%${searchTerm}%`;
-      // Use three *different* placeholders, one for each field
       query += ` AND (
         c.first_name ILIKE $${paramCount} OR 
         c.last_name ILIKE $${paramCount + 1} OR 
         b.booking_reference ILIKE $${paramCount + 2}
       )`;
-      // Add the parameter value three times
       params.push(searchPattern, searchPattern, searchPattern);
-      // Increment the counter by 3
       paramCount += 3;
     }
-    // --- [END FIX] ---
 
     query += ' ORDER BY ti.date DESC, ti.time DESC, b.created_at DESC';
 
@@ -77,9 +76,11 @@ export const getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
     
+    // --- [MODIFIED] Add b.admin_notes ---
+    // b.* already selects customer_notes and admin_notes, this is safe.
     const result = await pool.query(
       `SELECT 
-        b.*,
+        b.*, 
         c.first_name,
         c.last_name,
         c.email,
@@ -108,14 +109,51 @@ export const getBookingById = async (req, res, next) => {
   }
 };
 
-/**
- * Handles Triage/Refund cancellation.
- */
+// --- [NEW] Controller function for Admin Notes ---
+export const updateAdminNotes = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { adminNotes } = req.body;
+    const adminId = req.user.id; // From auth stub
+
+    // Sanitize the raw text content
+    const sanitizedNotes = sanitizeInput(adminNotes);
+
+    const result = await pool.query(
+      `UPDATE tour_bookings
+       SET admin_notes = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, admin_notes, updated_at`,
+      [sanitizedNotes, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Add to history
+    await pool.query(
+      `INSERT INTO tour_booking_history 
+       (booking_id, new_status, changed_by_admin, reason)
+       VALUES ($1, $2, $3, $4)`,
+      [id, 'updated', adminId, 'Admin notes updated']
+    );
+
+    res.json(result.rows[0]);
+
+  } catch (error) {
+    console.error(`Error updating admin notes for booking ${req.params.id}:`, error);
+    next(error);
+  }
+};
+// --- [END NEW FUNCTION] ---
+
+// --- (Unchanged functions: cancelBooking, refundBooking, getDashboardStats, updateBookingPassengers, manualConfirmBooking, manualMarkAsPaid, manualCancelBooking) ---
 export const cancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    const adminId = req.user.id; // From authenticateAdmin stub
+    const adminId = req.user.id; 
 
     if (!reason) {
       return res.status(400).json({ message: 'Cancellation reason is required' });
@@ -191,11 +229,6 @@ export const updateBookingPassengers = async (req, res, next) => {
   }
 };
 
-// --- [CONTROLLER FUNCTIONS] ---
-
-/**
- * Manually confirms a 'pending' booking.
- */
 export const manualConfirmBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -211,9 +244,6 @@ export const manualConfirmBooking = async (req, res, next) => {
   }
 };
 
-/**
- * Manually marks a booking as 'paid'.
- */
 export const manualMarkAsPaid = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -229,9 +259,6 @@ export const manualMarkAsPaid = async (req, res, next) => {
   }
 };
 
-/**
- * Manually cancels a 'pending' booking and releases inventory.
- */
 export const manualCancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -251,4 +278,3 @@ export const manualCancelBooking = async (req, res, next) => {
     next(error);
   }
 };
-// --- [END FUNCTIONS] ---
