@@ -199,6 +199,9 @@
 
 /* --- [NEW] Responsive Container Query --- */
 @container (max-width: 768px) {
+  .cardActions {
+    flex-direction: row;
+  }
   .desktopTable {
     display: none;
   }

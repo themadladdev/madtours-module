@@ -5,7 +5,6 @@
 
 import express from 'express';
 import { authenticateAdmin } from '../middleware/adminAuth.js';
-// FIXED: Corrected the controller filename
 import * as adminBookingController from '../controllers/adminTourBookingController.js';
 
 const router = express.Router();
@@ -30,10 +29,21 @@ router.post('/:id/cancel', adminBookingController.cancelBooking);
 // POST   /api/admin/bookings/:id/refund
 router.post('/:id/refund', adminBookingController.refundBooking);
 
-// --- NEW ROUTE ---
 // PUT    /api/admin/bookings/:id/passengers
 // (Used by the Manifest Editor)
 router.put('/:id/passengers', adminBookingController.updateBookingPassengers);
-// --- END NEW ROUTE ---
+
+// --- [THIS IS THE FIX] ---
+// === Manual Admin Actions ===
+
+// PUT    /api/admin/bookings/:id/manual-confirm
+router.put('/:id/manual-confirm', adminBookingController.manualConfirmBooking);
+
+// PUT    /api/admin/bookings/:id/manual-pay
+router.put('/:id/manual-pay', adminBookingController.manualMarkAsPaid);
+
+// PUT    /api/admin/bookings/:id/manual-cancel
+router.put('/:id/manual-cancel', adminBookingController.manualCancelBooking);
+// --- [END FIX] ---
 
 export default router;

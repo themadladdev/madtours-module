@@ -9,7 +9,6 @@ import { processRefund } from '../services/tourStripeService.js';
 
 export const getAllBookings = async (req, res, next) => {
   try {
-    // --- [NEW] Add searchTerm ---
     const { status, startDate, endDate, searchTerm } = req.query;
     
     let query = `
@@ -47,19 +46,21 @@ export const getAllBookings = async (req, res, next) => {
       params.push(endDate);
     }
 
-    // --- [NEW] Add search term logic ---
+    // --- [THIS IS THE FIX] ---
     if (searchTerm) {
       const searchPattern = `%${searchTerm}%`;
+      // Use three *different* placeholders, one for each field
       query += ` AND (
         c.first_name ILIKE $${paramCount} OR 
-        c.last_name ILIKE $${paramCount} OR 
-        b.booking_reference ILIKE $${paramCount}
+        c.last_name ILIKE $${paramCount + 1} OR 
+        b.booking_reference ILIKE $${paramCount + 2}
       )`;
-      // Add the same param three times
+      // Add the parameter value three times
       params.push(searchPattern, searchPattern, searchPattern);
-      paramCount++;
+      // Increment the counter by 3
+      paramCount += 3;
     }
-    // --- [END NEW] ---
+    // --- [END FIX] ---
 
     query += ' ORDER BY ti.date DESC, ti.time DESC, b.created_at DESC';
 
