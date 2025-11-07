@@ -1,7 +1,8 @@
 /* ==========================================
-// ADMIN: Instance Manager Styles
-// client/src/adminPortal/MADTourManagement/InstanceManager/InstanceManager.module.css
-// ========================================== */
+ * UPDATED FILE
+ * client/src/adminPortal/MADTourManagement/InstanceManager/InstanceManager.module.css
+ * ==========================================
+ */
 
 .textLeft   { text-align: left; }
 .textCenter { text-align: center; }
@@ -19,13 +20,30 @@
   gap: 1rem;
 }
 
-.filterBar > .filterGroup {
+/* --- [MODIFIED] This rule is now simpler --- */
+.filterBar > .localFilterGroup {
   margin-bottom: 0; 
-  flex-grow: 1;
-  flex-basis: 150px;
 }
 
-/* --- NEW: Style for the top macro bar --- */
+/* --- [NEW] Local Filter Group --- */
+/* Base styles copied from sharedStyles.filterGroup */
+.localFilterGroup {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 150px; /* Use original flex-basis */
+  gap: 0.5rem;
+  flex-grow: 1;
+}
+
+.localFilterGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+/* --- Style for the top macro bar --- */
 .macroBar {
   align-items: flex-end;
   padding: 1rem 1.5rem;
@@ -48,6 +66,10 @@
 .actionsCell {
   text-align: center;
   white-space: nowrap;
+}
+/* [NEW] Add gap to table actions */
+.actionsCell button {
+  margin: 0 0.25rem;
 }
 
 .status {
@@ -78,4 +100,164 @@
 
 .cancelForm {
   margin-top: 1rem;
+}
+
+/* --- [NEW] Responsive Card Styles --- */
+
+.desktopTable {
+  display: table;
+  width: 100%;
+}
+
+.mobileCardList {
+  display: none;
+}
+
+.instanceCard {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem;
+}
+.instanceCard:last-child {
+  border-bottom: none;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.cardDate {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.cardTime {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text);
+  font-family: monospace;
+}
+
+.cardDetails {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.cardDetailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--grey-100);
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.cardDetailItem label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--grey-500);
+  text-transform: uppercase;
+}
+
+.cardDetailItem span {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Status badge needs to fit in the card */
+.cardDetailItem .status {
+  font-size: 0.8rem;
+  align-self: center;
+}
+
+.cardActions {
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cardActions button,
+.cardActions span {
+  width: 100%;
+  text-align: center;
+}
+
+/* --- Hides "Date" word on mobile by default --- */
+.desktopLabel {
+  display: none;
+}
+
+
+/* --- [NEW] Responsive Container Query --- */
+@container (max-width: 768px) {
+  .desktopTable {
+    display: none;
+  }
+  .mobileCardList {
+    display: block;
+  }
+
+  .macroBar,
+  .filterBar {
+    align-items: stretch;
+  }
+  
+  /* Make macro groups stack */
+  .macroBar .filterGroup {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  
+  /* Make local filter groups horizontal */
+  .localFilterGroup {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .localFilterGroup label {
+    white-space: nowrap;
+    margin-bottom: 0; /* Override local stacking margin */
+    min-width: 40px;  /* --- [FIX] Align inputs --- */
+  }
+  
+  /* Make all inputs/buttons full width */
+  .macroBar .filterGroup select,
+  .macroBar .filterGroup button,
+  .localFilterGroup select,
+  .localFilterGroup input {
+    width: 100%;
+  }
+
+  /* --- [THIS IS THE FIX] --- */
+  .localFilterGroup input[type="date"] {
+    cursor: pointer;
+  }
+  
+  /* Adjust spacing */
+  .filterBar:nth-of-type(2) {
+    margin-bottom: 1.5rem;
+  }
+
+  .cardDetails {
+    gap: 0.5rem;
+  }
+}
+
+/* --- Show "Date" word on desktop --- */
+@container (min-width: 769px) {
+  .desktopLabel {
+    display: inline;
+  }
 }

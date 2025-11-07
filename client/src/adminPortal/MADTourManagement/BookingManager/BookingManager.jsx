@@ -272,8 +272,11 @@ const BookingManager = ({ defaultResolutionCount }) => {
         
         {/* --- Row 1: Date Filters (Always Visible) + Toggle Button --- */}
         <div className={styles.filterRow}>
+          {/* --- [THIS IS THE FIX] --- */}
           <div className={styles.filterItem}>
-            <label htmlFor="filter-start-date">From:</label>
+            <label htmlFor="filter-start-date">
+              <span className={styles.desktopLabel}>Date </span>From:
+            </label>
             <input
               id="filter-start-date"
               type="date"
@@ -285,7 +288,9 @@ const BookingManager = ({ defaultResolutionCount }) => {
             />
           </div>
           <div className={styles.filterItem}>
-            <label htmlFor="filter-end-date">To:</label>
+            <label htmlFor="filter-end-date">
+              <span className={styles.desktopLabel}>Date </span>To:
+            </label>
             <input
               id="filter-end-date"
               type="date"
@@ -296,6 +301,8 @@ const BookingManager = ({ defaultResolutionCount }) => {
               onMouseDown={(e) => e.preventDefault()}
             />
           </div>
+          {/* --- [END FIX] --- */}
+          
           {/* --- [NEW] Toggle Button is now part of this row --- */}
           <div className={styles.toggleItem}>
             <button 
@@ -578,7 +585,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
         isDestructive={true}
       >
         <div className={styles.refundForm}>
-          <div className={styles.formGroup}>
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="cancel-reason">Reason (required):</label>
             <textarea
               id="cancel-reason"

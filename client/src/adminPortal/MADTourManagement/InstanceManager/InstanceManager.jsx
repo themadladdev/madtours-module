@@ -1,4 +1,8 @@
+// ==========================================
+// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/InstanceManager/InstanceManager.jsx
+// ==========================================
+
 import React, { useState, useEffect } from 'react';
 import { 
   getTourInstances, 
@@ -199,6 +203,53 @@ const InstanceManager = () => {
   
   const selectedTour = tours.find(t => t.id === parseInt(selectedTourId));
 
+  // --- [NEW] Re-usable function to render action buttons ---
+  const renderActions = (instance) => (
+    <>
+      {instance.id && instance.booked_seats > 0 && (
+        <button
+          onClick={(e) => handleViewManifest(e, instance.id)}
+          className={sharedStyles.secondaryButtonSmall}
+        >
+          Manifest
+        </button>
+      )}
+      
+      {instance.status === 'scheduled' && (
+        <>
+          <button
+            onClick={() => handleMicroPriceEdit(instance)}
+            className={sharedStyles.secondaryButtonSmall}
+            title="Edit prices for this specific instance"
+          >
+            Edit Price
+          </button>
+          <button
+            onClick={() => handleCancelClick(instance)}
+            className={sharedStyles.destructiveButtonSmall}
+            title="Cancel tour and move bookings to pending"
+          >
+            Cancel
+          </button>
+        </>
+      )}
+      
+      {instance.status === 'cancelled' && (
+        <button
+          onClick={() => handleReInstateClick(instance)}
+          className={sharedStyles.primaryButtonSmall}
+          title="Re-instate tour and re-confirm pending bookings"
+        >
+          Re-instate
+        </button>
+      )}
+      
+      {instance.status === 'completed' && (
+        <span>(Completed)</span>
+      )}
+    </>
+  );
+
   return (
     <div className={styles.instanceManager}>
       
@@ -255,18 +306,25 @@ const InstanceManager = () => {
       
       {/* --- ROW 2: FILTERS --- */}
       <div className={`${sharedStyles.filterBox} ${styles.filterBar}`}>
-        <div className={sharedStyles.filterGroup}>
-          <label htmlFor="filter-start-date">Date From</label>
+        <div className={styles.localFilterGroup}>
+          <label htmlFor="filter-start-date">
+            <span className={styles.desktopLabel}>Date </span>From
+          </label>
           <input
             id="filter-start-date"
             type="date"
             className={sharedStyles.input}
             value={filters.startDate}
             onChange={(e) => setFilters({ ...filters, startDate: e.target.value, endDate: e.target.value })}
+            // --- [THIS IS THE FIX] ---
+            onClick={(e) => e.target.showPicker()}
+            onMouseDown={(e) => e.preventDefault()}
           />
         </div>
-        <div className={sharedStyles.filterGroup}>
-          <label htmlFor="filter-end-date">Date To</label>
+        <div className={styles.localFilterGroup}>
+          <label htmlFor="filter-end-date">
+            <span className={styles.desktopLabel}>Date </span>To
+          </label>
           <input
             id="filter-end-date"
             type="date"
@@ -274,9 +332,12 @@ const InstanceManager = () => {
             value={filters.endDate}
             onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
             min={filters.startDate}
+            // --- [THIS IS THE FIX] ---
+            onClick={(e) => e.target.showPicker()}
+            onMouseDown={(e) => e.preventDefault()}
           />
         </div>
-        <div className={sharedStyles.filterGroup}>
+        <div className={styles.localFilterGroup}>
           <label htmlFor="filter-status">Status</label>
           <select
             id="filter-status"
@@ -294,96 +355,94 @@ const InstanceManager = () => {
 
       {/* --- ROW 3: MICRO-EXCEPTIONS --- */}
       <div className={sharedStyles.contentBox}>
-        <table className={sharedStyles.table}>
-          <thead>
-            <tr>
-              <th className={styles.textLeft}>Date</th>
-              <th className={styles.textCenter}>Time</th>
-              <th className={styles.textCenter}>Status</th>
-              <th className={styles.textCenter}>Booked</th>
-              <th className={styles.textCenter}>Capacity</th>
-              <th className={styles.textCenter}>Actions (per Tour)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+        {/* --- [NEW] Desktop Table --- */}
+        <div className={styles.desktopTable}>
+          <table className={sharedStyles.table}>
+            <thead>
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
-                  <div className={sharedStyles.spinner}></div>
-                </td>
+                <th className={styles.textLeft}>Date</th>
+                <th className={styles.textCenter}>Time</th>
+                <th className={styles.textCenter}>Status</th>
+                <th className={styles.textCenter}>Booked</th>
+                <th className={styles.textCenter}>Capacity</th>
+                <th className={styles.textCenter}>Actions (per Tour)</th>
               </tr>
-            ) : instances.length === 0 ? (
-              <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
-                  {selectedTourId ? "No tour instances found for these filters." : "Please select a tour to view instances."}
-                </td>
-              </tr>
-            ) : (
-              instances.map(instance => (
-                <tr key={instance.id || `gen-${instance.date}-${instance.time}`}>
-                  <td className={styles.textLeft}>{new Date(instance.date).toLocaleDateString()}</td>
-                  <td className={styles.textCenter}>{instance.time.substring(0, 5)}</td>
-                  <td className={styles.textCenter}>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div className={sharedStyles.spinner}></div>
+                  </td>
+                </tr>
+              ) : instances.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
+                    {selectedTourId ? "No tour instances found for these filters." : "Please select a tour to view instances."}
+                  </td>
+                </tr>
+              ) : (
+                instances.map(instance => (
+                  <tr key={instance.id || `gen-${instance.date}-${instance.time}`}>
+                    <td className={styles.textLeft}>{new Date(instance.date).toLocaleDateString()}</td>
+                    <td className={styles.textCenter}>{instance.time.substring(0, 5)}</td>
+                    <td className={styles.textCenter}>
+                      <span className={`${styles.status} ${styles[instance.status]}`}>
+                        {instance.status}
+                      </span>
+                    </td>
+                    <td className={styles.textCenter}>{instance.booked_seats}</td>
+                    <td className={styles.textCenter}>{instance.capacity}</td>
+                    <td className={styles.actionsCell}>
+                      {renderActions(instance)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* --- [NEW] Mobile Card List --- */}
+        <div className={styles.mobileCardList}>
+          {loading ? (
+            <div className={sharedStyles.loadingContainer}>
+              <div className={sharedStyles.spinner}></div>
+            </div>
+          ) : instances.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              {selectedTourId ? "No tour instances found for these filters." : "Please select a tour to view instances."}
+            </div>
+          ) : (
+            instances.map(instance => (
+              <div key={instance.id || `gen-${instance.date}-${instance.time}`} className={styles.instanceCard}>
+                <div className={styles.cardHeader}>
+                  <span className={styles.cardDate}>{new Date(instance.date).toLocaleDateString()}</span>
+                  <span className={styles.cardTime}>{instance.time.substring(0, 5)}</span>
+                </div>
+                <div className={styles.cardDetails}>
+                  <div className={styles.cardDetailItem}>
+                    <label>Status</label>
                     <span className={`${styles.status} ${styles[instance.status]}`}>
                       {instance.status}
                     </span>
-                  </td>
-                  <td className={styles.textCenter}>{instance.booked_seats}</td>
-                  <td className={styles.textCenter}>{instance.capacity}</td>
-                  <td className={styles.actionsCell}>
-                    
-                    {instance.id && instance.booked_seats > 0 && (
-                      <button
-                        onClick={(e) => handleViewManifest(e, instance.id)}
-                        className={sharedStyles.secondaryButtonSmall}
-                        style={{ marginRight: '0.5rem' }}
-                      >
-                        Manifest
-                      </button>
-                    )}
-                    
-                    {instance.status === 'scheduled' && (
-                      <>
-                        {/* --- UPDATED: Removed disabled logic --- */}
-                        <button
-                          onClick={() => handleMicroPriceEdit(instance)}
-                          className={sharedStyles.secondaryButtonSmall}
-                          style={{ marginRight: '0.5rem' }}
-                          title="Edit prices for this specific instance"
-                        >
-                          Edit Price
-                        </button>
-                        {/* --- END UPDATE --- */}
-                        <button
-                          onClick={() => handleCancelClick(instance)}
-                          className={sharedStyles.destructiveButtonSmall}
-                          title="Cancel tour and move bookings to pending"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    )}
-                    
-                    {instance.status === 'cancelled' && (
-                      <button
-                        onClick={() => handleReInstateClick(instance)}
-                        className={sharedStyles.primaryButtonSmall}
-                        title="Re-instate tour and re-confirm pending bookings"
-                      >
-                        Re-instate
-                      </button>
-                    )}
-                    
-                    {instance.status === 'completed' && (
-                      <span>(Completed)</span>
-                    )}
-                    
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                  <div className={styles.cardDetailItem}>
+                    <label>Booked</label>
+                    <span>{instance.booked_seats}</span>
+                  </div>
+                  <div className={styles.cardDetailItem}>
+                    <label>Capacity</label>
+                    <span>{instance.capacity}</span>
+                  </div>
+                </div>
+                <div className={styles.cardActions}>
+                  {renderActions(instance)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* --- Cancel Dialog --- */}

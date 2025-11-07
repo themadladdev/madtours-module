@@ -164,6 +164,18 @@
     gap: 1rem;
     align-items: center;
 }
+
+/* --- [THIS IS THE FIX] --- */
+/* Base styles for new local filter group */
+/* This was removed as it was incorrect. We target .filterItem */
+
+/* Desktop-only label for "Date" */
+.desktopLabel {
+  display: none;
+}
+
+/* --- [END FIX] --- */
+
 .filterItem {
     display: flex;
     align-items: center;
@@ -268,6 +280,7 @@
 
 /* --- [THIS IS THE FIX] --- */
 /* Mobile Switch (Breakpoint from MADPrototypeShowcase.md) */
+/* --- [FIX] Replaced @media with @container --- */
 @container (max-width: 768px) {
   .desktopTable {
     display: none;
@@ -286,17 +299,18 @@
   /* --- [FIX 1] Stack date pickers --- */
   .filterRow .filterItem {
     flex-basis: 100%; /* Make each item full width */
-    flex-direction: column; /* Stack label/input */
-    align-items: stretch; /* Make children full-width */
+    flex-direction: row; /* Stack label/input */
+    align-items: center; /* Vertically align */
   }
   .filterRow .filterItem label {
-    min-width: 0; /* Remove 40px min-width */
-    white-space: normal; /* Allow label to wrap if needed */
-    text-align: left; /* Ensure label is left-aligned */
-    margin-bottom: 0.5rem; /* Add space between stacked label and input */
+    min-width: 40px; /* Align inputs */
+    white-space: nowrap; 
+    text-align: left; 
+    margin-bottom: 0; /* Remove stacking margin */
   }
   .filterRow .filterItem input[type="date"] {
     width: 100%;
+    cursor: pointer; /* Add pointer */
   }
   
   /* --- [FIX 2] Stack the entire search area --- */
@@ -324,13 +338,13 @@
   }
   
   .searchActionRow .filterItem input[type="text"] {
-    width: 100%;
+    width: 100%; /* Re-apply width */
   }
 
   /* Stacks the buttons on top of each other */
   .filterPanelActions {
     display: flex; /* Ensure flex is defined */
-    flex-direction: column-reverse;
+    flex-direction: row;
     align-items: stretch; 
     flex-basis: 100%; /* Make container full-width */
     gap: 0.75rem; /* Add gap between stacked buttons */
@@ -460,3 +474,11 @@
     text-transform: uppercase;
 }
 /* --- [END FIX] --- */
+
+/* --- [NEW] Show "Date" word on desktop --- */
+/* --- [FIX] Replaced @media with @container --- */
+@container (min-width: 769px) {
+  .desktopLabel {
+    display: inline;
+  }
+}
