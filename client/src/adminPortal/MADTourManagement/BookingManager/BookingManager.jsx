@@ -3,7 +3,7 @@
 // client/src/adminPortal/MADTourManagement/BookingManager/BookingManager.jsx
 // ==========================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   getAllBookings, 
   refundBooking, 
@@ -14,6 +14,7 @@ import {
 } from '../../../services/admin/adminBookingService.js';
 import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
 import BookingActionModal from './BookingActionModal.jsx';
+import useDebounce from '../../../utils/useDebounce.js';
 import styles from './BookingManager.module.css';
 import sharedStyles from '../../adminshared.module.css';
 
@@ -35,13 +36,17 @@ const BookingManager = ({ defaultResolutionCount }) => {
     defaultResolutionCount > 0 ? 'pending_triage' : 'confirmed'
   );
   
-  // --- [NEW] Search/Filter State ---
-  const [isSearchOpen, setIsSearchOpen] = useState(false); // For the expanding box
+  // --- [MODIFIED] Search/Filter State ---
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilters, setDateFilters] = useState({
     startDate: '',
     endDate: ''
   });
+  
+  // --- [NEW] Create a debounced value for the search term ---
+  // We wait 400ms after the user stops typing before searching
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
   
   const [modalBooking, setModalBooking] = useState(null);
 
@@ -56,40 +61,18 @@ const BookingManager = ({ defaultResolutionCount }) => {
   const [cancelDialog, setCancelDialog] = useState({ booking: null });
   const [cancelReason, setCancelReason] = useState('');
 
-  // --- [MODIFIED] Load bookings on quick filter change or manual search ---
-  useEffect(() => {
-    // When quick filter changes, clear other filters and reload
-    handleClearFilters(false); // false = don't reload
-    loadBookings(true, { status: activeQuickFilter }); // true = reset page
-  }, [activeQuickFilter]); 
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  /**
-   * Main data loading function.
-   * @param {boolean} reset - If true, clears date/search.
-   * @param {object} initialFilters - Used by quick filter change.
-   */
-  const loadBookings = async (reset = false, initialFilters = {}) => {
+  // --- [REFACTORED] Main data loading function ---
+  // Wrapped in useCallback to make it a stable dependency for useEffect.
+  // It now takes NO arguments and simply reads the current, up-to-date state.
+  const loadBookings = useCallback(async () => {
     setLoading(true);
     setToast(null);
     
-    // Determine filters, resetting if needed
-    const currentSearchTerm = reset ? '' : searchTerm;
-    const currentStartDate = reset ? '' : dateFilters.startDate;
-    const currentEndDate = reset ? '' : dateFilters.endDate;
-
     let filters = {
       status: activeQuickFilter === 'all' ? '' : activeQuickFilter,
-      startDate: currentStartDate,
-      endDate: currentEndDate,
-      searchTerm: currentSearchTerm,
-      ...initialFilters // Used by quick filter change
+      startDate: dateFilters.startDate,
+      endDate: dateFilters.endDate,
+      searchTerm: debouncedSearchTerm, // --- [MODIFIED] Use the debounced value
     };
 
     try {
@@ -101,8 +84,23 @@ const BookingManager = ({ defaultResolutionCount }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeQuickFilter, dateFilters, debouncedSearchTerm]); // Dependencies
 
+  // --- [REFACTORED] Single useEffect for ALL data loading ---
+  // This runs on mount and whenever any filter dependency changes.
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]); // The dependency is the stable loadBookings function
+
+  // Unchanged: Effect for clearing toast notifications
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // Unchanged: Close all dialogs
   const handleCloseDialogs = () => {
     setModalBooking(null); 
     setRefundDialog({ booking: null });
@@ -113,6 +111,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
     setCancelReason('');
   };
 
+  // Unchanged: Handle which action dialog to open
   const handleActionClick = (actionType, booking) => {
     setModalBooking(null); 
     
@@ -142,23 +141,28 @@ const BookingManager = ({ defaultResolutionCount }) => {
     }, 50);
   };
   
-  // --- [NEW] Filter Panel Handlers ---
-  
-  const handleSearchClick = () => {
-    // Manually trigger a search with current state
-    loadBookings(false); // false = don't reset
-  };
-  
-  const handleClearFilters = (reload = true) => {
+  // --- [NEW] Handler for Quick Filter Clicks ---
+  // This sets the new filter AND clears the advanced filters,
+  // which then triggers the main useEffect to reload the data.
+  const handleQuickFilterChange = (newFilterId) => {
+    setActiveQuickFilter(newFilterId);
     setSearchTerm('');
     setDateFilters({ startDate: '', endDate: '' });
-    if (reload) {
-      // Reload using only the active quick filter
-      loadBookings(true, { status: activeQuickFilter });
-    }
+  };
+  
+  // --- [REMOVED] handleSearchClick function is no longer needed ---
+
+  // --- [REFACTORED] Clear Filters ---
+  // This just resets the advanced filter state.
+  // The main useEffect automatically detects this and reloads.
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setDateFilters({ startDate: '', endDate: '' });
   };
 
-  // --- All Confirmation Handlers (Unchanged) ---
+  // --- All Confirmation Handlers (MODIFIED) ---
+  // All calls to loadBookings(false) are replaced with loadBookings()
+  
   const handleConfirmRefund = async () => {
     const { booking } = refundDialog;
     if (!refundReason) {
@@ -171,40 +175,44 @@ const BookingManager = ({ defaultResolutionCount }) => {
       await cancelBooking(booking.id, `Resolution Refund: ${refundReason}`); 
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} has been refunded and cancelled.` });
       handleCloseDialogs();
-      loadBookings(false); // false = don't reset, just reload
+      loadBookings(); // --- [MODIFIED]
     } catch (error) {
       console.error('Error processing refund:', error);
       setToast({ type: 'error', message: `Refund failed: ${error.message}` });
     }
   };
+  
   const handleConfirmTransfer = () => {
     setToast({ type: 'info', message: 'Transfer feature is not yet implemented. No action taken.'});
     handleCloseDialogs();
   };
+  
   const handleConfirmManualBooking = async () => {
     const { booking } = confirmDialog;
     try {
       await manualConfirmBooking(booking.id);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} confirmed.` });
       handleCloseDialogs();
-      loadBookings(false);
+      loadBookings(); // --- [MODIFIED]
     } catch (error) {
       console.error('Error manually confirming booking:', error);
       setToast({ type: 'error', message: `Confirmation failed: ${error.message}` });
     }
   };
+  
   const handleConfirmMarkAsPaid = async () => {
     const { booking } = payDialog;
     try {
       await manualMarkAsPaid(booking.id);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} marked as paid.` });
       handleCloseDialogs();
-      loadBookings(false);
+      loadBookings(); // --- [MODIFIED]
     } catch (error) {
       console.error('Error marking booking as paid:', error);
       setToast({ type: 'error', message: `Payment update failed: ${error.message}` });
     }
   };
+  
   const handleConfirmCancel = async () => {
     const { booking } = cancelDialog;
     if (booking.status === 'pending' && !cancelReason) {
@@ -215,7 +223,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
       await adminCancelBooking(booking.id, cancelReason || 'Admin cancellation');
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} has been cancelled.` });
       handleCloseDialogs();
-      loadBookings(false);
+      loadBookings(); // --- [MODIFIED]
     } catch (error) {
       console.error('Error manually cancelling booking:', error);
       setToast({ type: 'error', message: `Cancellation failed: ${error.message}` });
@@ -239,25 +247,25 @@ const BookingManager = ({ defaultResolutionCount }) => {
         </div>
       )}
 
-      {/* --- Desktop Quick Filter Nav --- */}
+      {/* --- Desktop Quick Filter Nav (MODIFIED) --- */}
       <div className={`${styles.quickFilterNav} ${styles.desktopNav}`}>
         {quickFilters.map(filter => (
           <button
             key={filter.id}
             className={`${styles.navButton} ${activeQuickFilter === filter.id ? styles.active : ''}`}
-            onClick={() => setActiveQuickFilter(filter.id)}
+            onClick={() => handleQuickFilterChange(filter.id)} // --- [MODIFIED]
           >
             {filter.label}
           </button>
         ))}
       </div>
       
-      {/* --- Mobile Quick Filter Select --- */}
+      {/* --- Mobile Quick Filter Select (MODIFIED) --- */}
       <div className={styles.mobileNav}>
         <select
           className={styles.mobileQuickFilter}
           value={activeQuickFilter}
-          onChange={(e) => setActiveQuickFilter(e.target.value)}
+          onChange={(e) => handleQuickFilterChange(e.target.value)} // --- [MODIFIED]
         >
           {quickFilters.map(filter => (
             <option key={filter.id} value={filter.id}>
@@ -267,12 +275,11 @@ const BookingManager = ({ defaultResolutionCount }) => {
         </select>
       </div>
 
-      {/* --- [REFACTORED] Collapsible Filter Box --- */}
+      {/* --- Collapsible Filter Box --- */}
       <div className={sharedStyles.filterBox} style={{ marginBottom: '1.5rem', gap: '0' }}>
         
-        {/* --- Row 1: Date Filters (Always Visible) + Toggle Button --- */}
+        {/* --- Row 1: Date Filters + Toggle Button --- */}
         <div className={styles.filterRow}>
-          {/* --- [THIS IS THE FIX] --- */}
           <div className={styles.filterItem}>
             <label htmlFor="filter-start-date">
               <span className={styles.desktopLabel}>Date </span>From:
@@ -301,9 +308,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
               onMouseDown={(e) => e.preventDefault()}
             />
           </div>
-          {/* --- [END FIX] --- */}
           
-          {/* --- [NEW] Toggle Button is now part of this row --- */}
           <div className={styles.toggleItem}>
             <button 
               className={styles.advancedSearchToggle} 
@@ -315,13 +320,12 @@ const BookingManager = ({ defaultResolutionCount }) => {
           </div>
         </div>
         
-        {/* --- Row 2: Collapsible Search Area --- */}
+        {/* --- Row 2: Collapsible Search Area (MODIFIED) --- */}
         <div className={`${styles.collapsibleSearch} ${isSearchOpen ? styles.open : ''}`}>
           
-          {/* --- [NEW] This row holds search and actions --- */}
           <div className={styles.searchActionRow}>
             
-            {/* --- Search Input --- */}
+            {/* --- Search Input (Unchanged) --- */}
             <div className={styles.filterItem}>
               <label htmlFor="search-term">Search:</label>
               <input
@@ -334,30 +338,26 @@ const BookingManager = ({ defaultResolutionCount }) => {
               />
             </div>
 
-            {/* --- Action Buttons --- */}
+            {/* --- Action Buttons (MODIFIED) --- */}
             <div className={styles.filterPanelActions}>
               <button 
                 className={sharedStyles.secondaryButton}
-                onClick={() => handleClearFilters(true)}
+                onClick={handleClearFilters} // --- [MODIFIED]
               >
-                Clear
+                Clear {/* --- [MODIFIED] Text changed */}
               </button>
-              <button 
-                className={sharedStyles.primaryButton}
-                onClick={handleSearchClick}
-              >
-                Search
-              </button>
+              
+              {/* --- [REMOVED] "Search" button is gone --- */}
+            
             </div>
           </div>
         </div>
       </div>
       
       
-      {/* --- Responsive Content Area --- */}
+      {/* --- Responsive Content Area (Unchanged) --- */}
       <div className={sharedStyles.contentBox}>
         
-        {/* --- VIEW 1: DESKTOP TABLE (Status column fixed) --- */}
         <table className={`${sharedStyles.table} ${styles.desktopTable}`}>
           <thead>
             <tr>
@@ -365,7 +365,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
               <th className={styles.textLeft}>Tour Details</th>
               <th className={styles.textCenter}>Seats</th>
               <th className={styles.textCenter}>Amount</th>
-              {/* --- [MODIFIED] Split Status Column --- */}
               <th className={styles.textCenter}>Booking</th>
               <th className={styles.textCenter}>Payment</th>
               {isResolutionView && <th className={styles.textCenter}>Reason</th>}
@@ -393,12 +392,10 @@ const BookingManager = ({ defaultResolutionCount }) => {
                   className={styles.clickableRow}
                   onClick={() => setModalBooking(booking)}
                 >
-                  {/* Col 1: Customer */}
                   <td>
                     <div>{booking.first_name} {booking.last_name}</div>
                     <div className={styles.subText}>{booking.email}</div>
                   </td>
-                  {/* Col 2: Tour Details */}
                   <td>
                     <div className={styles.reference}>{booking.booking_reference}</div>
                     <div>{booking.tour_name}</div>
@@ -406,19 +403,14 @@ const BookingManager = ({ defaultResolutionCount }) => {
                       {new Date(booking.date).toLocaleDateString()} @ {booking.time.substring(0, 5)}
                     </div>
                   </td>
-                  {/* Col 3: Seats */}
                   <td className={styles.textCenter}>{booking.seats}</td>
-                  {/* Col 4: Amount */}
                   <td className={`${styles.amount} ${styles.textCenter}`}>${booking.total_amount}</td>
                   
-                  {/* --- [MODIFIED] Split Status Cells --- */}
-                  {/* Col 5: Booking Status */}
                   <td className={styles.textCenter}>
                     <span className={`${styles.badge} ${styles[booking.status]}`}>
                       {booking.status}
                     </span>
                   </td>
-                  {/* Col 6: Payment Status */}
                   <td className={styles.textCenter}>
                     <span className={`${styles.badge} ${styles[booking.payment_status]}`}>
                       {booking.payment_status}
@@ -434,7 +426,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
           </tbody>
         </table>
         
-        {/* --- VIEW 2: MOBILE CARD LIST --- */}
         <div className={styles.mobileCardList}>
           {loading ? (
             <div className={sharedStyles.loadingContainer}>
@@ -462,7 +453,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
                   {booking.tour_name} - {new Date(booking.date).toLocaleDateString()}
                 </div>
                 
-                {/* --- [THIS IS THE FIX] --- */}
                 <div className={styles.cardStatusGrid}>
                   <div className={styles.cardStatusItem}>
                     <label>Booking</label>
@@ -477,7 +467,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
                     </span>
                   </div>
                 </div>
-                {/* --- [END FIX] --- */}
 
               </div>
             ))
@@ -485,7 +474,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
         </div>
       </div>
 
-      {/* --- Render the Action Modal --- */}
+      {/* --- Render the Action Modal (Unchanged) --- */}
       {modalBooking && (
         <BookingActionModal
           booking={modalBooking}
@@ -520,7 +509,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
               step="0.01"
               className={sharedStyles.input}
               value={refundAmount}
-              onChange={(e) => setRefundAmount(e.target.value)}
+              onChange={(e) => setRefundAmount(e.targe.value)}
               max={refundDialog.booking?.total_amount}
               placeholder="Leave blank for full refund"
             />
@@ -544,7 +533,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
       <ConfirmationDialog
         isOpen={!!transferDialog.booking}
         title="Transfer Booking (STUB)"
-        message={`This feature is not yet implemented. \n\nIn a future task, this will allow you to select a new, available tour instance for ${transferDialog.booking?.booking_reference} and re-confirm the booking.`}
+        message={`This feature is not yet implemented. \n\In a future task, this will allow you to select a new, available tour instance for ${transferDialog.booking?.booking_reference} and re-confirm the booking.`}
         onConfirm={handleConfirmTransfer}
         onClose={handleCloseDialogs}
         confirmText="Acknowledge"
@@ -585,7 +574,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
         isDestructive={true}
       >
         <div className={styles.refundForm}>
-          <div className={sharedStyles.formGroup}>
+          <div className={styles.formGroup}>
             <label htmlFor="cancel-reason">Reason (required):</label>
             <textarea
               id="cancel-reason"
