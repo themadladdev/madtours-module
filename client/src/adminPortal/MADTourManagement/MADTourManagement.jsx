@@ -1,5 +1,4 @@
 // ==========================================
-// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/MADTourManagement.jsx
 // ==========================================
 
@@ -10,10 +9,11 @@ import { getAllBookings } from '../../services/admin/adminBookingService.js';
 
 // Import sub-page components
 import TourDashboard from './Dashboard/TourDashboard.jsx';
-import BookingManager from './BookingManager/BookingManager.jsx';
 import InstanceManager from './InstanceManager/InstanceManager.jsx';
+import BookingManager from './BookingManager/BookingManager.jsx';
 import TourManager from './TourManager/TourManager.jsx';
 import TicketManager from './TicketManager/TicketManager.jsx';
+import Statistics from './Statistics/Statistics.jsx';
 
 
 // Placeholder Icon
@@ -33,10 +33,12 @@ const MADTourManagement = () => {
             setActiveSubTab('bookings');
         } else if (path.includes('/manage')) {
             setActiveSubTab('tours');
-        } else if (path.includes('/tickets')) { // --- NEW ---
+        } else if (path.includes('/tickets')) {
             setActiveSubTab('tickets');
+        } else if (path.includes('/statistics')) { 
+            setActiveSubTab('statistics');
         } else {
-            setActiveSubTab('dashboard');
+            setActiveSubTab('dashboard'); // Default
         }
         
         // Fetch count for the badge
@@ -52,6 +54,7 @@ const MADTourManagement = () => {
             event.preventDefault();
         }
         
+        // Refresh count on any navigation
         fetchResolutionCount();
         
         setActiveSubTab(tabId);
@@ -60,7 +63,6 @@ const MADTourManagement = () => {
         window.dispatchEvent(navigationEvent);
     };
     
-    // --- [NEW] Specific handler for mobile select ---
     const handleMobileNavChange = (event) => {
         const selectedTabId = event.target.value;
         const selectedTab = subTabs.find(tab => tab.id === selectedTabId);
@@ -71,6 +73,7 @@ const MADTourManagement = () => {
 
     const fetchResolutionCount = async () => {
         try {
+            // This is a lightweight query, safe to run often
             const data = await getAllBookings({ status: 'pending_triage' });
             setResolutionCount(data.length || 0);
         } catch (error) {
@@ -109,13 +112,19 @@ const MADTourManagement = () => {
             icon: <IconPlaceholder />,
             component: <TourManager /> 
         },
-        // --- NEW: Add Ticket Library Tab ---
         { 
             id: 'tickets', 
             label: 'Ticket Library', 
             path: '/admin/tours/tickets',
             icon: <IconPlaceholder />,
             component: <TicketManager /> 
+        },
+        { 
+            id: 'statistics', 
+            label: 'Statistics', 
+            path: '/admin/tours/statistics',
+            icon: <IconPlaceholder />,
+            component: <Statistics /> 
         },
     ];
 
@@ -134,11 +143,19 @@ const MADTourManagement = () => {
                         Manage tour schedules, view bookings, and see manifests.
                     </p>
                  </div>
+                 {/* --- [NEW] Global Action Button --- */}
+                 <div className={styles.headerActions}>
+                    <button 
+                        className={sharedStyles.primaryButton}
+                        onClick={() => { /* Logic to open admin booking modal */ }}
+                    >
+                        Create New Booking
+                    </button>
+                 </div>
              </div>
              
              {/* --- Sub Navigation Tabs --- */}
              <div className={styles.pageNavWrapper}>
-                {/* --- [NEW] Desktop Sub-Nav --- */}
                 <div className={styles.desktopSubNav}>
                     {subTabs.map(tab => (
                         <button
@@ -155,7 +172,6 @@ const MADTourManagement = () => {
                     ))}
                 </div>
                 
-                {/* --- [NEW] Mobile Sub-Nav --- */}
                 <div className={styles.mobileSubNav}>
                     <select
                         className={styles.mobileQuickFilter}

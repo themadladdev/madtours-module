@@ -1,4 +1,6 @@
-/* client/src/adminPortal/MADTourManagement/MADTourManagement.module.css
+/* ==========================================
+ * client/src/adminPortal/MADTourManagement/MADTourManagement.module.css
+ * ==========================================
  * Uses variables defined in src/styles/global.css */
 
 .tourContainer {
@@ -30,6 +32,14 @@
 }
 /* sharedStyles.description handles the description text */
 
+/* --- [NEW] Global Action Button Container --- */
+.headerActions {
+    flex-shrink: 0;
+    padding-top: 0.25rem; /* Align button nicely with title */
+}
+/* --- [END NEW] --- */
+
+
 /* --- Wrapper for SubNav --- */
 .pageNavWrapper {
     display: flex;
@@ -38,6 +48,9 @@
     border-bottom: 1px solid var(--border-color);
     background-color: var(--background);
     flex-shrink: 0;
+    /* --- NEW: Allow nav to shrink --- */
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 /* --- [MODIFIED] Renamed .subNavigation to .desktopSubNav --- */
@@ -140,6 +153,17 @@
         flex-direction: column;
         align-items: stretch;
     }
+
+    /* --- [NEW] Stack header button on mobile --- */
+    .headerActions {
+        padding-top: 0;
+        padding-bottom: 0.5rem;
+    }
+    
+    .headerActions > button {
+        width: 100%;
+    }
+    /* --- [END NEW] --- */
 }
 
 @container (max-width: 768px) {

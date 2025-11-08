@@ -6,6 +6,7 @@
 import * as tourService from '../services/tourService.js';
 import { generateManifest } from '../utils/tourManifestGenerator.js';
 import { getAdminTourInstances } from '../utils/tourAvailabilityCalculator.js';
+import { pool } from '../db/db.js'; // --- [NEW] Import pool for complex dashboard query
 
 export const createTour = async (req, res, next) => {
     try {
@@ -252,6 +253,130 @@ export const batchCancelBlackout = async (req, res, next) => {
     }
 };
 // === END NEW CONTROLLER ===
+
+// === [REWRITTEN] DIRECTIONAL DASHBOARD CONTROLLER ===
+export const getDirectionalDashboard = async (req, res, next) => {
+    try {
+        // --- 1. Triage Queries (Unchanged) ---
+        const triagePendingTriageQuery = pool.query(
+            "SELECT COUNT(*) FROM tour_bookings WHERE status = 'pending_triage'"
+        );
+        const triagePendingBookingsQuery = pool.query(
+            "SELECT COUNT(*) FROM tour_bookings WHERE status = 'pending' AND created_at < NOW() - INTERVAL '1 hour'"
+        );
+        const triageFailedPaymentsQuery = pool.query(
+            "SELECT COUNT(*) FROM tour_bookings WHERE payment_status = 'failed'"
+        );
+
+        // --- 2. Booking Statistics (Historic, based on created_at) ---
+        const commonBookingStats = `
+            SELECT 
+                COALESCE(COUNT(*), 0) as bookings,
+                COALESCE(SUM(total_amount), 0) as revenue
+            FROM tour_bookings 
+            WHERE status = 'confirmed' AND
+        `;
+        const bookingStatsTodayQuery = pool.query(
+            `${commonBookingStats} DATE(created_at) = CURRENT_DATE`
+        );
+        const bookingStatsWeekQuery = pool.query(
+            `${commonBookingStats} DATE(created_at) >= DATE_TRUNC('week', CURRENT_DATE)`
+        );
+        const bookingStatsMonthQuery = pool.query(
+            `${commonBookingStats} DATE(created_at) >= DATE_TRUNC('month', CURRENT_DATE)`
+        );
+        const bookingStatsYTDQuery = pool.query(
+            `${commonBookingStats} DATE(created_at) >= DATE_TRUNC('year', CURRENT_DATE)`
+        );
+
+        // --- 3. Tour Statistics (Forward-Looking, based on instance.date) ---
+        const commonTourStats = `
+            SELECT 
+                COALESCE(SUM(b.seats), 0) as seats, 
+                COALESCE(SUM(b.total_amount), 0) as value
+            FROM tour_bookings b
+            JOIN tour_instances i ON b.tour_instance_id = i.id
+            WHERE b.status = 'confirmed' AND
+        `;
+        const tourStatsTodayQuery = pool.query(
+            `${commonTourStats} i.date = CURRENT_DATE`
+        );
+        const tourStatsWeekQuery = pool.query(
+            `${commonTourStats} i.date > CURRENT_DATE AND i.date <= (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')`
+        );
+        const tourStatsMonthQuery = pool.query(
+            `${commonTourStats} i.date > CURRENT_DATE AND i.date <= (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day')`
+        );
+        const tourStats90DayQuery = pool.query(
+            `${commonTourStats} i.date > CURRENT_DATE AND i.date <= (CURRENT_DATE + INTERVAL '90 days')`
+        );
+
+        // --- Run all queries in parallel ---
+        const [
+            triagePendingTriage,
+            triagePendingBookings,
+            triageFailedPayments,
+            bookingStatsToday,
+            bookingStatsWeek,
+            bookingStatsMonth,
+            bookingStatsYTD,
+            tourStatsToday,
+            tourStatsWeek,
+            tourStatsMonth,
+            tourStats90Day
+        ] = await Promise.all([
+            triagePendingTriageQuery,
+            triagePendingBookingsQuery,
+            triageFailedPaymentsQuery,
+            bookingStatsTodayQuery,
+            bookingStatsWeekQuery,
+            bookingStatsMonthQuery,
+            bookingStatsYTDQuery,
+            tourStatsTodayQuery,
+            tourStatsWeekQuery,
+            tourStatsMonthQuery,
+            tourStats90DayQuery
+        ]);
+        
+        // Helper to format query results
+        const formatStats = (row) => ({
+            bookings: parseInt(row.bookings, 10),
+            revenue: parseFloat(row.revenue)
+        });
+        const formatTourStats = (row) => ({
+            seats: parseInt(row.seats, 10),
+            value: parseFloat(row.value)
+        });
+
+        // --- Assemble the final JSON object ---
+        const dashboardData = {
+            triage: {
+                pending_triage: parseInt(triagePendingTriage.rows[0].count, 10),
+                pending_bookings: parseInt(triagePendingBookings.rows[0].count, 10),
+                failed_payments: parseInt(triageFailedPayments.rows[0].count, 10),
+            },
+            bookingStats: {
+                today: formatStats(bookingStatsToday.rows[0]),
+                week: formatStats(bookingStatsWeek.rows[0]),
+                month: formatStats(bookingStatsMonth.rows[0]),
+                ytd: formatStats(bookingStatsYTD.rows[0]),
+            },
+            tourStats: {
+                today: formatTourStats(tourStatsToday.rows[0]),
+                week: formatTourStats(tourStatsWeek.rows[0]),
+                month: formatTourStats(tourStatsMonth.rows[0]),
+                next90Days: formatTourStats(tourStats90Day.rows[0]),
+            }
+        };
+
+        res.json(dashboardData);
+
+    } catch (error) {
+        console.error('Error fetching directional dashboard data:', error);
+        next(error);
+    }
+};
+// === [END REWRITE] ===
 
 export const getManifest = async (req, res, next) => {
     try {

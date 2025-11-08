@@ -1,87 +1,206 @@
-/* client/src/adminPortal/MADTourManagement/Dashboard/TourDashboard.module.css */
+/* ==========================================
+ * client/src/adminPortal/MADTourManagement/Dashboard/TourDashboard.module.css
+ * ==========================================
+ * Uses variables defined in src/styles/global.css */
 
-.dashboard {
-  /* Padding is removed, handled by contentArea */
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.dashboard h1,
-.dashboard h2 {
-  color: var(--text);
-  margin-top: 0;
-}
-
-.dashboard h2 {
-   margin-bottom: 1.5rem;
-}
-
-.statsGrid {
+.dashboardContainer {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2.5rem;
-}
-
-.statCard {
-  background: var(--background);
-  padding: 1.5rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-}
-
-.statCard h3 {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  color: var(--grey-700);
-  font-weight: 600;
-}
-
-.statValue {
-  font-size: 2.2rem;
-  font-weight: bold;
-  margin: 0;
-  color: var(--text);
-}
-
-.todaySection {
-  margin-bottom: 2.5rem;
-}
-
-.toursList {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: 1fr; /* Default to 1 column */
   gap: 1.5rem;
 }
 
-.tourCard {
-  background: var(--background);
-  border-radius: 4px;
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
+/* --- Column Layout --- */
+/* We use container queries based on the .contentArea from the parent */
+@container (min-width: 769px) {
+  .dashboardContainer {
+    /* 2 columns: 1fr 2fr */
+    grid-template-columns: minmax(300px, 1fr) 2fr;
+  }
+  
+  /* Stack columns 2 and 3 vertically */
+  .dashboardContainer > div:nth-child(2) {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+  }
+  .dashboardContainer > div:nth-child(3) {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+  }
+}
+
+@container (min-width: 1200px) {
+  .dashboardContainer {
+    /* 3 columns: 1fr 1.5fr 1fr */
+    grid-template-columns: minmax(300px, 1fr) 1.5fr minmax(300px, 1fr);
+  }
+  
+  /* Reset to 3-column layout */
+  .dashboardContainer > div:nth-child(2) {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+  }
+  .dashboardContainer > div:nth-child(3) {
+    grid-column: 3 / 4;
+    grid-row: 1 / 2;
+  }
+}
+
+.dashboardColumn {
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0; /* Prevents overflow */
 }
 
-.tourHeader {
+/* --- Self-contained Card Style --- */
+.dashboardCard {
+  background-color: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden; /* Ensures padding is respected */
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
+  flex-direction: column;
+  /* --- [MODIFIED] No longer need 100% height --- */
+}
+
+/* --- Card Header (for title) --- */
+.cardHeader {
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
 }
 
-.tourHeader h3 {
+/* --- Card Section (for content) --- */
+.cardSection {
+  padding: 1.5rem;
+  /* Add a border between sections */
+  border-bottom: 1px solid var(--border-color);
+}
+/* Remove border from last section */
+.dashboardCard > .cardSection:last-child {
+  border-bottom: none;
+}
+
+.columnTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
   margin: 0;
-  font-size: 1.1rem;
+}
+
+.columnSubTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--grey-700);
+  text-transform: uppercase;
+  margin: 0 0 0.75rem 0; /* Has padding from parent */
+}
+
+/* --- Action Center Column --- */
+.triageGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.triageLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  background-color: var(--grey-100);
+  border: 1px solid var(--border-color);
+  text-decoration: none;
+  color: var(--text);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.triageLink:hover {
+  background-color: var(--grey-200);
+  border-color: var(--grey-500);
+}
+
+.triageLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.triageCount {
+  font-size: 0.9rem;
+  font-weight: 600;
+  background-color: var(--grey-200);
+  color: var(--text);
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.triageCountAlert {
+  background-color: var(--destructive);
+  color: var(--background);
+}
+
+/* --- Today's Operations Column --- */
+.toursList {
+  overflow-x: auto;
+  flex-grow: 1; /* Allows it to fill card height */
+}
+
+.toursTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tourRow {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+.dashboardCard > .toursList > .toursTable > tbody > .tourRow:last-child {
+  border-bottom: none;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+.clickableRow:hover {
+  background-color: var(--grey-100);
+}
+
+.toursTable td {
+  padding: 1rem 1.5rem;
+  vertical-align: middle;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.tourTime {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.tourName {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.tourSeats {
+  font-weight: 500;
+  color: var(--grey-700);
+}
+
+.tourStatus {
+  text-align: left;
+}
+.tourAction {
+  text-align: right;
 }
 
 .status {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-transform: capitalize;
 }
@@ -98,34 +217,40 @@
   border: 1px solid var(--destructive);
 }
 
-.tourDetails {
-  flex-grow: 1;
+/* --- [NEW] Statistics Column Styles --- */
+.denseStatGroup {
+  display: grid;
+  /* This creates the aligned, non-spreadsheet layout */
+  grid-template-columns: auto 1fr; 
+  gap: 0.75rem 1.5rem; /* row-gap, column-gap */
+  align-items: baseline;
 }
 
-.tourDetails p {
-  margin: 0.5rem 0;
-  font-size: 0.95rem;
+.denseStatRow {
+  /* This is now a grid-row, spanning all columns */
+  display: contents; /* Makes the div act as if it's not there */
+  font-size: 0.9rem;
 }
 
-.tourActions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
+.denseStatLabel {
+  font-weight: 500;
+  color: var(--grey-700);
+  white-space: nowrap;
+  text-align: left;
 }
 
-/* Remove old button styles, they are now in adminshared.module.css */
-
-.quickActions {
-  background: var(--background);
-  border: 1px solid var(--border-color);
-  padding: 1.5rem;
-  border-radius: 4px;
+.denseStatValue {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 1rem;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.actionButtons {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+.denseStatSubtext {
+  font-weight: 500;
+  color: var(--grey-700);
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+  white-space: nowrap;
 }
-
-/* Remove old actionButton styles */

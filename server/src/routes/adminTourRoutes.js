@@ -5,6 +5,7 @@
 
 import express from 'express';
 import { authenticateAdmin } from '../middleware/adminAuth.js';
+// --- [MODIFIED] Added getDirectionalDashboard ---
 import * as adminTourController from '../controllers/adminTourController.js';
 
 const router = express.Router();
@@ -15,6 +16,11 @@ router.use(authenticateAdmin);
 // === Tour Instances (Daily Operations) ===
 // Static routes MUST be defined *before* dynamic routes like '/:id'
 router.get('/instances', adminTourController.getTourInstances);
+
+// --- [NEW] Dashboard Route ---
+router.get('/dashboard', adminTourController.getDirectionalDashboard);
+// --- [END NEW] ---
+
 router.get('/instances/:id/manifest', adminTourController.getManifest);
 
 // === NEW CANCELLATION & RE-INSTATEMENT ROUTES ===

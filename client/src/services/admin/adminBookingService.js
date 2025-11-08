@@ -1,5 +1,4 @@
 // ==========================================
-// UPDATED FILE
 // client/src/services/admin/adminBookingService.js
 // ==========================================
 
@@ -43,8 +42,20 @@ export const refundBooking = async (id, amount, reason) => {
 };
 
 export const getDashboardStats = async () => {
+  // This route is now deprecated by getDirectionalDashboard
   return await adminApiFetch(`${API_PREFIX}/dashboard/stats`);
 };
+
+/**
+ * --- [NEW] ---
+ * Fetches all consolidated data for the new directional dashboard.
+ * This replaces the old getDashboardStats()
+ */
+export const getDirectionalDashboard = async () => {
+  // Note: This endpoint is in the tour controller, not bookings
+  return await adminApiFetch('/admin/tours/dashboard');
+};
+// --- [END NEW] ---
 
 export const updateBookingPassengers = async (bookingId, passengers) => {
   return await adminApiFetch(`${API_PREFIX}/${bookingId}/passengers`, {
