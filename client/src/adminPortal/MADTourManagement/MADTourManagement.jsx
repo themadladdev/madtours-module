@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import styles from './MADTourManagement.module.css';
-import sharedStyles from '../adminshared.module.css';
+import sharedStyles from '../../MADLibrary/admin/styles/adminshared.module.css';
 import { getAllBookings } from '../../services/admin/adminBookingService.js';
 
 // Import sub-page components

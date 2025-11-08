@@ -1,0 +1,38 @@
+/* ==========================================
+ * client/src/ui/MADLibrary/MADTours/dashboard/ProgressDonut/ProgressDonut.module.css
+ * ==========================================
+ * Uses variables defined in src/styles/global.css */
+
+.donutWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donutSvg {
+  transform: rotate(-90deg); /* Start at 12 o'clock */
+  position: absolute;
+}
+
+.donutTrack,
+.donutProgress {
+  fill: none;
+  stroke-linecap: round; /* Rounded ends */
+}
+
+.donutTrack {
+  stroke: var(--grey-200); /* Light grey track */
+}
+
+.donutProgress {
+  stroke: var(--text); /* Black/text color progress */
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+.donutText {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  z-index: 1;
+}

@@ -1,10 +1,10 @@
 // client/src/adminPortal/MADTourManagement/InstanceManager/BlackoutManagerModal.jsx
 import React, { useState, useEffect } from 'react';
-import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
-import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
+import AdminFormModal from '../../../MADLibrary/admin/modals/AdminFormModal.jsx';
+import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/ConfirmationDialog.jsx';
 import * as adminTourService from '../../../services/admin/adminTourService.js';
 import styles from './BlackoutManagerModal.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 const BlackoutManagerModal = ({ isOpen, onClose, tour, onSuccess }) => {
   const [loading, setLoading] = useState(false);

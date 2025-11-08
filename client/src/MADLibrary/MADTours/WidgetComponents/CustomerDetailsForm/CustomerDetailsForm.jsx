@@ -5,7 +5,7 @@
 
 import React from 'react';
 // --- [NEW] Import the Markdown Editor ---
-import MarkdownEditor from '../../../MarkdownEditor/MarkdownEditor.jsx';
+import MarkdownEditor from '../../../admin/MarkdownEditor/MarkdownEditor.jsx';
 import styles from './CustomerDetailsForm.module.css';
 import sharedStyles from '../../Widgets/TicketBookingWidget/TicketBookingWidget.module.css';
 

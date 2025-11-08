@@ -1,0 +1,39 @@
+/* ==========================================
+ * client/src/ui/MADLibrary/MADTours/dashboard/StatusIndicator/StatusIndicator.module.css
+ * ==========================================
+ * Uses variables defined in src/styles/global.css */
+
+.indicatorWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.indicatorDot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+}
+
+/* --- Variant Styles --- */
+
+/* Default / Scheduled */
+.default {
+  background-color: var(--text);
+}
+.scheduled {
+  background-color: var(--text);
+}
+
+/* Cancelled / Destructive */
+.cancelled {
+  background-color: var(--destructive);
+}
+
+/* Other states */
+.pending {
+  background-color: var(--grey-500);
+}

@@ -1,9 +1,9 @@
 // client/src/adminPortal/MADTourManagement/TicketManager/TicketEditorModal.jsx
 import React, { useState, useEffect } from 'react';
-import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
+import AdminFormModal from '../../../MADLibrary/admin/modals/AdminFormModal.jsx';
 import * as adminTicketService from '../../../services/admin/adminTicketService.js';
 import styles from './TicketEditorModal.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 // --- Recipe Editor Sub-component ---
 const RecipeEditor = ({ recipe, atomicTickets, onRecipeChange }) => {

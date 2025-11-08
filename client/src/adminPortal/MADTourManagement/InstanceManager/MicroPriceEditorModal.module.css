@@ -58,7 +58,7 @@
 
 .priceInput {
   /* Use shared styles as a base but override padding */
-  composes: input from '../../adminshared.module.css';
+  composes: input from '../../../MADLibrary/admin/styles/adminshared.module.css';
   width: 120px;
   padding: 0.6rem 0.8rem 0.6rem 1.75rem; /* Left padding for $ sign */
   text-align: left;

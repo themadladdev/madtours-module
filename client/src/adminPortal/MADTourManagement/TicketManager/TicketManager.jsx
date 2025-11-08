@@ -1,10 +1,10 @@
 // client/src/adminPortal/MADTourManagement/TicketManager/TicketManager.jsx
 import React, { useState, useEffect } from 'react';
 import * as adminTicketService from '../../../services/admin/adminTicketService.js';
-import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
+import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/ConfirmationDialog.jsx';
 import TicketEditorModal from './TicketEditorModal.jsx';
 import styles from './TicketManager.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 const TicketManager = () => {
   const [tickets, setTickets] = useState([]);

@@ -4,7 +4,7 @@
 
 import React from 'react';
 import styles from './Statistics.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 const Statistics = () => {
   return (

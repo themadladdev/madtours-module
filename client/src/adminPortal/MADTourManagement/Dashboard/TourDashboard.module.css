@@ -60,13 +60,31 @@
   overflow: hidden; /* Ensures padding is respected */
   display: flex;
   flex-direction: column;
-  /* --- [MODIFIED] No longer need 100% height --- */
 }
 
 /* --- Card Header (for title) --- */
 .cardHeader {
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
+  /* --- [MODIFIED] Flex properties --- */
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* Changed from baseline */
+  gap: 1rem;
+}
+
+/* --- [MODIFIED] Header Stat (e.g., Total Seats) --- */
+.headerStat {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--grey-700);
+  white-space: nowrap;
+  flex-shrink: 0;
+  
+  /* --- [NEW] Flex properties --- */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* --- Card Section (for content) --- */
@@ -168,7 +186,7 @@
 }
 
 .toursTable td {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   vertical-align: middle;
   font-size: 0.9rem;
   white-space: nowrap;
@@ -188,6 +206,14 @@
 .tourSeats {
   font-weight: 500;
   color: var(--grey-700);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tourSeatsMax {
+  font-size: 0.9rem;
+  color: var(--grey-500);
+  white-space: nowrap;
 }
 
 .tourStatus {
@@ -197,27 +223,7 @@
   text-align: right;
 }
 
-.status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.status.scheduled {
-  background: var(--grey-200);
-  color: var(--text);
-  border: 1px solid var(--grey-700);
-}
-
-.status.cancelled {
-  background: var(--grey-100);
-  color: var(--destructive);
-  border: 1px solid var(--destructive);
-}
-
-/* --- [NEW] Statistics Column Styles --- */
+/* --- Statistics Column Styles --- */
 .denseStatGroup {
   display: grid;
   /* This creates the aligned, non-spreadsheet layout */
@@ -245,12 +251,27 @@
   font-size: 1rem;
   text-align: right;
   white-space: nowrap;
+  
+  /* Flex properties */
+  display: flex;
+  justify-content: flex-end;
+  align-items: center; /* [MODIFIED] center align */
+  gap: 0.5rem;
 }
 
+.sparklineWrapper {
+  margin-left: 0.25rem;
+}
+
+/* --- [MODIFIED] denseStatSubtext is now a flex container --- */
 .denseStatSubtext {
   font-weight: 500;
   color: var(--grey-700);
   font-size: 0.85rem;
-  margin-left: 0.5rem;
   white-space: nowrap;
+  
+  /* --- [NEW] Flex properties --- */
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }

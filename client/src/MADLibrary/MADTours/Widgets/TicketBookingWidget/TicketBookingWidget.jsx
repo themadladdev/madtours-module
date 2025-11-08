@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import * as tourBookingService from '../../../../services/public/tourBookingService.js';
-import { useToast } from '../../../toast/useToast.js';
+import { useToast } from '../../../admin/toast/useToast.js';
 import styles from './TicketBookingWidget.module.css';
 
 // --- Import Reusable Widget Components ---

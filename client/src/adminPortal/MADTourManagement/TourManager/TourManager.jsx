@@ -5,10 +5,10 @@
 
 import React, { useState, useEffect } from 'react';
 import * as adminTourService from '../../../services/admin/adminTourService.js';
-import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
+import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/ConfirmationDialog.jsx';
 import TourEditorModal from './TourEditorModal.jsx';
 import styles from './TourManager.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 const TourManager = () => {
   const [tours, setTours] = useState([]);

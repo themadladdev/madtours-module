@@ -1,11 +1,11 @@
 // client/src/adminPortal/MADTourManagement/TourManager/TourEditorModal.jsx
 import React, { useState, useEffect } from 'react';
-import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
+import AdminFormModal from '../../../MADLibrary/admin/modals/AdminFormModal.jsx';
 import * as adminTourService from '../../../services/admin/adminTourService.js';
 // --- NEW: Import the ticket service ---
 import * as adminTicketService from '../../../services/admin/adminTicketService.js';
 import styles from './TourEditorModal.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 // --- Schedule Editor Sub-component (Unchanged) ---
 const ScheduleEditor = ({ schedule, onScheduleChange }) => {

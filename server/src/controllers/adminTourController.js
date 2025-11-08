@@ -6,7 +6,7 @@
 import * as tourService from '../services/tourService.js';
 import { generateManifest } from '../utils/tourManifestGenerator.js';
 import { getAdminTourInstances } from '../utils/tourAvailabilityCalculator.js';
-import { pool } from '../db/db.js'; // --- [NEW] Import pool for complex dashboard query
+import { pool } from '../db/db.js';
 
 export const createTour = async (req, res, next) => {
     try {
@@ -254,6 +254,25 @@ export const batchCancelBlackout = async (req, res, next) => {
 };
 // === END NEW CONTROLLER ===
 
+// --- [MODIFIED] Helper function to process trend data ---
+// Creates a 7-day array, padding with 0s for days with no data.
+// Assumes startDate is the correct start of the week (e.g., Monday).
+const processTrendData = (queryRows, startDate, numDays, valueField) => {
+  const trendMap = new Map(
+    queryRows.map(row => [row.day.toISOString().split('T')[0], parseFloat(row[valueField])])
+  );
+  
+  const trendData = [];
+  const processingDate = new Date(startDate.getTime()); // Clone the date
+
+  for (let i = 0; i < numDays; i++) {
+    const dateKey = processingDate.toISOString().split('T')[0];
+    trendData.push(trendMap.get(dateKey) || 0);
+    processingDate.setDate(processingDate.getDate() + 1); // Increment day
+  }
+  return trendData;
+};
+
 // === [REWRITTEN] DIRECTIONAL DASHBOARD CONTROLLER ===
 export const getDirectionalDashboard = async (req, res, next) => {
     try {
@@ -279,9 +298,23 @@ export const getDirectionalDashboard = async (req, res, next) => {
         const bookingStatsTodayQuery = pool.query(
             `${commonBookingStats} DATE(created_at) = CURRENT_DATE`
         );
+        // [MODIFIED] Query for full current week
         const bookingStatsWeekQuery = pool.query(
             `${commonBookingStats} DATE(created_at) >= DATE_TRUNC('week', CURRENT_DATE)`
         );
+        // [MODIFIED] Trend for full current week
+        const bookingStatsWeekTrendQuery = pool.query(
+            `SELECT 
+                DATE(created_at) as day, 
+                COALESCE(SUM(total_amount), 0) as revenue
+             FROM tour_bookings
+             WHERE status = 'confirmed' 
+               AND DATE(created_at) >= DATE_TRUNC('week', CURRENT_DATE)
+               AND DATE(created_at) <= (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')
+             GROUP BY day
+             ORDER BY day ASC`
+        );
+        // [MODIFIED] Query for full current month
         const bookingStatsMonthQuery = pool.query(
             `${commonBookingStats} DATE(created_at) >= DATE_TRUNC('month', CURRENT_DATE)`
         );
@@ -301,11 +334,26 @@ export const getDirectionalDashboard = async (req, res, next) => {
         const tourStatsTodayQuery = pool.query(
             `${commonTourStats} i.date = CURRENT_DATE`
         );
+        // [MODIFIED] Query for full current week (from today onwards)
         const tourStatsWeekQuery = pool.query(
-            `${commonTourStats} i.date > CURRENT_DATE AND i.date <= (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')`
+            `${commonTourStats} i.date >= CURRENT_DATE AND i.date <= (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')`
         );
+        // [MODIFIED] Trend for full current week (from today onwards)
+        const tourStatsWeekTrendQuery = pool.query(
+            `SELECT 
+                i.date as day, 
+                COALESCE(SUM(b.total_amount), 0) as value
+             FROM tour_bookings b
+             JOIN tour_instances i ON b.tour_instance_id = i.id
+             WHERE b.status = 'confirmed' 
+               AND i.date >= CURRENT_DATE 
+               AND i.date <= (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')
+             GROUP BY day
+             ORDER BY day ASC`
+        );
+        // [MODIFIED] Query for full current month (from today onwards)
         const tourStatsMonthQuery = pool.query(
-            `${commonTourStats} i.date > CURRENT_DATE AND i.date <= (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day')`
+            `${commonTourStats} i.date >= CURRENT_DATE AND i.date <= (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day')`
         );
         const tourStats90DayQuery = pool.query(
             `${commonTourStats} i.date > CURRENT_DATE AND i.date <= (CURRENT_DATE + INTERVAL '90 days')`
@@ -318,25 +366,41 @@ export const getDirectionalDashboard = async (req, res, next) => {
             triageFailedPayments,
             bookingStatsToday,
             bookingStatsWeek,
+            bookingStatsWeekTrend,
             bookingStatsMonth,
             bookingStatsYTD,
             tourStatsToday,
             tourStatsWeek,
+            tourStatsWeekTrend,
             tourStatsMonth,
-            tourStats90Day
+            tourStats90Day,
+            // [NEW] Get the actual start of the week from Postgres
+            dbWeekStartDate
         ] = await Promise.all([
             triagePendingTriageQuery,
             triagePendingBookingsQuery,
             triageFailedPaymentsQuery,
             bookingStatsTodayQuery,
             bookingStatsWeekQuery,
+            bookingStatsWeekTrendQuery,
             bookingStatsMonthQuery,
             bookingStatsYTDQuery,
             tourStatsTodayQuery,
             tourStatsWeekQuery,
+            tourStatsWeekTrendQuery,
             tourStatsMonthQuery,
-            tourStats90DayQuery
+            tourStats90DayQuery,
+            pool.query("SELECT DATE_TRUNC('week', CURRENT_DATE) as week_start")
         ]);
+        
+        // --- Process Trend Data ---
+        // [MODIFIED] Use the exact start date from Postgres for 100% accuracy
+        const pgStartOfWeek = dbWeekStartDate.rows[0].week_start;
+        
+        const bookingTrend = processTrendData(bookingStatsWeekTrend.rows, pgStartOfWeek, 7, 'revenue');
+        // Tour trend still correctly starts from today
+        const tourTrend = processTrendData(tourStatsWeekTrend.rows, new Date(), 7, 'value'); 
+
         
         // Helper to format query results
         const formatStats = (row) => ({
@@ -357,13 +421,13 @@ export const getDirectionalDashboard = async (req, res, next) => {
             },
             bookingStats: {
                 today: formatStats(bookingStatsToday.rows[0]),
-                week: formatStats(bookingStatsWeek.rows[0]),
+                week: { ...formatStats(bookingStatsWeek.rows[0]), trend: bookingTrend }, // Add trend
                 month: formatStats(bookingStatsMonth.rows[0]),
                 ytd: formatStats(bookingStatsYTD.rows[0]),
             },
             tourStats: {
                 today: formatTourStats(tourStatsToday.rows[0]),
-                week: formatTourStats(tourStatsWeek.rows[0]),
+                week: { ...formatTourStats(tourStatsWeek.rows[0]), trend: tourTrend }, // Add trend
                 month: formatTourStats(tourStatsMonth.rows[0]),
                 next90Days: formatTourStats(tourStats90Day.rows[0]),
             }

@@ -1,6 +1,6 @@
 // client/src/adminPortal/AdminDashboard.jsx
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import sharedStyles from './adminshared.module.css'; // For PageLoader
+import sharedStyles from '../MADLibrary/admin/styles/adminshared.module.css';
 
 // Lazy load MADTours admin components
 const MADTourManagement = lazy(() => import('./MADTourManagement/MADTourManagement.jsx'));

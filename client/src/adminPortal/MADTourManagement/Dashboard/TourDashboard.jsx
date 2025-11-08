@@ -6,7 +6,15 @@ import React, { useState, useEffect } from 'react';
 import { getDirectionalDashboard } from '../../../services/admin/adminBookingService.js';
 import { getTourInstances } from '../../../services/admin/adminTourService.js';
 import styles from './TourDashboard.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
+
+import StatusIndicator from '../../../MADLibrary/admin/dashboard/StatusIndicator/StatusIndicator.jsx';
+import ProgressDonut from '../../../MADLibrary/admin/dashboard/ProgressDonut/ProgressDonut.jsx';
+import Sparkline from '../../../MADLibrary/admin/charts/Sparkline/Sparkline.jsx';
+
+// --- Import icons ---
+import UserIcon from '../../../MADLibrary/MADTours/icons/UserIcon.jsx';
+import TicketIcon from '../../../MADLibrary/MADTours/icons/TicketIcon.jsx';
 
 // Reusable loader component
 const LoadingSpinner = ({ text }) => (
@@ -46,8 +54,8 @@ const TriageLink = ({ label, count, path, filterKey, isLoading }) => {
   );
 };
 
-// --- [NEW] Dense stat row component ---
-const DenseStatRow = ({ label, value, subtext, isLoading }) => (
+// --- [MODIFIED] Added 'subtextIcon' prop ---
+const DenseStatRow = ({ label, value, subtext, subtextIcon, sparklineData, isLoading }) => (
   <div className={styles.denseStatRow}>
     <span className={styles.denseStatLabel}>{label}</span>
     {isLoading ? (
@@ -55,7 +63,18 @@ const DenseStatRow = ({ label, value, subtext, isLoading }) => (
     ) : (
       <span className={styles.denseStatValue}>
         {value}
-        <span className={styles.denseStatSubtext}>{subtext}</span>
+        {/* Render sparkline if data exists */}
+        {sparklineData && sparklineData.length > 0 && (
+          <span className={styles.sparklineWrapper}>
+            <Sparkline data={sparklineData} width={60} height={16} />
+          </span>
+        )}
+        <span className={styles.denseStatSubtext}>
+          {/* Render the correct icon */}
+          {subtextIcon === 'user' && <UserIcon />}
+          {subtextIcon === 'ticket' && <TicketIcon />}
+          {subtext}
+        </span>
       </span>
     )}
   </div>
@@ -66,6 +85,8 @@ const TourDashboard = () => {
   const [data, setData] = useState(null);
   const [todayTours, setTodayTours] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const monthName = new Date().toLocaleString('default', { month: 'long' });
 
   // Use our custom router logic for non-triage links
   const handleNavigate = (event, path) => {
@@ -115,6 +136,10 @@ const TourDashboard = () => {
     }
   };
 
+  const totalTodaySeats = todayTours.reduce(
+    (acc, tour) => acc + tour.booked_seats,
+    0
+  );
 
   return (
     <div className={styles.dashboardContainer}>
@@ -154,11 +179,17 @@ const TourDashboard = () => {
         </div>
       </div>
 
-      {/* Column 2: Today's Operations */}
+      {/* Column 2: Today's Tours */}
       <div className={styles.dashboardColumn}>
         <div className={styles.dashboardCard}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.columnTitle}>Today's Operations</h2>
+            <h2 className={styles.columnTitle}>Today's Tours</h2>
+            {/* --- [MODIFIED] Added Icon --- */}
+            {!loading && (
+              <span className={styles.headerStat}>
+                <UserIcon /> Total Seats: {totalTodaySeats}
+              </span>
+            )}
           </div>
           
           <div className={styles.toursList}>
@@ -182,11 +213,19 @@ const TourDashboard = () => {
                     >
                       <td className={styles.tourTime}>{tour.time.substring(0, 5)}</td>
                       <td className={styles.tourName}>{tour.tour_name}</td>
-                      <td className={styles.tourSeats}>{tour.booked_seats} / {tour.capacity}</td>
-                      <td className={styles.tourStatus}>
-                        <span className={`${styles.status} ${styles[tour.status]}`}>
-                          {tour.status}
+                      <td className={styles.tourSeats}>
+                        <ProgressDonut 
+                          value={tour.booked_seats} 
+                          max={tour.capacity} 
+                        />
+                        <span className={styles.tourSeatsMax}>
+                          / {tour.capacity}
                         </span>
+                      </td>
+                      <td className={styles.tourStatus}>
+                        <StatusIndicator variant={tour.status}>
+                          {tour.status}
+                        </StatusIndicator>
                       </td>
                       <td className={styles.tourAction}>
                         <button
@@ -206,79 +245,90 @@ const TourDashboard = () => {
         </div>
       </div>
 
-      {/* Column 3: Statistics (Refactored to 2 Cards) */}
+      {/* Column 3: Statistics */}
       <div className={styles.dashboardColumn}>
-        {/* --- Card 1: Tour Statistics --- */}
+        {/* Card 1: Tour Statistics */}
         <div className={styles.dashboardCard}>
           <div className={styles.cardHeader}>
             <h2 className={styles.columnTitle}>Tour Statistics (Forward-Look)</h2>
           </div>
           <div className={styles.cardSection}>
             <div className={styles.denseStatGroup}>
+              {/* --- [MODIFIED] Using UserIcon --- */}
               <DenseStatRow
                 label="Today"
                 value={`$${data?.tourStats?.today?.value || 0}`}
-                subtext={`(${data?.tourStats?.today?.seats || 0} seats)`}
+                subtext={data?.tourStats?.today?.seats || 0}
+                subtextIcon="user"
                 isLoading={loading}
               />
               <DenseStatRow
-                label="Rest of Week"
+                label="Weekly (Current)"
                 value={`$${data?.tourStats?.week?.value || 0}`}
-                subtext={`(${data?.tourStats?.week?.seats || 0} seats)`}
+                subtext={data?.tourStats?.week?.seats || 0}
+                subtextIcon="user"
+                sparklineData={data?.tourStats?.week?.trend}
                 isLoading={loading}
               />
               <DenseStatRow
-                label="Rest of Month"
+                label={`Monthly (${monthName})`}
                 value={`$${data?.tourStats?.month?.value || 0}`}
-                subtext={`(${data?.tourStats?.month?.seats || 0} seats)`}
+                subtext={data?.tourStats?.month?.seats || 0}
+                subtextIcon="user"
                 isLoading={loading}
               />
               <DenseStatRow
                 label="Next 90 Days"
                 value={`$${data?.tourStats?.next90Days?.value || 0}`}
-                subtext={`(${data?.tourStats?.next90Days?.seats || 0} seats)`}
+                subtext={data?.tourStats?.next90Days?.seats || 0}
+                subtextIcon="user"
                 isLoading={loading}
               />
             </div>
           </div>
         </div>
         
-        {/* --- Card 2: Booking Statistics --- */}
+        {/* Card 2: Booking Statistics */}
         <div className={styles.dashboardCard}>
           <div className={styles.cardHeader}>
             <h2 className={styles.columnTitle}>Booking Statistics (Historic)</h2>
           </div>
           <div className={styles.cardSection}>
             <div className={styles.denseStatGroup}>
+              {/* --- [MODIFIED] Using TicketIcon --- */}
               <DenseStatRow
                 label="Today"
                 value={`$${data?.bookingStats?.today?.revenue || 0}`}
-                subtext={`(${data?.bookingStats?.today?.bookings || 0} bookings)`}
+                subtext={data?.bookingStats?.today?.bookings || 0}
+                subtextIcon="ticket"
                 isLoading={loading}
               />
               <DenseStatRow
-                label="This Week"
+                label="Weekly (Mon-Sun)"
                 value={`$${data?.bookingStats?.week?.revenue || 0}`}
-                subtext={`(${data?.bookingStats?.week?.bookings || 0} bookings)`}
+                subtext={data?.bookingStats?.week?.bookings || 0}
+                subtextIcon="ticket"
+                sparklineData={data?.bookingStats?.week?.trend}
                 isLoading={loading}
               />
               <DenseStatRow
-                label="This Month"
+                label={`Monthly (${monthName})`}
                 value={`$${data?.bookingStats?.month?.revenue || 0}`}
-                subtext={`(${data?.bookingStats?.month?.bookings || 0} bookings)`}
+                subtext={data?.bookingStats?.month?.bookings || 0}
+                subtextIcon="ticket"
                 isLoading={loading}
               />
               <DenseStatRow
                 label="Year-to-Date"
                 value={`$${data?.bookingStats?.ytd?.revenue || 0}`}
-                subtext={`(${data?.bookingStats?.ytd?.bookings || 0} bookings)`}
+                subtext={data?.bookingStats?.ytd?.bookings || 0}
+                subtextIcon="ticket"
                 isLoading={loading}
               />
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 };

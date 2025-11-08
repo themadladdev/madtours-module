@@ -4,7 +4,7 @@
 // ==========================================
 
 import React, { useState, useEffect } from 'react';
-import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
+import AdminFormModal from '../../../MADLibrary/admin/modals/AdminFormModal.jsx';
 import { updateBookingPassengers } from '../../../services/admin/adminBookingService.js';
 import styles from './ManifestEditorModal.module.css';
 import sharedStyles from '../../adminshared.module.css';

@@ -1,0 +1,15 @@
+/* ==========================================
+ * client/src/ui/MADLibrary/MADTours/charts/Sparkline/Sparkline.module.css
+ * ==========================================
+ * Uses variables defined in src/styles/global.css */
+
+.sparklineSvg {
+  overflow: visible;
+}
+
+.sparklinePath {
+  fill: none;
+  stroke: var(--text);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

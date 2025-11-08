@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { getTourById } from '../../../services/public/tourBookingService.js';
 import styles from './TourDetailPage.module.css';
-import BookingCalendar from '../../../ui/MADTours/Widgets/BookingCalendarWidget/BookingCalendarWidget.jsx'; // Import the child widget
+import BookingCalendar from '../../../MADLibrary/MADTours/Widgets/BookingCalendarWidget/BookingCalendarWidget.jsx'; // Import the child widget
 
 // This component receives the 'id' from the router in App.jsx
 const TourDetailPage = ({ id }) => {

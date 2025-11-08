@@ -12,11 +12,11 @@ import {
   manualMarkAsPaid, 
   adminCancelBooking 
 } from '../../../services/admin/adminBookingService.js';
-import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
+import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/ConfirmationDialog.jsx';
 import BookingActionModal from './BookingActionModal.jsx';
 import useDebounce from '../../../utils/useDebounce.js';
 import styles from './BookingManager.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 // --- Define "quick filter" views ---
 const quickFilters = [

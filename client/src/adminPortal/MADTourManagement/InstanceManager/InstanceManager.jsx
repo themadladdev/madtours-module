@@ -1,5 +1,4 @@
 // ==========================================
-// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/InstanceManager/InstanceManager.jsx
 // ==========================================
 
@@ -10,12 +9,12 @@ import {
   operationalCancelInstance,
   reInstateInstance
 } from '../../../services/admin/adminTourService.js';
-import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
+import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/ConfirmationDialog.jsx';
 import BlackoutManagerModal from './BlackoutManagerModal.jsx';
 import PriceManagerModal from './MacroPriceEditorModal.jsx'; 
 import MicroPriceEditorModal from './MicroPriceEditorModal.jsx';
 import styles from './InstanceManager.module.css';
-import sharedStyles from '../../adminshared.module.css'; 
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 const InstanceManager = () => {
   const [instances, setInstances] = useState([]);

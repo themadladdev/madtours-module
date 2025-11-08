@@ -4,12 +4,12 @@
 // ==========================================
 
 import React, { useState } from 'react';
-import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
-import MarkdownRenderer from '../../../ui/MarkdownEditor/MarkdownRenderer.jsx';
-import MarkdownEditor from '../../../ui/MarkdownEditor/MarkdownEditor.jsx';
+import AdminFormModal from '../../../MADLibrary/admin/modals/AdminFormModal.jsx';
+import MarkdownRenderer from '../../../MADLibrary/admin/MarkdownEditor/MarkdownRenderer.jsx';
+import MarkdownEditor from '../../../MADLibrary/admin/MarkdownEditor/MarkdownEditor.jsx';
 import { updateAdminNotes } from '../../../services/admin/adminBookingService.js';
 import styles from './BookingActionModal.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 const BookingActionModal = ({ booking, onClose, onTriggerAction, isResolutionView }) => {
 

@@ -1,11 +1,11 @@
 // client/src/adminPortal/MADTourManagement/InstanceManager/MacroPriceEditorModal.jsx
 import React, { useState, useEffect } from 'react';
-import AdminFormModal from '../../../ui/modals/AdminFormModal.jsx';
-import ConfirmationDialog from '../../../ui/dialogbox/ConfirmationDialog.jsx';
+import AdminFormModal from '../../../MADLibrary/admin/modals/AdminFormModal.jsx';
+import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/ConfirmationDialog.jsx';
 import * as adminTicketService from '../../../services/admin/adminTicketService.js';
 // Updated CSS import
 import styles from './MacroPriceEditorModal.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 // Renamed component
 const MacroPriceEditorModal = ({ isOpen, onClose, tour, onSuccess }) => {

@@ -4,8 +4,8 @@ import { getActiveTours, getTourAvailability } from '../../../../services/public
 import styles from './AvailabilityBookingWidget.module.css';
 
 // --- Import "Dumb" UI Components ---
-import DumbBookingCalendar from '../../../../ui/MADTours/WidgetComponents/BookingCalendar/BookingCalendar.jsx';
-import TimeSlotSelector from '../../../../ui/MADTours/WidgetComponents/TimeSlotSelector/TimeSlotSelector.jsx';
+import DumbBookingCalendar from '../../WidgetComponents/BookingCalendar/BookingCalendar.jsx';
+import TimeSlotSelector from '../../WidgetComponents/TimeSlotSelector/TimeSlotSelector.jsx';
 
 const AvailabilityBookingWidget = () => {
     // State for tour selection
