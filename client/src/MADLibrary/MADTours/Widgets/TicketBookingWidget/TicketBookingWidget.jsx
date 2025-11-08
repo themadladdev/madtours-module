@@ -1,5 +1,5 @@
 // ==========================================
-// client/src/ui/MADTours/Widgets/TicketBookingWidget/TicketBookingWidget.jsx
+// client/src/MADLibrary/MADTours/Widgets/TicketBookingWidget/TicketBookingWidget.jsx
 // ==========================================
 
 import React, { useState, useEffect } from 'react';

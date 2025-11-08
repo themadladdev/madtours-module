@@ -1,4 +1,4 @@
-/* client/src/ui/MADTours/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.module.css */
+/* client/src/MADLibrary/MADTours/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.module.css */
 /* Uses variables from /client/src/styles/global.css */
 
 .widgetContainer {
@@ -204,7 +204,7 @@
   border-color: var(--text);
 }
 
-/* --- NEW: Responsive Styles --- */
+/* --- Responsive Styles --- */
 @container (max-width: 300px) {
   .controls {
     /* Allow wrapping and center the buttons */

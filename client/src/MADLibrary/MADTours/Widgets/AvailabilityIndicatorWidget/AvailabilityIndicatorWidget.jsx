@@ -1,4 +1,4 @@
-// client/src/ui/MADTours/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.jsx
+// client/src/MADLibrary/MADTours/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.jsx
 import React, { useState, useEffect } from 'react';
 import styles from './AvailabilityIndicatorWidget.module.css';
 

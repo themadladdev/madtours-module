@@ -1,4 +1,4 @@
-// client/src/modules/MADTours/FeaturedTourWidget/FeaturedTourWidget.jsx
+// client/src/MADLibrary/MADTours/Widgets/FeaturedTourWidget/FeaturedTourWidget.jsx
 import React, { useState, useEffect } from 'react';
 import { getTourById } from '../../../../services/public/tourBookingService.js';
 import styles from './FeaturedTourWidget.module.css';

@@ -1,5 +1,5 @@
 // ==========================================
-// client/src/ui/MADLibrary/MADTours/icons/UserIcon.jsx
+// client/src/MADLibrary/MADTours/icons/UserIcon.jsx
 // ==========================================
 
 import React from 'react';

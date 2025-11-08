@@ -1,5 +1,5 @@
 // ==========================================
-// client/src/ui/MADLibrary/MADTours/dashboard/StatusIndicator/StatusIndicator.jsx
+// client/src/MADLibrary/admin/dashboard/StatusIndicator/StatusIndicator.jsx
 // ==========================================
 
 import React from 'react';

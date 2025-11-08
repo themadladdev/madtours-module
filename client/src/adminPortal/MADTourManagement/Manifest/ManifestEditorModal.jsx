@@ -1,5 +1,4 @@
 // ==========================================
-// NEW FILE
 // client/src/adminPortal/MADTourManagement/Manifest/ManifestEditorModal.jsx
 // ==========================================
 
@@ -7,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import AdminFormModal from '../../../MADLibrary/admin/modals/AdminFormModal.jsx';
 import { updateBookingPassengers } from '../../../services/admin/adminBookingService.js';
 import styles from './ManifestEditorModal.module.css';
-import sharedStyles from '../../adminshared.module.css';
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 /**
  * Renders a modal to edit passenger names for a specific booking.

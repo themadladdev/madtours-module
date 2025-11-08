@@ -1,4 +1,4 @@
-// client/src/modules/MADTours/Widgets/BookingCalendarWidget/BookingCalendarWidget.jsx
+// client/src/MADLibrary/MADTours/Widgets/BookingCalendarWidget/BookingCalendarWidget.jsx
 import React, { useState, useEffect } from 'react';
 import { getTourAvailability } from '../../../../services/public/tourBookingService.js';
 import styles from './BookingCalendarWidget.module.css';

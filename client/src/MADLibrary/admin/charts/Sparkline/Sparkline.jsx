@@ -1,5 +1,5 @@
 // ==========================================
-// client/src/ui/MADLibrary/MADTours/charts/Sparkline/Sparkline.jsx
+// client/src/MADLibrary/admin/charts/Sparkline/Sparkline.jsx
 // ==========================================
 
 import React from 'react';

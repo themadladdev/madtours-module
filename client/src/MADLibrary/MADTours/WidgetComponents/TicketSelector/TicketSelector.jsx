@@ -1,7 +1,7 @@
-// client/src/ui/MADTours/WidgetComponents/TicketSelector/TicketSelector.jsx
+// client/src/MADLibrary/MADTours/WidgetComponents/TicketSelector/TicketSelector.jsx
 import React from 'react';
 import styles from './TicketSelector.module.css';
-import sharedStyles from '../../Widgets/TicketBookingWidget/TicketBookingWidget.module.css'; // Borrowing some styles
+import sharedStyles from '../../Widgets/TicketBookingWidget/TicketBookingWidget.module.css';
 
 const TicketSelector = ({ 
   pricing, 

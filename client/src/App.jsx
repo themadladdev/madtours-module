@@ -20,8 +20,7 @@ const PrototypeShowcase = lazy(() => import('./prototypeshowcase/PrototypeShowca
 // --- NEW MADTours Prototype Components ---
 const TourCollectionPage = lazy(() => import('./modules/MADTours/TourCollectionPage/TourCollectionPage.jsx'));
 const TourDetailPage = lazy(() => import('./modules/MADTours/TourDetailPage/TourDetailPage.jsx'));
-// --- NEW: Add the BookingPage ---
-const BookingPage = lazy(() => import('./modules/MADTours/BookingPage/BookingPage.old.jsx'));
+
 
 
 // A simple loading component
@@ -86,11 +85,6 @@ function App() {
       // The main collection page
       if (path === '/tours') {
         return <TourCollectionPage />;
-      }
-      
-      // --- NEW: Add the route for the booking page ---
-      if (path === '/tours/book') {
-        return <BookingPage />;
       }
 
       // The tour detail page (captures /tours/1, /tours/2, etc.)

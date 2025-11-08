@@ -1,5 +1,5 @@
 // ==========================================
-// client/src/ui/MADLibrary/MADTours/dashboard/ProgressDonut/ProgressDonut.jsx
+// client/src/MADLibrary/admin/dashboard/ProgressDonut/ProgressDonut.jsx
 // ==========================================
 
 import React from 'react';

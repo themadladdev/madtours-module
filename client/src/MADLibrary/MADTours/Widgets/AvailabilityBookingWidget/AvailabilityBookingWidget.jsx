@@ -1,4 +1,4 @@
-// client/src/modules/MADTours/Widgets/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx
+// client/src/MADLibrary/MADTours/Widgets/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx
 import React, { useState, useEffect } from 'react';
 import { getActiveTours, getTourAvailability } from '../../../../services/public/tourBookingService.js';
 import styles from './AvailabilityBookingWidget.module.css';

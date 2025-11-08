@@ -1,4 +1,4 @@
-// client/src/ui/dialogbox/ConfirmationDialog.jsx
+// client/src/MADLibrary/admin/dialogbox/ConfirmationDialog.jsx
 import styles from './ConfirmationDialog.module.css';
 
 const ConfirmationDialog = ({ 

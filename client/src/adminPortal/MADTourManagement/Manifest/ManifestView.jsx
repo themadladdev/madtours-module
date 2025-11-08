@@ -6,8 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { getManifest } from '../../../services/admin/adminTourService.js';
 import styles from './ManifestView.module.css';
-import sharedStyles from '../../adminshared.module.css';
-// --- NEW: Import the modal ---
+import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
+
 import ManifestEditorModal from './ManifestEditorModal.jsx';
 
 const ManifestView = ({ instanceId }) => {

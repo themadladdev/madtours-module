@@ -1,7 +1,7 @@
-// client/src/ui/MADTours/WidgetComponents/TimeSlotSelector/TimeSlotSelector.jsx
+// client/src/MADLibrary/MADTours/WidgetComponents/TimeSlotSelector/TimeSlotSelector.jsx
 import React from 'react';
 import styles from './TimeSlotSelector.module.css';
-import sharedStyles from '../../Widgets/TicketBookingWidget/TicketBookingWidget.module.css'; // Borrowing some styles
+import sharedStyles from '../../Widgets/TicketBookingWidget/TicketBookingWidget.module.css';
 
 const TimeSlotSelector = ({ slots, selectedTime, onTimeClick }) => {
   if (!slots || slots.length === 0) {

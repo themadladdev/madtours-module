@@ -1,4 +1,4 @@
-// client/src/ui/modals/AdminFormModal.jsx
+// client/src/MADLibrary/admin/modals/AdminFormModal.jsx
 import React from 'react';
 import styles from './AdminFormModal.module.css';
 

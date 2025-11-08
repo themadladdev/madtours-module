@@ -1,6 +1,5 @@
 // ==========================================
-// UPDATED FILE
-// client/src/ui/MADTours/WidgetComponents/CustomerDetailsForm/CustomerDetailsForm.jsx
+// client/src/MADLibrary/MADTours/WidgetComponents/CustomerDetailsForm/CustomerDetailsForm.jsx
 // ==========================================
 
 import React from 'react';

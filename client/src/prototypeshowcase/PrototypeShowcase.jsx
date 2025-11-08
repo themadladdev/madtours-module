@@ -10,7 +10,7 @@ import TourDetailPage from '../modules/MADTours/TourDetailPage/TourDetailPage.js
 
 // --- Widget ("UI Component") Imports ---
 import AvailabilityWidget from '../MADLibrary/MADTours/Widgets/AvailabilityWidget/AvailabilityWidget.jsx';
-import FeaturedTourWidget from '../MADLibrary/MADTours/Widgets/FeaturedTourWidget/FeaturedTourWidget.js';
+import FeaturedTourWidget from '../MADLibrary/MADTours/Widgets/FeaturedTourWidget/FeaturedTourWidget.jsx';
 import BookingCalendarWidget from '../MADLibrary/MADTours/Widgets/BookingCalendarWidget/BookingCalendarWidget.jsx';
 import AvailabilityBookingWidget from '../MADLibrary/MADTours/Widgets/AvailabilityBookingWidget/AvailabilityBookingWidget.jsx';
 import AvailabilityIndicatorWidget from '../MADLibrary/MADTours/Widgets/AvailabilityIndicatorWidget/AvailabilityIndicatorWidget.jsx';

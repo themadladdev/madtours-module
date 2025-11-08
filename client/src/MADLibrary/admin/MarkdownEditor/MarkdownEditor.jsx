@@ -1,4 +1,4 @@
-// client/src/ui/MarkdownEditor/MarkdownEditor.jsx
+// client/src/MADLibrary/admin/MarkdownEditor/MarkdownEditor.jsx
 import { useRef } from 'react';
 import styles from './MarkdownEditor.module.css';
 

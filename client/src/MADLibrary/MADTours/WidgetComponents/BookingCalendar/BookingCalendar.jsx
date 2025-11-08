@@ -1,4 +1,4 @@
-// client/src/ui/MADTours/WidgetComponents/BookingCalendar/BookingCalendar.jsx
+// client/src/MADLibrary/MADTours/WidgetComponents/BookingCalendar/BookingCalendar.jsx
 import React from 'react';
 import styles from './BookingCalendar.module.css';
 

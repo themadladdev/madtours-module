@@ -1,4 +1,4 @@
-// client/src/ui/MarkdownEditor/MarkdownRenderer.jsx
+// client/src/MADLibrary/admin/MarkdownEditor/MarkdownRenderer.jsx
 import React from 'react';
 import styles from './MarkdownRenderer.module.css';
 
