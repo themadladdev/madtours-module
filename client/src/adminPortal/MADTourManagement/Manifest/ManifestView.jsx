@@ -1,21 +1,23 @@
-// ==========================================
 // client/src/adminPortal/MADTourManagement/Manifest/ManifestView.jsx
-// ==========================================
-
 import React, { useState, useEffect } from 'react';
 import { getManifest } from '../../../services/admin/adminTourService.js';
 import styles from './ManifestView.module.css';
 import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 import ManifestEditorModal from './ManifestEditorModal.jsx';
+// --- [NEW] Import the manual booking modal ---
+import ManualBookingModal from '../BookingManager/ManualBookingModal.jsx';
 
 const ManifestView = ({ instanceId }) => {
   const [manifest, setManifest] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // --- NEW: State for the modal ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // --- State for the editor modal ---
+  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+
+  // --- [NEW] State for the manual booking modal ---
+  const [isManualBookingModalOpen, setIsManualBookingModalOpen] = useState(false);
 
   // Use our custom router logic
   const handleNavigate = (event, path) => {
@@ -47,14 +49,14 @@ const ManifestView = ({ instanceId }) => {
     window.print();
   };
 
-  // --- NEW: Modal open/close handlers ---
+  // --- Editor Modal open/close handlers ---
   const handleOpenEditor = (booking) => {
     setSelectedBooking(booking);
-    setIsModalOpen(true);
+    setIsEditorModalOpen(true);
   };
 
   const handleCloseEditor = () => {
-    setIsModalOpen(false);
+    setIsEditorModalOpen(false);
     setSelectedBooking(null);
   };
 
@@ -78,7 +80,7 @@ const ManifestView = ({ instanceId }) => {
         <tr 
           key={booking.booking_reference} 
           className={`${styles.passengerRow} ${styles.editableRow}`}
-          onClick={() => handleOpenEditor(booking)} // --- NEW: Click handler
+          onClick={() => handleOpenEditor(booking)} // --- Click handler ---
         >
           <td rowSpan={totalPassengers} className={styles.reference}>{booking.booking_reference}</td>
           <td className={styles.name}>{booking.passengers[0].first_name} {booking.passengers[0].last_name}</td>
@@ -104,7 +106,7 @@ const ManifestView = ({ instanceId }) => {
           <tr 
             key={`${booking.booking_reference}-${i}`} 
             className={`${styles.passengerRow} ${styles.editableRow}`}
-            onClick={() => handleOpenEditor(booking)} // --- NEW: Click handler
+            onClick={() => handleOpenEditor(booking)} // --- Click handler ---
           >
             {/* This row ONLY contains the name, as all other cells are row-spanned */}
             <td className={styles.name}>{booking.passengers[i].first_name} {booking.passengers[i].last_name}</td>
@@ -123,7 +125,7 @@ const ManifestView = ({ instanceId }) => {
         <tr 
           key={booking.booking_reference} 
           className={`${styles.fallbackRow} ${styles.editableRow}`}
-          onClick={() => handleOpenEditor(booking)} // --- NEW: Click handler
+          onClick={() => handleOpenEditor(booking)} // --- Click handler ---
         >
           <td className={styles.reference}>{booking.booking_reference}</td>
           <td className={styles.name}>
@@ -183,12 +185,25 @@ const ManifestView = ({ instanceId }) => {
 
   return (
     <>
-      {/* --- NEW: Render the modal --- */}
+      {/* --- Render the editor modal --- */}
       <ManifestEditorModal
-        isOpen={isModalOpen}
+        isOpen={isEditorModalOpen}
         onClose={handleCloseEditor}
         booking={selectedBooking}
         onSaveSuccess={handleSaveSuccess}
+      />
+
+      {/* --- [NEW] Render the manual booking modal --- */}
+      {/* This entry point passes context so the form is pre-filled */}
+      <ManualBookingModal
+        isOpen={isManualBookingModalOpen}
+        onClose={() => {
+            setIsManualBookingModalOpen(false);
+            loadManifest(); // Refresh manifest after modal closes
+        }}
+        initialTourId={manifest.tour_id}
+        initialDate={manifest.date}
+        initialTime={manifest.time}
       />
     
       <div className={styles.manifestContainer}>
@@ -196,10 +211,20 @@ const ManifestView = ({ instanceId }) => {
           <button 
             onClick={(e) => handleNavigate(e, '/admin/tours/dashboard')}
             className={sharedStyles.secondaryButton}
-            style={{ marginRight: '1rem' }}
+            style={{ marginRight: 'auto' }} /* Pushes other buttons right */
           >
             Back to Dashboard
           </button>
+          
+          {/* --- [NEW] Add Booking button --- */}
+          <button 
+            onClick={() => setIsManualBookingModalOpen(true)}
+            className={sharedStyles.secondaryButton}
+            style={{ marginRight: '1rem' }}
+          >
+            Add Booking to this Manifest
+          </button>
+
           <button onClick={handlePrint} className={sharedStyles.primaryButton}>
             Print Manifest
           </button>

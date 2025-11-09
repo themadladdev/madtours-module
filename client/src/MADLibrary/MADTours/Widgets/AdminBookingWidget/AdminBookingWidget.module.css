@@ -1,0 +1,116 @@
+/* client/src/MADLibrary/MADTours/Widgets/AdminBookingWidget/AdminBookingWidget.module.css
+ * It uses the B&W/greyscale variables from global.css
+*/
+
+.widgetContainer {
+    /* */
+    background-color: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    max-width: 400px; /* Admin modal can be wider, but keep widget consistent */
+    margin: 0 auto; /* Centered in the modal */
+}
+
+.widgetHeader {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.widgetTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+    text-align: center;
+}
+
+.tourSelectorGroup {
+    padding: 1.5rem;
+}
+
+.tourSelectorGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--grey-700);
+}
+
+.input {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+.spinnerSmall {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid rgba(var(--text-rgb), 0.1);
+    border-top: 2px solid var(--text);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 1rem auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.stepContent {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--grey-100);
+}
+
+.stepHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.stepTitle {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.availability {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--grey-700);
+}
+
+.bookButton {
+    display: block;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid var(--primary);
+    background-color: var(--primary);
+    color: var(--primary-text);
+}
+
+.bookButton:hover {
+    background-color: var(--secondary);
+    color: var(--secondary-text);
+}
+
+.bookButton:disabled {
+    background-color: var(--grey-200);
+    color: var(--grey-500);
+    border-color: var(--grey-200);
+    cursor: not-allowed;
+    opacity: 0.7;
+}

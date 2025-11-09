@@ -1,0 +1,55 @@
+/* client/src/MADLibrary/MADTours/WidgetComponents/AdminCustomerDetails/AdminCustomerDetails.module.css
+ * and merges the required styles for the admin radio buttons.
+*/
+
+/* --- [Copied from Grok's CSS] --- */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--grey-700); /* */
+}
+/* --- [End Copied Section] --- */
+
+
+/* --- [Retained] Admin-specific radio button styles --- */
+.radioGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color); /* */
+    border-radius: 4px;
+}
+
+.radioGroup label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400;
+    cursor: pointer;
+    color: var(--text); /* */
+    margin-bottom: 0; /* Override default label margin */
+}
+/* --- [End Retained Section] --- */
+
+
+/* --- [Copied from Grok's CSS] Responsive Styles --- */
+@container (max-width: 500px) {
+  .formGrid {
+    /* Stack the form into a single column on small screens */
+    grid-template-columns: 1fr;
+  }
+}

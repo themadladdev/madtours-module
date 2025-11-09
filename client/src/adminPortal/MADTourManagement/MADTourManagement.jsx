@@ -1,7 +1,3 @@
-// ==========================================
-// client/src/adminPortal/MADTourManagement/MADTourManagement.jsx
-// ==========================================
-
 import React, { useState, useEffect } from 'react';
 import styles from './MADTourManagement.module.css';
 import sharedStyles from '../../MADLibrary/admin/styles/adminshared.module.css';
@@ -15,6 +11,9 @@ import TourManager from './TourManager/TourManager.jsx';
 import TicketManager from './TicketManager/TicketManager.jsx';
 import Statistics from './Statistics/Statistics.jsx';
 
+// --- [NEW] Import the modal ---
+import ManualBookingModal from './BookingManager/ManualBookingModal.jsx';
+
 
 // Placeholder Icon
 const IconPlaceholder = () => <span style={{ marginRight: '8px' }}>•</span>;
@@ -23,6 +22,9 @@ const IconPlaceholder = () => <span style={{ marginRight: '8px' }}>•</span>;
 const MADTourManagement = () => {
     const [activeSubTab, setActiveSubTab] = useState('dashboard');
     const [resolutionCount, setResolutionCount] = useState(0); 
+    
+    // --- [NEW] State for the manual booking modal ---
+    const [isManualBookingModalOpen, setIsManualBookingModalOpen] = useState(false);
 
     // Read the path to set the initial tab
     useEffect(() => {
@@ -157,7 +159,8 @@ const MADTourManagement = () => {
                  <div className={styles.headerActions}>
                     <button 
                         className={sharedStyles.primaryButton}
-                        onClick={() => { /* Logic to open admin booking modal */ }}
+                        // --- [NEW] Wire up the modal ---
+                        onClick={() => setIsManualBookingModalOpen(true)}
                     >
                         Create New Booking
                     </button>
@@ -204,6 +207,13 @@ const MADTourManagement = () => {
             <div className={styles.contentArea}>
                  {renderSubComponent()}
             </div>
+
+            {/* --- [NEW] Render the modal --- */}
+            {/* This entry point passes no initial props, so the form is blank */}
+            <ManualBookingModal
+                isOpen={isManualBookingModalOpen}
+                onClose={() => setIsManualBookingModalOpen(false)}
+            />
         </div>
     );
 };
