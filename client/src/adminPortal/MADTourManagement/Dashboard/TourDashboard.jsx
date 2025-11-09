@@ -1,7 +1,3 @@
-// ==========================================
-// client/src/adminPortal/MADTourManagement/Dashboard/TourDashboard.jsx
-// ==========================================
-
 import React, { useState, useEffect } from 'react';
 import { getDirectionalDashboard } from '../../../services/admin/adminBookingService.js';
 import { getTourInstances } from '../../../services/admin/adminTourService.js';
@@ -13,8 +9,8 @@ import ProgressDonut from '../../../MADLibrary/admin/dashboard/ProgressDonut/Pro
 import Sparkline from '../../../MADLibrary/admin/charts/Sparkline/Sparkline.jsx';
 
 // --- Import icons ---
-import UserIcon from '../../../MADLibrary/MADTours/icons/UserIcon.jsx';
-import TicketIcon from '../../../MADLibrary/MADTours/icons/TicketIcon.jsx';
+import UserIcon from '../../../MADLibrary/admin/icons/UserIcon.jsx';
+import TicketIcon from '../../../MADLibrary/admin/icons/TicketIcon.jsx';
 
 // Reusable loader component
 const LoadingSpinner = ({ text }) => (
@@ -69,12 +65,22 @@ const DenseStatRow = ({ label, value, subtext, subtextIcon, sparklineData, isLoa
             <Sparkline data={sparklineData} width={60} height={16} />
           </span>
         )}
+        
+        {/* --- MODIFICATION HERE --- */}
+        {/* This is the outer pill container */}
         <span className={styles.denseStatSubtext}>
-          {/* Render the correct icon */}
-          {subtextIcon === 'user' && <UserIcon />}
-          {subtextIcon === 'ticket' && <TicketIcon />}
-          {subtext}
+          {/* 1. The Value/Number (reversed order) */}
+          <span className={styles.denseStatSubtextValue}>
+            {subtext}
+          </span>
+          {/* 2. The Icon with its own background */}
+          <span className={styles.denseStatSubtextIcon}>
+            {subtextIcon === 'user' && <UserIcon />}
+            {subtextIcon === 'ticket' && <TicketIcon />}
+          </span>
         </span>
+        {/* --- END MODIFICATION --- */}
+
       </span>
     )}
   </div>
@@ -184,10 +190,14 @@ const TourDashboard = () => {
         <div className={styles.dashboardCard}>
           <div className={styles.cardHeader}>
             <h2 className={styles.columnTitle}>Today's Tours</h2>
-            {/* --- [MODIFIED] Added Icon --- */}
             {!loading && (
               <span className={styles.headerStat}>
-                <UserIcon /> Total Seats: {totalTodaySeats}
+                <span className={styles.headerStatIcon}>
+                  <UserIcon />
+                </span>
+                <span className={styles.headerStatText}>
+                  Total Seats: <strong>{totalTodaySeats}</strong>
+                </span>
               </span>
             )}
           </div>
@@ -250,11 +260,10 @@ const TourDashboard = () => {
         {/* Card 1: Tour Statistics */}
         <div className={styles.dashboardCard}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.columnTitle}>Tour Statistics (Forward-Look)</h2>
+            <h2 className={styles.columnTitle}>Tour Statistics</h2>
           </div>
           <div className={styles.cardSection}>
             <div className={styles.denseStatGroup}>
-              {/* --- [MODIFIED] Using UserIcon --- */}
               <DenseStatRow
                 label="Today"
                 value={`$${data?.tourStats?.today?.value || 0}`}
@@ -291,11 +300,10 @@ const TourDashboard = () => {
         {/* Card 2: Booking Statistics */}
         <div className={styles.dashboardCard}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.columnTitle}>Booking Statistics (Historic)</h2>
+            <h2 className={styles.columnTitle}>Booking Statistics</h2>
           </div>
           <div className={styles.cardSection}>
             <div className={styles.denseStatGroup}>
-              {/* --- [MODIFIED] Using TicketIcon --- */}
               <DenseStatRow
                 label="Today"
                 value={`$${data?.bookingStats?.today?.revenue || 0}`}

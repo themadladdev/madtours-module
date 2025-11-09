@@ -5,7 +5,6 @@ import styles from './ManifestView.module.css';
 import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 import ManifestEditorModal from './ManifestEditorModal.jsx';
-// --- [NEW] Import the manual booking modal ---
 import ManualBookingModal from '../BookingManager/ManualBookingModal.jsx';
 
 const ManifestView = ({ instanceId }) => {
@@ -222,7 +221,7 @@ const ManifestView = ({ instanceId }) => {
             className={sharedStyles.secondaryButton}
             style={{ marginRight: '1rem' }}
           >
-            Add Booking to this Manifest
+            Create New Booking
           </button>
 
           <button onClick={handlePrint} className={sharedStyles.primaryButton}>
