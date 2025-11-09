@@ -254,11 +254,10 @@ export const createFocBooking = async (req, res, next) => {
 
 /**
  * --- [REFACTORED] ---
- * Updated to handle the new composite 'all_pending' filter.
+ * Updated to handle new, complex 'special_filter' queries for the admin badges.
  */
 export const getAllBookings = async (req, res, next) => {
   try {
-    // --- [NEW] 'special_filter' query param ---
     const { seat_status, payment_status, startDate, endDate, searchTerm, special_filter } = req.query;
     
     let query = `
@@ -282,12 +281,30 @@ export const getAllBookings = async (req, res, next) => {
     const params = [];
     let paramCount = 1;
 
-    // --- [NEW] Logic for composite filter ---
-    if (special_filter === 'all_pending') {
-      query += ` AND (
-        (b.seat_status = 'seat_confirmed' AND b.payment_status = 'payment_manual_pending') OR
-        (b.seat_status = 'seat_pending' AND b.payment_status = 'payment_stripe_pending')
-      )`;
+    // --- [NEW] Logic for complex filters ---
+    if (special_filter) {
+      if (special_filter === 'action_required') {
+        // Find all "failure" states
+        query += ` AND (
+          b.seat_status = 'triage' OR
+          b.payment_status = 'refund_stripe_failed' OR
+          (b.seat_status = 'seat_pending' AND b.created_at < (NOW() - INTERVAL '1 hour')) OR
+          (b.payment_status = 'payment_manual_pending' AND ti.date < CURRENT_DATE)
+        )`;
+      } 
+      else if (special_filter === 'triage_queue') {
+         query += ` AND (b.seat_status = 'triage' OR b.payment_status = 'refund_stripe_failed')`;
+      }
+      else if (special_filter === 'stuck_pending_queue') {
+         query += ` AND (b.seat_status = 'seat_pending' AND b.created_at < (NOW() - INTERVAL '1 hour'))`;
+      }
+      else if (special_filter === 'missed_payment_queue') {
+         query += ` AND (b.payment_status = 'payment_manual_pending' AND ti.date < CURRENT_DATE)`;
+      }
+      else if (special_filter === 'pay_on_arrival_queue') {
+         // This is the informational queue: "Pay on Arrival" for *future* dates
+         query += ` AND (b.payment_status = 'payment_manual_pending' AND ti.date >= CURRENT_DATE)`;
+      }
     } else {
       // Standard filters
       if (seat_status) {

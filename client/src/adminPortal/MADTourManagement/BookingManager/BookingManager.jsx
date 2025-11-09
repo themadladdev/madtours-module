@@ -17,23 +17,38 @@ import useDebounce from '../../../utils/useDebounce.js';
 import styles from './BookingManager.module.css';
 import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
+
 // --- [REFACTORED] Quick filters ---
 const quickFilters = [
-  { id: 'triage', label: 'Pending Resolution' },
-  { id: 'seat_confirmed', label: 'Confirmed' },
-  // --- [FIX] Renamed to "Pending Payments" ---
-  { id: 'all_pending', label: 'Pending Payments' },
-  { id: 'all', label: 'All Bookings' },
-  { id: 'seat_cancelled', label: 'Cancelled' },
+  { 
+    id: 'action_required', 
+    label: 'Action Required',
+    badge: 0 // Will be populated by fetchQueueCounts
+  },
+  { 
+    id: 'pay_on_arrival', 
+    label: 'Pay on Arrival',
+    badge: 0 // Will be populated by fetchQueueCounts
+  },
+  { id: 'seat_confirmed', label: 'Confirmed', badge: 0 },
+  { id: 'all', label: 'All Bookings', badge: 0 },
+  { id: 'seat_cancelled', label: 'Cancelled', badge: 0 },
 ];
 
-const BookingManager = ({ defaultResolutionCount }) => {
+const BookingManager = ({ defaultActionCount }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
+  // --- [NEW] State to hold counts for sub-tab badges ---
+  const [queueCounts, setQueueCounts] = useState({
+    action_required: 0,
+    pay_on_arrival: 0,
+  });
+
   const [activeQuickFilter, setActiveQuickFilter] = useState(
-    defaultResolutionCount > 0 ? 'triage' : 'seat_confirmed'
+    // --- [FIX] Default to the new 'action_required' tab if there's an action ---
+    defaultActionCount > 0 ? 'action_required' : 'seat_confirmed'
   );
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -47,6 +62,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
   
   const [modalBooking, setModalBooking] = useState(null);
 
+  // --- Dialog states ---
   const [resolveStripeDialog, setResolveStripeDialog] = useState({ booking: null });
   const [refundAmount, setRefundAmount] = useState('');
   const [refundReason, setRefundReason] = useState('');
@@ -64,9 +80,28 @@ const BookingManager = ({ defaultResolutionCount }) => {
   const [payDialog, setPayDialog] = useState({ booking: null });
 
 
+  // --- [NEW] Function to fetch all queue counts for sub-tab badges ---
+  const fetchQueueCounts = useCallback(async () => {
+    try {
+      // Run all count queries in parallel
+      const [actionData, payOnArrivalData] = await Promise.all([
+        getAllBookings({ special_filter: 'action_required' }),
+        getAllBookings({ special_filter: 'pay_on_arrival_queue' })
+      ]);
+      
+      setQueueCounts({
+        action_required: actionData.length || 0,
+        pay_on_arrival: payOnArrivalData.length || 0,
+      });
+      
+    } catch (error) {
+      console.error('Error fetching queue counts:', error);
+    }
+  }, []); // Empty dependency array, this is stable
+
   /**
    * --- [REFACTORED] Main data loading function ---
-   * Now handles the composite 'all_pending' filter.
+   * Now queries using the correct filter for the active tab.
    */
   const loadBookings = useCallback(async () => {
     setLoading(true);
@@ -78,9 +113,11 @@ const BookingManager = ({ defaultResolutionCount }) => {
       searchTerm: debouncedSearchTerm,
     };
 
-    // --- [FIX] Logic for new composite filter ---
-    if (activeQuickFilter === 'all_pending') {
-      filters.special_filter = 'all_pending';
+    // --- [FIX] Logic for new tabs ---
+    if (activeQuickFilter === 'action_required') {
+      filters.special_filter = 'action_required';
+    } else if (activeQuickFilter === 'pay_on_arrival') {
+      filters.special_filter = 'pay_on_arrival_queue';
     } else if (activeQuickFilter !== 'all') {
       filters.seat_status = activeQuickFilter;
     }
@@ -96,9 +133,13 @@ const BookingManager = ({ defaultResolutionCount }) => {
     }
   }, [activeQuickFilter, dateFilters, debouncedSearchTerm]); 
 
+  // --- [REFACTORED] Main useEffect ---
   useEffect(() => {
+    // Load counts for the badges first
+    fetchQueueCounts();
+    // Then load the bookings for the active tab
     loadBookings();
-  }, [loadBookings]);
+  }, [loadBookings, fetchQueueCounts]); // Both are stable callbacks
 
   useEffect(() => {
     if (toast) {
@@ -120,10 +161,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
     setManualRefundReason('');
   };
 
-  /**
-   * --- [REFACTORED] ---
-   * Central dispatcher for all modal actions.
-   */
   const handleActionClick = (actionType, booking) => {
     setModalBooking(null); 
     
@@ -169,18 +206,27 @@ const BookingManager = ({ defaultResolutionCount }) => {
     }, 50);
   };
   
+  // --- [NEW] This function now also re-fetches counts ---
   const handleQuickFilterChange = (newFilterId) => {
     setActiveQuickFilter(newFilterId);
     setSearchTerm('');
     setDateFilters({ startDate: '', endDate: '' });
+    fetchQueueCounts(); // Re-fetch counts on tab change
   };
   
   const handleClearFilters = () => {
     setSearchTerm('');
     setDateFilters({ startDate: '', endDate: '' });
   };
+  
+  // --- [NEW] Helper to reload all data after an action ---
+  const reloadAllData = () => {
+    fetchQueueCounts();
+    loadBookings();
+  };
 
-  // --- Confirmation Handlers (REFACTORED & NEW) ---
+  // --- Confirmation Handlers (REFACTORED) ---
+  // All handlers now call reloadAllData() on success.
   
   const handleConfirmStripeRefund = async () => {
     const { booking } = resolveStripeDialog;
@@ -193,7 +239,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
       await refundBooking(booking.id, amount, refundReason);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} refund is processing.` });
       handleCloseDialogs();
-      loadBookings();
+      reloadAllData(); // --- [FIX] ---
     } catch (error) {
       console.error('Error processing Stripe refund:', error);
       setToast({ type: 'error', message: `Refund failed: ${error.message}` });
@@ -215,7 +261,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
       await manualMarkRefunded(booking.id, manualRefundReason);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} marked as manually refunded.` });
       handleCloseDialogs();
-      loadBookings();
+      reloadAllData(); // --- [FIX] ---
     } catch (error) {
       console.error('Error marking manual refund:', error);
       setToast({ type: 'error', message: `Failed: ${error.message}` });
@@ -228,7 +274,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
       await retryStripeRefund(booking.id);
       setToast({ type: 'success', message: `Retrying refund for ${booking.booking_reference}.` });
       handleCloseDialogs();
-      loadBookings();
+      reloadAllData(); // --- [FIX] ---
     } catch (error) {
       console.error('Error retrying refund:', error);
       setToast({ type: 'error', message: `Failed: ${error.message}` });
@@ -245,7 +291,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
       await adminCancelBooking(booking.id, cancelReason);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} has been cancelled.` });
       handleCloseDialogs();
-      loadBookings();
+      reloadAllData(); // --- [FIX] ---
     } catch (error) {
       console.error('Error manually cancelling booking:', error);
       setToast({ type: 'error', message: `Cancellation failed: ${error.message}` });
@@ -258,14 +304,33 @@ const BookingManager = ({ defaultResolutionCount }) => {
       await manualMarkAsPaid(booking.id, 'Manual admin payment received');
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} marked as paid.` });
       handleCloseDialogs();
-      loadBookings();
+      reloadAllData(); // --- [FIX] ---
     } catch (error) {
       console.error('Error marking booking as paid:', error);
       setToast({ type: 'error', message: `Payment update failed: ${error.message}` });
     }
   };
 
-  const isTriageView = activeQuickFilter === 'triage';
+  // --- [NEW] Dynamically define quick filters with badges ---
+  const populatedQuickFilters = [
+    { 
+      id: 'action_required', 
+      label: 'Action Required',
+      badge: queueCounts.action_required,
+      badgeType: 'destructive' // Use red badge
+    },
+    { 
+      id: 'pay_on_arrival', 
+      label: 'Pay on Arrival',
+      badge: queueCounts.pay_on_arrival,
+      badgeType: 'informational' // Use grey badge
+    },
+    { id: 'seat_confirmed', label: 'Confirmed', badge: 0, badgeType: 'informational' },
+    { id: 'all', label: 'All Bookings', badge: 0, badgeType: 'informational' },
+    { id: 'seat_cancelled', label: 'Cancelled', badge: 0, badgeType: 'informational' },
+  ];
+  
+  const isActionView = activeQuickFilter === 'action_required';
 
   return (
     <div className={styles.bookingManager}>
@@ -284,13 +349,23 @@ const BookingManager = ({ defaultResolutionCount }) => {
 
       {/* --- Desktop Quick Filter Nav (REFACTORED) --- */}
       <div className={`${styles.quickFilterNav} ${styles.desktopNav}`}>
-        {quickFilters.map(filter => (
+        {populatedQuickFilters.map(filter => (
           <button
             key={filter.id}
             className={`${styles.navButton} ${activeQuickFilter === filter.id ? styles.active : ''}`}
             onClick={() => handleQuickFilterChange(filter.id)}
           >
-            {filter.label}
+            <span>{filter.label}</span>
+            {/* --- [FIX] Conditional badge styling --- */}
+            {filter.badge > 0 && (
+              <span className={
+                filter.badgeType === 'destructive'
+                  ? styles.badgeDestructive
+                  : styles.badgeInformational
+              }>
+                {filter.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -302,9 +377,9 @@ const BookingManager = ({ defaultResolutionCount }) => {
           value={activeQuickFilter}
           onChange={(e) => handleQuickFilterChange(e.target.value)}
         >
-          {quickFilters.map(filter => (
+          {populatedQuickFilters.map(filter => (
             <option key={filter.id} value={filter.id}>
-              {filter.label}
+              {filter.label} {filter.badge > 0 ? `(${filter.badge})` : ''}
             </option>
           ))}
         </select>
@@ -387,18 +462,19 @@ const BookingManager = ({ defaultResolutionCount }) => {
           <thead>
             <tr>
               <th className={styles.textLeft}>Customer</th>
+              {/* --- [TYPO FIX] --- */}
               <th className={styles.textLeft}>Tour Details</th>
               <th className={styles.textCenter}>Seats</th>
               <th className={styles.textCenter}>Amount</th>
               <th className={styles.textCenter}>Booking</th>
               <th className={styles.textCenter}>Payment</th>
-              {isTriageView && <th className={styles.textCenter}>Reason</th>}
+              {isActionView && <th className={styles.textCenter}>Action</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={isTriageView ? 7 : 6}>
+                <td colSpan={isActionView ? 7 : 6}>
                   <div className={sharedStyles.loadingContainer}>
                     <div className={sharedStyles.spinner}></div>
                   </div>
@@ -406,7 +482,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
               </tr>
             ) : bookings.length === 0 ? (
               <tr>
-                <td colSpan={isTriageView ? 7 : 6} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={isActionView ? 7 : 6} style={{ textAlign: 'center', padding: '2rem' }}>
                   No bookings found for this view.
                 </td>
               </tr>
@@ -442,9 +518,13 @@ const BookingManager = ({ defaultResolutionCount }) => {
                     </span>
                   </td>
                   
-                  {isTriageView && (
+                  {isActionView && (
                     <td className={`${styles.reason} ${styles.textCenter}`}>
-                      {booking.cancellation_reason || 'N/A'}
+                      {/* --- [NEW] Show the admin what to do --- */}
+                      {booking.seat_status === 'triage' && "Triage"}
+                      {booking.payment_status === 'refund_stripe_failed' && "Refund Failed"}
+                      {booking.seat_status === 'seat_pending' && "Stuck Hostage"}
+                      {booking.payment_status === 'payment_manual_pending' && "Missed Payment"}
                     </td>
                   )}
                 </tr>
@@ -494,9 +574,13 @@ const BookingManager = ({ defaultResolutionCount }) => {
                   </div>
                 </div>
 
-                {isTriageView && (
+                {isActionView && (
                   <div className={styles.cardReason}>
-                    <strong>Reason:</strong> {booking.cancellation_reason || 'N/A'}
+                    <strong>Action:</strong> 
+                    {booking.seat_status === 'triage' && " Triage"}
+                    {booking.payment_status === 'refund_stripe_failed' && " Refund Failed"}
+                    {booking.seat_status === 'seat_pending' && " Stuck Hostage"}
+                    {booking.payment_status === 'payment_manual_pending' && " Missed Payment"}
                   </div>
                 )}
               </div>
@@ -511,7 +595,8 @@ const BookingManager = ({ defaultResolutionCount }) => {
           booking={modalBooking}
           onClose={() => setModalBooking(null)}
           onTriggerAction={handleActionClick}
-          isTriageView={isTriageView} 
+          // --- [FIX] Pass the correct view flag ---
+          isActionView={isActionView} 
         />
       )}
 
@@ -521,7 +606,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
         isOpen={!!resolveStripeDialog.booking}
         title="Process Stripe Refund"
         message={
-          isTriageView 
+          isActionView 
             ? `Resolve this item by processing a Stripe refund for ${resolveStripeDialog.booking?.booking_reference}? This will move the booking to 'Cancelled' and set payment to 'refund_stripe_pending'.`
             : `Process a Stripe refund for ${resolveStripeDialog.booking?.booking_reference}? This will cancel the booking.`
         }
@@ -561,7 +646,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
         </div>
       </ConfirmationDialog>
       
-      {/* --- [NEW] Manual Refund Dialog --- */}
       <ConfirmationDialog
         isOpen={!!resolveManualRefundDialog.booking}
         title="Mark Manual Refund"
@@ -588,7 +672,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
         </div>
       </ConfirmationDialog>
       
-      {/* --- [NEW] Retry Stripe Refund Dialog --- */}
       <ConfirmationDialog
         isOpen={!!resolveRetryStripeDialog.booking}
         title="Retry Stripe Refund"
@@ -637,7 +720,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
         </div>
       </ConfirmationDialog>
 
-      {/* --- [NEW] Mark as Paid Dialog --- */}
       <ConfirmationDialog
         isOpen={!!payDialog.booking}
         title="Manually Mark as Paid"

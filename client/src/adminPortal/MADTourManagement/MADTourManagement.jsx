@@ -73,35 +73,17 @@ const MADTourManagement = () => {
 
     /**
      * --- [REFACTORED] ---
-     * Fetches the count of ALL actionable items for the admin.
-     * This now includes 'triage', 'payment_manual_pending', AND 'seat_pending'.
-     *
+     * Fetches the count of ALL "actionable items" for the admin.
+     * This includes Triage, Failed Refunds, Stuck Hostage, and Missed Payments.
      */
     const fetchResolutionCount = async () => {
         try {
-            // 1. Get count for "Pending Resolution" (Triage)
-            const triageData = await getAllBookings({ 
-              seat_status: 'triage' 
+            // --- [FIX] Use the new special_filter to get the *true* count ---
+            const data = await getAllBookings({ 
+              special_filter: 'action_required' 
             });
             
-            // 2. Get count for "Pay on Arrival"
-            const payOnArrivalData = await getAllBookings({ 
-              seat_status: 'seat_confirmed', 
-              payment_status: 'payment_manual_pending'
-            });
-            
-            // 3. Get count for "Hostage Inventory" (Stuck online checkouts)
-            const hostageData = await getAllBookings({
-              seat_status: 'seat_pending',
-              payment_status: 'payment_stripe_pending'
-            });
-            
-            // 4. The badge is the sum of all three actionable queues
-            setResolutionCount(
-              (triageData.length || 0) + 
-              (payOnArrivalData.length || 0) +
-              (hostageData.length || 0)
-            );
+            setResolutionCount(data.length || 0);
             
         } catch (error) {
             console.error('Error fetching resolution count:', error);
@@ -129,7 +111,8 @@ const MADTourManagement = () => {
             label: 'Bookings', 
             path: '/admin/tours/bookings',
             icon: <IconPlaceholder />,
-            component: <BookingManager defaultResolutionCount={resolutionCount} />,
+            // --- [FIX] Pass the true count down ---
+            component: <BookingManager defaultActionCount={resolutionCount} />,
             badge: resolutionCount > 0 ? resolutionCount : null
         },
         { 
