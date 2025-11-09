@@ -1,5 +1,4 @@
 // ==========================================
-// UPDATED FILE
 // server/src/routes/adminBookingRoutes.js
 // ==========================================
 
@@ -23,11 +22,26 @@ router.get('/', adminBookingController.getAllBookings);
 // GET    /api/admin/bookings/:id
 router.get('/:id', adminBookingController.getBookingById);
 
+// POST   /api/admin/bookings/manual
+router.post('/manual', adminBookingController.createManualBooking);
+
+// POST   /api/admin/bookings/foc
+router.post('/foc', adminBookingController.createFocBooking);
+
 // POST   /api/admin/bookings/:id/cancel
 router.post('/:id/cancel', adminBookingController.cancelBooking);
 
 // POST   /api/admin/bookings/:id/refund
+// This is the Triage "Process Stripe Refund" action
 router.post('/:id/refund', adminBookingController.refundBooking);
+
+// --- [NEW] Triage Resolver Routes ---
+// POST   /api/admin/bookings/:id/manual-refund
+router.post('/:id/manual-refund', adminBookingController.manualMarkRefunded);
+
+// POST   /api/admin/bookings/:id/retry-refund
+router.post('/:id/retry-refund', adminBookingController.retryStripeRefund);
+// --- [END NEW] ---
 
 // PUT    /api/admin/bookings/:id/passengers
 // (Used by the Manifest Editor)
@@ -44,9 +58,8 @@ router.put('/:id/manual-pay', adminBookingController.manualMarkAsPaid);
 // PUT    /api/admin/bookings/:id/manual-cancel
 router.put('/:id/manual-cancel', adminBookingController.manualCancelBooking);
 
-// --- [NEW] Admin Notes ---
+// --- Admin Notes ---
 // PUT    /api/admin/bookings/:id/notes
 router.put('/:id/notes', adminBookingController.updateAdminNotes);
-// --- [END NEW] ---
 
 export default router;

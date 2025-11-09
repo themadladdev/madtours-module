@@ -7,6 +7,7 @@ import { pool } from '../db/db.js';
 
 export const generateManifest = async (tourInstanceId) => {
   
+  // --- [REFACTORED QUERY] ---
   const result = await pool.query(
     `SELECT 
       ti.id,
@@ -18,7 +19,7 @@ export const generateManifest = async (tourInstanceId) => {
       t.duration_minutes,
       t.description,
       
-      -- Aggregate all bookings for this instance
+      -- Aggregate all CONFIRMED bookings for this instance
       json_agg(
         json_build_object(
           'booking_id', b.id,
@@ -26,9 +27,8 @@ export const generateManifest = async (tourInstanceId) => {
           'seats_total', b.seats,
           'special_requests', b.special_requests,
           'payment_status', b.payment_status,
-          'booking_status', b.status,
+          'seat_status', b.seat_status, -- Use new column
           
-          -- NEW: Passenger List Sub-query
           'passengers', (
             SELECT json_agg(
               json_build_object(
@@ -41,7 +41,6 @@ export const generateManifest = async (tourInstanceId) => {
             WHERE p.booking_id = b.id
           ),
           
-          -- FALLBACK: Get the primary customer (payer) details
           'customer', json_build_object(
             'first_name', c.first_name,
             'last_name', c.last_name,
@@ -50,8 +49,10 @@ export const generateManifest = async (tourInstanceId) => {
           )
         ) ORDER BY b.created_at
       ) 
-      -- --- BUG FIX: 'pending_ttriage' corrected to 'pending_triage' ---
-      FILTER (WHERE b.status IN ('confirmed', 'pending_triage')) as bookings 
+      -- Filter for 'seat_confirmed' ONLY. 
+      -- 'triage' bookings are not on the manifest.
+      --
+      FILTER (WHERE b.seat_status = 'seat_confirmed') as confirmed_bookings 
 
     FROM tour_instances ti
     JOIN tours t ON ti.tour_id = t.id
@@ -69,17 +70,16 @@ export const generateManifest = async (tourInstanceId) => {
 
   const manifest = result.rows[0];
   
-  // --- NEW: Process bookings to use new structure ---
-  const allBookings = manifest.bookings || [];
+  // --- [REFACTORED LOGIC] ---
+  // The database now *only* returns confirmed bookings.
+  const confirmedBookings = manifest.confirmed_bookings || [];
   
-  const confirmedBookings = allBookings.filter(b => b.booking_status === 'confirmed');
-  
-  // Calculate total seats from CONFIRMED bookings only
+  // Calculate total seats from CONFIRMED bookings
   const totalSeats = confirmedBookings.reduce((sum, b) => sum + b.seats_total, 0);
 
   return {
     ...manifest,
-    bookings: allBookings, // All confirmed AND pending_triage
+    // 'bookings' is deprecated, just return 'confirmed_bookings'
     confirmed_bookings: confirmedBookings,
     total_confirmed_seats: totalSeats,
     available_seats: manifest.capacity - manifest.booked_seats

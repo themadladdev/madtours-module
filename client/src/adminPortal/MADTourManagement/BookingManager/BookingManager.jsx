@@ -1,16 +1,15 @@
 // ==========================================
-// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/BookingManager/BookingManager.jsx
 // ==========================================
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   getAllBookings, 
-  refundBooking, 
-  cancelBooking, 
-  manualConfirmBooking, 
-  manualMarkAsPaid, 
-  adminCancelBooking 
+  refundBooking,  // This is for Stripe refunds
+  adminCancelBooking, // This is for unpaid cancellations
+  manualMarkAsPaid,
+  manualMarkRefunded,
+  retryStripeRefund
 } from '../../../services/admin/adminBookingService.js';
 import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/ConfirmationDialog.jsx';
 import BookingActionModal from './BookingActionModal.jsx';
@@ -18,13 +17,14 @@ import useDebounce from '../../../utils/useDebounce.js';
 import styles from './BookingManager.module.css';
 import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
-// --- Define "quick filter" views ---
+// --- [REFACTORED] Quick filters ---
 const quickFilters = [
-  { id: 'pending_triage', label: 'Pending Resolution' },
-  { id: 'confirmed', label: 'Confirmed' },
-  { id: 'pending', label: 'Pending Payment' },
+  { id: 'triage', label: 'Pending Resolution' },
+  { id: 'seat_confirmed', label: 'Confirmed' },
+  // --- [FIX] Renamed to "Pending Payments" ---
+  { id: 'all_pending', label: 'Pending Payments' },
   { id: 'all', label: 'All Bookings' },
-  { id: 'cancelled', label: 'Cancelled' },
+  { id: 'seat_cancelled', label: 'Cancelled' },
 ];
 
 const BookingManager = ({ defaultResolutionCount }) => {
@@ -33,10 +33,9 @@ const BookingManager = ({ defaultResolutionCount }) => {
   const [toast, setToast] = useState(null);
 
   const [activeQuickFilter, setActiveQuickFilter] = useState(
-    defaultResolutionCount > 0 ? 'pending_triage' : 'confirmed'
+    defaultResolutionCount > 0 ? 'triage' : 'seat_confirmed'
   );
   
-  // --- [MODIFIED] Search/Filter State ---
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilters, setDateFilters] = useState({
@@ -44,36 +43,47 @@ const BookingManager = ({ defaultResolutionCount }) => {
     endDate: ''
   });
   
-  // --- [NEW] Create a debounced value for the search term ---
-  // We wait 400ms after the user stops typing before searching
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
   
   const [modalBooking, setModalBooking] = useState(null);
 
-  // --- Dialog states ---
-  const [refundDialog, setRefundDialog] = useState({ booking: null });
+  const [resolveStripeDialog, setResolveStripeDialog] = useState({ booking: null });
   const [refundAmount, setRefundAmount] = useState('');
   const [refundReason, setRefundReason] = useState('');
   
-  const [transferDialog, setTransferDialog] = useState({ booking: null });
-  const [confirmDialog, setConfirmDialog] = useState({ booking: null });
-  const [payDialog, setPayDialog] = useState({ booking: null });
-  const [cancelDialog, setCancelDialog] = useState({ booking: null });
-  const [cancelReason, setCancelReason] = useState('');
+  const [resolveManualRefundDialog, setResolveManualRefundDialog] = useState({ booking: null });
+  const [manualRefundReason, setManualRefundReason] = useState('');
 
-  // --- [REFACTORED] Main data loading function ---
-  // Wrapped in useCallback to make it a stable dependency for useEffect.
-  // It now takes NO arguments and simply reads the current, up-to-date state.
+  const [resolveRetryStripeDialog, setResolveRetryStripeDialog] = useState({ booking: null });
+  
+  const [transferDialog, setTransferDialog] = useState({ booking: null });
+  
+  const [resolveUnpaidCancelDialog, setResolveUnpaidCancelDialog] = useState({ booking: null });
+  const [cancelReason, setCancelReason] = useState('');
+  
+  const [payDialog, setPayDialog] = useState({ booking: null });
+
+
+  /**
+   * --- [REFACTORED] Main data loading function ---
+   * Now handles the composite 'all_pending' filter.
+   */
   const loadBookings = useCallback(async () => {
     setLoading(true);
     setToast(null);
     
     let filters = {
-      status: activeQuickFilter === 'all' ? '' : activeQuickFilter,
       startDate: dateFilters.startDate,
       endDate: dateFilters.endDate,
-      searchTerm: debouncedSearchTerm, // --- [MODIFIED] Use the debounced value
+      searchTerm: debouncedSearchTerm,
     };
+
+    // --- [FIX] Logic for new composite filter ---
+    if (activeQuickFilter === 'all_pending') {
+      filters.special_filter = 'all_pending';
+    } else if (activeQuickFilter !== 'all') {
+      filters.seat_status = activeQuickFilter;
+    }
 
     try {
       const data = await getAllBookings(filters);
@@ -84,15 +94,12 @@ const BookingManager = ({ defaultResolutionCount }) => {
     } finally {
       setLoading(false);
     }
-  }, [activeQuickFilter, dateFilters, debouncedSearchTerm]); // Dependencies
+  }, [activeQuickFilter, dateFilters, debouncedSearchTerm]); 
 
-  // --- [REFACTORED] Single useEffect for ALL data loading ---
-  // This runs on mount and whenever any filter dependency changes.
   useEffect(() => {
     loadBookings();
-  }, [loadBookings]); // The dependency is the stable loadBookings function
+  }, [loadBookings]);
 
-  // Unchanged: Effect for clearing toast notifications
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 4000);
@@ -100,40 +107,61 @@ const BookingManager = ({ defaultResolutionCount }) => {
     }
   }, [toast]);
 
-  // Unchanged: Close all dialogs
   const handleCloseDialogs = () => {
     setModalBooking(null); 
-    setRefundDialog({ booking: null });
+    setResolveStripeDialog({ booking: null });
+    setResolveManualRefundDialog({ booking: null });
+    setResolveRetryStripeDialog({ booking: null });
     setTransferDialog({ booking: null });
-    setConfirmDialog({ booking: null });
-    setPayDialog({ booking: null });
-    setCancelDialog({ booking: null });
+    setResolveUnpaidCancelDialog({ booking: null });
+    setPayDialog({ booking: null }); 
     setCancelReason('');
+    setRefundReason('');
+    setManualRefundReason('');
   };
 
-  // Unchanged: Handle which action dialog to open
+  /**
+   * --- [REFACTORED] ---
+   * Central dispatcher for all modal actions.
+   */
   const handleActionClick = (actionType, booking) => {
     setModalBooking(null); 
     
     setTimeout(() => {
       switch (actionType) {
-        case 'confirm':
-          setConfirmDialog({ booking: booking });
-          break;
-        case 'pay':
-          setPayDialog({ booking: booking });
-          break;
-        case 'cancel':
-          setCancelDialog({ booking: booking });
-          setCancelReason('');
-          break;
-        case 'refund':
-          setRefundDialog({ booking: booking });
+        // --- Triage Actions ---
+        case 'resolve_stripe_refund':
+          setResolveStripeDialog({ booking: booking });
           setRefundAmount(booking.total_amount);
           setRefundReason('');
           break;
+        case 'resolve_manual_refund':
+          setResolveManualRefundDialog({ booking: booking });
+          setManualRefundReason('');
+          break;
+        case 'resolve_cancel_unpaid':
+          setResolveUnpaidCancelDialog({ booking: booking });
+          setCancelReason('');
+          break;
+        case 'resolve_retry_stripe':
+          setResolveRetryStripeDialog({ booking: booking });
+          break;
         case 'transfer':
           setTransferDialog({ booking: booking });
+          break;
+
+        // --- Standard Actions ---
+        case 'mark_as_paid':
+          setPayDialog({ booking: booking }); 
+          break;
+        case 'standard_cancel':
+          setResolveUnpaidCancelDialog({ booking: booking });
+          setCancelReason('');
+          break;
+        case 'standard_refund':
+          setResolveStripeDialog({ booking: booking });
+          setRefundAmount(booking.total_amount);
+          setRefundReason('');
           break;
         default:
           console.error('Unknown action type:', actionType);
@@ -141,30 +169,21 @@ const BookingManager = ({ defaultResolutionCount }) => {
     }, 50);
   };
   
-  // --- [NEW] Handler for Quick Filter Clicks ---
-  // This sets the new filter AND clears the advanced filters,
-  // which then triggers the main useEffect to reload the data.
   const handleQuickFilterChange = (newFilterId) => {
     setActiveQuickFilter(newFilterId);
     setSearchTerm('');
     setDateFilters({ startDate: '', endDate: '' });
   };
   
-  // --- [REMOVED] handleSearchClick function is no longer needed ---
-
-  // --- [REFACTORED] Clear Filters ---
-  // This just resets the advanced filter state.
-  // The main useEffect automatically detects this and reloads.
   const handleClearFilters = () => {
     setSearchTerm('');
     setDateFilters({ startDate: '', endDate: '' });
   };
 
-  // --- All Confirmation Handlers (MODIFIED) ---
-  // All calls to loadBookings(false) are replaced with loadBookings()
+  // --- Confirmation Handlers (REFACTORED & NEW) ---
   
-  const handleConfirmRefund = async () => {
-    const { booking } = refundDialog;
+  const handleConfirmStripeRefund = async () => {
+    const { booking } = resolveStripeDialog;
     if (!refundReason) {
       alert('Refund reason is required.');
       return;
@@ -172,12 +191,11 @@ const BookingManager = ({ defaultResolutionCount }) => {
     try {
       const amount = (refundAmount === '' || parseFloat(refundAmount) === parseFloat(booking.total_amount)) ? null : parseFloat(refundAmount);
       await refundBooking(booking.id, amount, refundReason);
-      await cancelBooking(booking.id, `Resolution Refund: ${refundReason}`); 
-      setToast({ type: 'success', message: `Booking ${booking.booking_reference} has been refunded and cancelled.` });
+      setToast({ type: 'success', message: `Booking ${booking.booking_reference} refund is processing.` });
       handleCloseDialogs();
-      loadBookings(); // --- [MODIFIED]
+      loadBookings();
     } catch (error) {
-      console.error('Error processing refund:', error);
+      console.error('Error processing Stripe refund:', error);
       setToast({ type: 'error', message: `Refund failed: ${error.message}` });
     }
   };
@@ -187,50 +205,67 @@ const BookingManager = ({ defaultResolutionCount }) => {
     handleCloseDialogs();
   };
   
-  const handleConfirmManualBooking = async () => {
-    const { booking } = confirmDialog;
-    try {
-      await manualConfirmBooking(booking.id);
-      setToast({ type: 'success', message: `Booking ${booking.booking_reference} confirmed.` });
-      handleCloseDialogs();
-      loadBookings(); // --- [MODIFIED]
-    } catch (error) {
-      console.error('Error manually confirming booking:', error);
-      setToast({ type: 'error', message: `Confirmation failed: ${error.message}` });
-    }
-  };
-  
-  const handleConfirmMarkAsPaid = async () => {
-    const { booking } = payDialog;
-    try {
-      await manualMarkAsPaid(booking.id);
-      setToast({ type: 'success', message: `Booking ${booking.booking_reference} marked as paid.` });
-      handleCloseDialogs();
-      loadBookings(); // --- [MODIFIED]
-    } catch (error) {
-      console.error('Error marking booking as paid:', error);
-      setToast({ type: 'error', message: `Payment update failed: ${error.message}` });
-    }
-  };
-  
-  const handleConfirmCancel = async () => {
-    const { booking } = cancelDialog;
-    if (booking.status === 'pending' && !cancelReason) {
-      alert('Reason is required to cancel a pending booking.');
+  const handleConfirmManualRefund = async () => {
+    const { booking } = resolveManualRefundDialog;
+    if (!manualRefundReason) {
+      alert('Reason is required.');
       return;
     }
     try {
-      await adminCancelBooking(booking.id, cancelReason || 'Admin cancellation');
+      await manualMarkRefunded(booking.id, manualRefundReason);
+      setToast({ type: 'success', message: `Booking ${booking.booking_reference} marked as manually refunded.` });
+      handleCloseDialogs();
+      loadBookings();
+    } catch (error) {
+      console.error('Error marking manual refund:', error);
+      setToast({ type: 'error', message: `Failed: ${error.message}` });
+    }
+  };
+
+  const handleConfirmRetryStripe = async () => {
+    const { booking } = resolveRetryStripeDialog;
+     try {
+      await retryStripeRefund(booking.id);
+      setToast({ type: 'success', message: `Retrying refund for ${booking.booking_reference}.` });
+      handleCloseDialogs();
+      loadBookings();
+    } catch (error) {
+      console.error('Error retrying refund:', error);
+      setToast({ type: 'error', message: `Failed: ${error.message}` });
+    }
+  };
+  
+  const handleConfirmUnpaidCancel = async () => {
+    const { booking } = resolveUnpaidCancelDialog;
+    if (!cancelReason) {
+      alert('Reason is required to cancel this booking.');
+      return;
+    }
+    try {
+      await adminCancelBooking(booking.id, cancelReason);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} has been cancelled.` });
       handleCloseDialogs();
-      loadBookings(); // --- [MODIFIED]
+      loadBookings();
     } catch (error) {
       console.error('Error manually cancelling booking:', error);
       setToast({ type: 'error', message: `Cancellation failed: ${error.message}` });
     }
   };
   
-  const isResolutionView = activeQuickFilter === 'pending_triage';
+  const handleConfirmMarkAsPaid = async () => {
+    const { booking } = payDialog;
+    try {
+      await manualMarkAsPaid(booking.id, 'Manual admin payment received');
+      setToast({ type: 'success', message: `Booking ${booking.booking_reference} marked as paid.` });
+      handleCloseDialogs();
+      loadBookings();
+    } catch (error) {
+      console.error('Error marking booking as paid:', error);
+      setToast({ type: 'error', message: `Payment update failed: ${error.message}` });
+    }
+  };
+
+  const isTriageView = activeQuickFilter === 'triage';
 
   return (
     <div className={styles.bookingManager}>
@@ -247,25 +282,25 @@ const BookingManager = ({ defaultResolutionCount }) => {
         </div>
       )}
 
-      {/* --- Desktop Quick Filter Nav (MODIFIED) --- */}
+      {/* --- Desktop Quick Filter Nav (REFACTORED) --- */}
       <div className={`${styles.quickFilterNav} ${styles.desktopNav}`}>
         {quickFilters.map(filter => (
           <button
             key={filter.id}
             className={`${styles.navButton} ${activeQuickFilter === filter.id ? styles.active : ''}`}
-            onClick={() => handleQuickFilterChange(filter.id)} // --- [MODIFIED]
+            onClick={() => handleQuickFilterChange(filter.id)}
           >
             {filter.label}
           </button>
         ))}
       </div>
       
-      {/* --- Mobile Quick Filter Select (MODIFIED) --- */}
+      {/* --- Mobile Quick Filter Select (REFACTORED) --- */}
       <div className={styles.mobileNav}>
         <select
           className={styles.mobileQuickFilter}
           value={activeQuickFilter}
-          onChange={(e) => handleQuickFilterChange(e.target.value)} // --- [MODIFIED]
+          onChange={(e) => handleQuickFilterChange(e.target.value)}
         >
           {quickFilters.map(filter => (
             <option key={filter.id} value={filter.id}>
@@ -278,7 +313,6 @@ const BookingManager = ({ defaultResolutionCount }) => {
       {/* --- Collapsible Filter Box --- */}
       <div className={sharedStyles.filterBox} style={{ marginBottom: '1.5rem', gap: '0' }}>
         
-        {/* --- Row 1: Date Filters + Toggle Button --- */}
         <div className={styles.filterRow}>
           <div className={styles.filterItem}>
             <label htmlFor="filter-start-date">
@@ -320,12 +354,8 @@ const BookingManager = ({ defaultResolutionCount }) => {
           </div>
         </div>
         
-        {/* --- Row 2: Collapsible Search Area (MODIFIED) --- */}
         <div className={`${styles.collapsibleSearch} ${isSearchOpen ? styles.open : ''}`}>
-          
           <div className={styles.searchActionRow}>
-            
-            {/* --- Search Input (Unchanged) --- */}
             <div className={styles.filterItem}>
               <label htmlFor="search-term">Search:</label>
               <input
@@ -337,25 +367,20 @@ const BookingManager = ({ defaultResolutionCount }) => {
                 placeholder="Name or Booking Ref..."
               />
             </div>
-
-            {/* --- Action Buttons (MODIFIED) --- */}
             <div className={styles.filterPanelActions}>
               <button 
                 className={sharedStyles.secondaryButton}
-                onClick={handleClearFilters} // --- [MODIFIED]
+                onClick={handleClearFilters}
               >
-                Clear {/* --- [MODIFIED] Text changed */}
+                Clear
               </button>
-              
-              {/* --- [REMOVED] "Search" button is gone --- */}
-            
             </div>
           </div>
         </div>
       </div>
       
       
-      {/* --- Responsive Content Area (Unchanged) --- */}
+      {/* --- Responsive Content Area (REFACTORED) --- */}
       <div className={sharedStyles.contentBox}>
         
         <table className={`${sharedStyles.table} ${styles.desktopTable}`}>
@@ -367,13 +392,13 @@ const BookingManager = ({ defaultResolutionCount }) => {
               <th className={styles.textCenter}>Amount</th>
               <th className={styles.textCenter}>Booking</th>
               <th className={styles.textCenter}>Payment</th>
-              {isResolutionView && <th className={styles.textCenter}>Reason</th>}
+              {isTriageView && <th className={styles.textCenter}>Reason</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={isResolutionView ? 7 : 6} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={isTriageView ? 7 : 6}>
                   <div className={sharedStyles.loadingContainer}>
                     <div className={sharedStyles.spinner}></div>
                   </div>
@@ -381,7 +406,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
               </tr>
             ) : bookings.length === 0 ? (
               <tr>
-                <td colSpan={isResolutionView ? 7 : 6} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={isTriageView ? 7 : 6} style={{ textAlign: 'center', padding: '2rem' }}>
                   No bookings found for this view.
                 </td>
               </tr>
@@ -407,8 +432,8 @@ const BookingManager = ({ defaultResolutionCount }) => {
                   <td className={`${styles.amount} ${styles.textCenter}`}>${booking.total_amount}</td>
                   
                   <td className={styles.textCenter}>
-                    <span className={`${styles.badge} ${styles[booking.status]}`}>
-                      {booking.status}
+                    <span className={`${styles.badge} ${styles[booking.seat_status]}`}>
+                      {booking.seat_status}
                     </span>
                   </td>
                   <td className={styles.textCenter}>
@@ -417,8 +442,10 @@ const BookingManager = ({ defaultResolutionCount }) => {
                     </span>
                   </td>
                   
-                  {isResolutionView && (
-                    <td className={`${styles.reason} ${styles.textCenter}`}>{'N/A'}</td>
+                  {isTriageView && (
+                    <td className={`${styles.reason} ${styles.textCenter}`}>
+                      {booking.cancellation_reason || 'N/A'}
+                    </td>
                   )}
                 </tr>
               ))
@@ -426,6 +453,7 @@ const BookingManager = ({ defaultResolutionCount }) => {
           </tbody>
         </table>
         
+        {/* --- Mobile Card List (REFACTORED) --- */}
         <div className={styles.mobileCardList}>
           {loading ? (
             <div className={sharedStyles.loadingContainer}>
@@ -442,13 +470,11 @@ const BookingManager = ({ defaultResolutionCount }) => {
                 className={styles.bookingCard}
                 onClick={() => setModalBooking(booking)}
               >
-                
                 <div className={styles.cardHeader}>
                   <span className={styles.cardRef}>{booking.booking_reference}</span>
                   <span className={styles.cardSeats}>{booking.seats} Seat(s)</span>
                 </div>
                 <div className={styles.cardName}>{booking.first_name} {booking.last_name}</div>
-                
                 <div className={styles.cardTour}>
                   {booking.tour_name} - {new Date(booking.date).toLocaleDateString()}
                 </div>
@@ -456,8 +482,8 @@ const BookingManager = ({ defaultResolutionCount }) => {
                 <div className={styles.cardStatusGrid}>
                   <div className={styles.cardStatusItem}>
                     <label>Booking</label>
-                    <span className={`${styles.badge} ${styles[booking.status]}`}>
-                      {booking.status}
+                    <span className={`${styles.badge} ${styles[booking.seat_status]}`}>
+                      {booking.seat_status}
                     </span>
                   </div>
                   <div className={styles.cardStatusItem}>
@@ -468,35 +494,40 @@ const BookingManager = ({ defaultResolutionCount }) => {
                   </div>
                 </div>
 
+                {isTriageView && (
+                  <div className={styles.cardReason}>
+                    <strong>Reason:</strong> {booking.cancellation_reason || 'N/A'}
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
       </div>
 
-      {/* --- Render the Action Modal (Unchanged) --- */}
+      {/* --- Render the Action Modal (REFACTORED) --- */}
       {modalBooking && (
         <BookingActionModal
           booking={modalBooking}
           onClose={() => setModalBooking(null)}
           onTriggerAction={handleActionClick}
-          isResolutionView={isResolutionView}
+          isTriageView={isTriageView} 
         />
       )}
 
-      {/* --- ALL CONFIRMATION DIALOGS (Unchanged) --- */}
+      {/* --- ALL CONFIRMATION DIALOGS (REFACTORED & NEW) --- */}
       
       <ConfirmationDialog
-        isOpen={!!refundDialog.booking}
-        title="Process Refund"
+        isOpen={!!resolveStripeDialog.booking}
+        title="Process Stripe Refund"
         message={
-          isResolutionView 
-            ? `Resolve this item by processing a refund for ${refundDialog.booking?.booking_reference}? This will move the booking to 'Cancelled'.`
-            : `Process refund for booking ${refundDialog.booking?.booking_reference}? This will also cancel the booking if it's not already.`
+          isTriageView 
+            ? `Resolve this item by processing a Stripe refund for ${resolveStripeDialog.booking?.booking_reference}? This will move the booking to 'Cancelled' and set payment to 'refund_stripe_pending'.`
+            : `Process a Stripe refund for ${resolveStripeDialog.booking?.booking_reference}? This will cancel the booking.`
         }
-        onConfirm={handleConfirmRefund}
+        onConfirm={handleConfirmStripeRefund}
         onClose={handleCloseDialogs}
-        confirmText="Process Refund"
+        confirmText="Process Stripe Refund"
         cancelText="Cancel"
         isDestructive={true}
       >
@@ -509,11 +540,11 @@ const BookingManager = ({ defaultResolutionCount }) => {
               step="0.01"
               className={sharedStyles.input}
               value={refundAmount}
-              onChange={(e) => setRefundAmount(e.targe.value)}
-              max={refundDialog.booking?.total_amount}
+              onChange={(e) => setRefundAmount(e.target.value)}
+              max={resolveStripeDialog.booking?.total_amount}
               placeholder="Leave blank for full refund"
             />
-            <small>Original amount: ${refundDialog.booking?.total_amount}</small>
+            <small>Original amount: ${resolveStripeDialog.booking?.total_amount}</small>
           </div>
           <div className={sharedStyles.formGroup}>
             <label htmlFor="refund-reason">Reason (required):</label>
@@ -530,6 +561,45 @@ const BookingManager = ({ defaultResolutionCount }) => {
         </div>
       </ConfirmationDialog>
       
+      {/* --- [NEW] Manual Refund Dialog --- */}
+      <ConfirmationDialog
+        isOpen={!!resolveManualRefundDialog.booking}
+        title="Mark Manual Refund"
+        message={`Resolve this item by confirming you have manually refunded ${resolveManualRefundDialog.booking?.booking_reference} (e.g., cash, bank transfer). This will move the booking to 'Cancelled' and 'refund_manual_success'.`}
+        onConfirm={handleConfirmManualRefund}
+        onClose={handleCloseDialogs}
+        confirmText="Confirm Manual Refund"
+        cancelText="Cancel"
+        isDestructive={true}
+      >
+         <div className={styles.refundForm}>
+          <div className={sharedStyles.formGroup}>
+            <label htmlFor="manual-refund-reason">Reason (required):</label>
+            <textarea
+              id="manual-refund-reason"
+              className={sharedStyles.textarea}
+              value={manualRefundReason}
+              onChange={(e) => setManualRefundReason(e.target.value)}
+              placeholder="Reason for refund (e.g., 'Cash refund processed')."
+              rows="3"
+              required
+            />
+          </div>
+        </div>
+      </ConfirmationDialog>
+      
+      {/* --- [NEW] Retry Stripe Refund Dialog --- */}
+      <ConfirmationDialog
+        isOpen={!!resolveRetryStripeDialog.booking}
+        title="Retry Stripe Refund"
+        message={`The last refund attempt for ${resolveRetryStripeDialog.booking?.booking_reference} failed. Do you want to try processing the Stripe refund again?`}
+        onConfirm={handleConfirmRetryStripe}
+        onClose={handleCloseDialogs}
+        confirmText="Retry Stripe Refund"
+        cancelText="Cancel"
+        isDestructive={false}
+      />
+      
       <ConfirmationDialog
         isOpen={!!transferDialog.booking}
         title="Transfer Booking (STUB)"
@@ -542,39 +612,17 @@ const BookingManager = ({ defaultResolutionCount }) => {
       />
       
       <ConfirmationDialog
-        isOpen={!!confirmDialog.booking}
-        title="Manually Confirm Booking"
-        message={`Are you sure you want to manually confirm booking ${confirmDialog.booking?.booking_reference}? This will mark it as 'confirmed' and it will appear on the manifest. This does not affect payment status.`}
-        onConfirm={handleConfirmManualBooking}
-        onClose={handleCloseDialogs}
-        confirmText="Confirm Booking"
-        cancelText="Cancel"
-        isDestructive={false}
-      />
-      
-      <ConfirmationDialog
-        isOpen={!!payDialog.booking}
-        title="Manually Mark as Paid"
-        message={`Are you sure you want to mark booking ${payDialog.booking?.booking_reference} as 'paid'? This should only be done after receiving payment (e.g., cash).`}
-        onConfirm={handleConfirmMarkAsPaid}
-        onClose={handleCloseDialogs}
-        confirmText="Mark as Paid"
-        cancelText="Cancel"
-        isDestructive={false}
-      />
-      
-      <ConfirmationDialog
-        isOpen={!!cancelDialog.booking}
+        isOpen={!!resolveUnpaidCancelDialog.booking}
         title="Manually Cancel Booking"
-        message={`Are you sure you want to cancel booking ${cancelDialog.booking?.booking_reference}? This will release its ${cancelDialog.booking?.seats} seats back into inventory.`}
-        onConfirm={handleConfirmCancel}
+        message={`Are you sure you want to cancel booking ${resolveUnpaidCancelDialog.booking?.booking_reference}? This will release its ${resolveUnpaidCancelDialog.booking?.seats} seats back into inventory.`}
+        onConfirm={handleConfirmUnpaidCancel}
         onClose={handleCloseDialogs}
         confirmText="Cancel Booking"
         cancelText="Back"
         isDestructive={true}
       >
         <div className={styles.refundForm}>
-          <div className={styles.formGroup}>
+          <div className={sharedStyles.formGroup}>
             <label htmlFor="cancel-reason">Reason (required):</label>
             <textarea
               id="cancel-reason"
@@ -588,6 +636,18 @@ const BookingManager = ({ defaultResolutionCount }) => {
           </div>
         </div>
       </ConfirmationDialog>
+
+      {/* --- [NEW] Mark as Paid Dialog --- */}
+      <ConfirmationDialog
+        isOpen={!!payDialog.booking}
+        title="Manually Mark as Paid"
+        message={`Are you sure you want to mark booking ${payDialog.booking?.booking_reference} as 'payment_manual_success'? This should only be done after receiving payment (e.g., cash).`}
+        onConfirm={handleConfirmMarkAsPaid}
+        onClose={handleCloseDialogs}
+        confirmText="Mark as Paid"
+        cancelText="Cancel"
+        isDestructive={false}
+      />
       
     </div>
   );

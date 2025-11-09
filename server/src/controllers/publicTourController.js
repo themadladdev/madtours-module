@@ -1,4 +1,7 @@
+// ==========================================
 // server/src/controllers/publicTourController.js
+// ==========================================
+
 import * as tourService from '../services/tourService.js';
 import * as bookingService from '../services/tourBookingService.js';
 import * as stripeService from '../services/tourStripeService.js';
@@ -191,14 +194,19 @@ export const createBooking = async (req, res, next) => {
       special_requests: sanitizedData.specialRequests
     };
 
+    // This now creates the booking with 'seat_pending' and 'payment_stripe_pending'
     const booking = await bookingService.createBooking(bookingData);
+    
+    // This creates the Stripe PI and saves the ID to the booking
     const paymentIntent = await stripeService.createPaymentIntent(booking);
 
+    // --- [REFACTOR] ---
+    // Return the new 'seat_status' instead of the old 'status'
     res.status(201).json({
       booking: {
         id: booking.id,
         reference: booking.booking_reference,
-        status: booking.status
+        seat_status: booking.seat_status 
       },
       payment: {
         clientSecret: paymentIntent.clientSecret
@@ -221,31 +229,23 @@ export const createBooking = async (req, res, next) => {
  */
 export const createTicketBooking = async (req, res, next) => {
   try {
-    // --- DEBUG [2/3] ---
-    console.log('--- DEBUG [SERVER CONTROLLER]: Received req.body ---');
-    console.log(JSON.stringify(req.body, null, 2));
-    // --- END DEBUG ---
-    
     // 1. Sanitize the complex data
     const sanitizedData = sanitizeTicketBookingData(req.body);
 
-    // --- DEBUG [2/3] ---
-    console.log('--- DEBUG [SERVER CONTROLLER]: Sanitized passengers array ---');
-    console.log(sanitizedData.passengers);
-    // --- END DEBUG ---
-
     // 2. Call the new, real booking service
+    // This now creates the booking with 'seat_pending' and 'payment_stripe_pending'
     const booking = await bookingService.createTicketBooking(sanitizedData);
 
     // 3. Create a payment intent for the new booking
     const paymentIntent = await stripeService.createPaymentIntent(booking);
     
-    // 4. Return the real response
+    // --- [REFACTOR] ---
+    // Return the new 'seat_status' instead of the old 'status'
     res.status(201).json({
       booking: {
         id: booking.id,
         reference: booking.booking_reference,
-        status: booking.status
+        seat_status: booking.seat_status
       },
       payment: {
         clientSecret: paymentIntent.clientSecret
@@ -297,7 +297,8 @@ export const handleStripeWebhook = async (req, res, next) => {
     await stripeService.handleWebhook(rawBody, sig);
     res.json({ received: true });
   } catch (error) {
-    console.error('Webhook signature verification failed:', error);
-    next(error);
+    console.error('Webhook error:', error);
+    // Send 400 status for webhook errors as per Stripe docs
+    res.status(400).json({ message: error.message });
   }
 };

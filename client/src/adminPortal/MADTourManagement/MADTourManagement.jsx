@@ -71,11 +71,38 @@ const MADTourManagement = () => {
         }
     };
 
+    /**
+     * --- [REFACTORED] ---
+     * Fetches the count of ALL actionable items for the admin.
+     * This now includes 'triage', 'payment_manual_pending', AND 'seat_pending'.
+     *
+     */
     const fetchResolutionCount = async () => {
         try {
-            // This is a lightweight query, safe to run often
-            const data = await getAllBookings({ status: 'pending_triage' });
-            setResolutionCount(data.length || 0);
+            // 1. Get count for "Pending Resolution" (Triage)
+            const triageData = await getAllBookings({ 
+              seat_status: 'triage' 
+            });
+            
+            // 2. Get count for "Pay on Arrival"
+            const payOnArrivalData = await getAllBookings({ 
+              seat_status: 'seat_confirmed', 
+              payment_status: 'payment_manual_pending'
+            });
+            
+            // 3. Get count for "Hostage Inventory" (Stuck online checkouts)
+            const hostageData = await getAllBookings({
+              seat_status: 'seat_pending',
+              payment_status: 'payment_stripe_pending'
+            });
+            
+            // 4. The badge is the sum of all three actionable queues
+            setResolutionCount(
+              (triageData.length || 0) + 
+              (payOnArrivalData.length || 0) +
+              (hostageData.length || 0)
+            );
+            
         } catch (error) {
             console.error('Error fetching resolution count:', error);
             setResolutionCount(0);

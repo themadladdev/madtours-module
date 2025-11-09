@@ -274,47 +274,49 @@ const processTrendData = (queryRows, startDate, numDays, valueField) => {
 };
 
 // === [REWRITTEN] DIRECTIONAL DASHBOARD CONTROLLER ===
+// This function has been refactored to use the new schema
+//
 export const getDirectionalDashboard = async (req, res, next) => {
     try {
-        // --- 1. Triage Queries (Unchanged) ---
+        // --- 1. Triage Queries (REFACTORED) ---
         const triagePendingTriageQuery = pool.query(
-            "SELECT COUNT(*) FROM tour_bookings WHERE status = 'pending_triage'"
+            "SELECT COUNT(*) FROM tour_bookings WHERE seat_status = 'triage'"
         );
         const triagePendingBookingsQuery = pool.query(
-            "SELECT COUNT(*) FROM tour_bookings WHERE status = 'pending' AND created_at < NOW() - INTERVAL '1 hour'"
+            `SELECT COUNT(*) FROM tour_bookings 
+             WHERE seat_status = 'seat_pending' 
+               AND payment_status = 'payment_stripe_pending'
+               AND created_at < NOW() - INTERVAL '1 hour'`
         );
         const triageFailedPaymentsQuery = pool.query(
-            "SELECT COUNT(*) FROM tour_bookings WHERE payment_status = 'failed'"
+            "SELECT COUNT(*) FROM tour_bookings WHERE payment_status = 'refund_stripe_failed'"
         );
 
-        // --- 2. Booking Statistics (Historic, based on created_at) ---
+        // --- 2. Booking Statistics (REFACTORED) ---
         const commonBookingStats = `
             SELECT 
                 COALESCE(COUNT(*), 0) as bookings,
                 COALESCE(SUM(total_amount), 0) as revenue
             FROM tour_bookings 
-            WHERE status = 'confirmed' AND
+            WHERE seat_status = 'seat_confirmed' AND
         `;
         const bookingStatsTodayQuery = pool.query(
             `${commonBookingStats} DATE(created_at) = CURRENT_DATE`
         );
-        // [MODIFIED] Query for full current week
         const bookingStatsWeekQuery = pool.query(
             `${commonBookingStats} DATE(created_at) >= DATE_TRUNC('week', CURRENT_DATE)`
         );
-        // [MODIFIED] Trend for full current week
         const bookingStatsWeekTrendQuery = pool.query(
             `SELECT 
                 DATE(created_at) as day, 
                 COALESCE(SUM(total_amount), 0) as revenue
              FROM tour_bookings
-             WHERE status = 'confirmed' 
+             WHERE seat_status = 'seat_confirmed' 
                AND DATE(created_at) >= DATE_TRUNC('week', CURRENT_DATE)
                AND DATE(created_at) <= (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')
              GROUP BY day
              ORDER BY day ASC`
         );
-        // [MODIFIED] Query for full current month
         const bookingStatsMonthQuery = pool.query(
             `${commonBookingStats} DATE(created_at) >= DATE_TRUNC('month', CURRENT_DATE)`
         );
@@ -322,36 +324,33 @@ export const getDirectionalDashboard = async (req, res, next) => {
             `${commonBookingStats} DATE(created_at) >= DATE_TRUNC('year', CURRENT_DATE)`
         );
 
-        // --- 3. Tour Statistics (Forward-Looking, based on instance.date) ---
+        // --- 3. Tour Statistics (REFACTORED) ---
         const commonTourStats = `
             SELECT 
                 COALESCE(SUM(b.seats), 0) as seats, 
                 COALESCE(SUM(b.total_amount), 0) as value
             FROM tour_bookings b
             JOIN tour_instances i ON b.tour_instance_id = i.id
-            WHERE b.status = 'confirmed' AND
+            WHERE b.seat_status = 'seat_confirmed' AND
         `;
         const tourStatsTodayQuery = pool.query(
             `${commonTourStats} i.date = CURRENT_DATE`
         );
-        // [MODIFIED] Query for full current week (from today onwards)
         const tourStatsWeekQuery = pool.query(
             `${commonTourStats} i.date >= CURRENT_DATE AND i.date <= (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')`
         );
-        // [MODIFIED] Trend for full current week (from today onwards)
         const tourStatsWeekTrendQuery = pool.query(
             `SELECT 
                 i.date as day, 
                 COALESCE(SUM(b.total_amount), 0) as value
              FROM tour_bookings b
              JOIN tour_instances i ON b.tour_instance_id = i.id
-             WHERE b.status = 'confirmed' 
+             WHERE b.seat_status = 'seat_confirmed' 
                AND i.date >= CURRENT_DATE 
                AND i.date <= (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '6 days')
              GROUP BY day
              ORDER BY day ASC`
         );
-        // [MODIFIED] Query for full current month (from today onwards)
         const tourStatsMonthQuery = pool.query(
             `${commonTourStats} i.date >= CURRENT_DATE AND i.date <= (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 day')`
         );
@@ -374,7 +373,6 @@ export const getDirectionalDashboard = async (req, res, next) => {
             tourStatsWeekTrend,
             tourStatsMonth,
             tourStats90Day,
-            // [NEW] Get the actual start of the week from Postgres
             dbWeekStartDate
         ] = await Promise.all([
             triagePendingTriageQuery,
@@ -393,16 +391,10 @@ export const getDirectionalDashboard = async (req, res, next) => {
             pool.query("SELECT DATE_TRUNC('week', CURRENT_DATE) as week_start")
         ]);
         
-        // --- Process Trend Data ---
-        // [MODIFIED] Use the exact start date from Postgres for 100% accuracy
         const pgStartOfWeek = dbWeekStartDate.rows[0].week_start;
-        
         const bookingTrend = processTrendData(bookingStatsWeekTrend.rows, pgStartOfWeek, 7, 'revenue');
-        // Tour trend still correctly starts from today
         const tourTrend = processTrendData(tourStatsWeekTrend.rows, new Date(), 7, 'value'); 
 
-        
-        // Helper to format query results
         const formatStats = (row) => ({
             bookings: parseInt(row.bookings, 10),
             revenue: parseFloat(row.revenue)
@@ -412,7 +404,6 @@ export const getDirectionalDashboard = async (req, res, next) => {
             value: parseFloat(row.value)
         });
 
-        // --- Assemble the final JSON object ---
         const dashboardData = {
             triage: {
                 pending_triage: parseInt(triagePendingTriage.rows[0].count, 10),
@@ -421,13 +412,13 @@ export const getDirectionalDashboard = async (req, res, next) => {
             },
             bookingStats: {
                 today: formatStats(bookingStatsToday.rows[0]),
-                week: { ...formatStats(bookingStatsWeek.rows[0]), trend: bookingTrend }, // Add trend
+                week: { ...formatStats(bookingStatsWeek.rows[0]), trend: bookingTrend },
                 month: formatStats(bookingStatsMonth.rows[0]),
                 ytd: formatStats(bookingStatsYTD.rows[0]),
             },
             tourStats: {
                 today: formatTourStats(tourStatsToday.rows[0]),
-                week: { ...formatTourStats(tourStatsWeek.rows[0]), trend: tourTrend }, // Add trend
+                week: { ...formatTourStats(tourStatsWeek.rows[0]), trend: tourTrend },
                 month: formatTourStats(tourStatsMonth.rows[0]),
                 next90Days: formatTourStats(tourStats90Day.rows[0]),
             }

@@ -4,10 +4,10 @@
 // ==========================================
 
 import { pool } from '../db/db.js';
-// STUB: We need new email templates for this new workflow
 import { sendTourCancellationTriageNotice, sendTourReinstatementNotice } from './tourEmailService.js';
-// We still need processRefund, but it will be called from a new "Pending" page, NOT from here.
-import { processRefund } from './tourStripeService.js';
+// --- [REFACTOR] Import Stripe and booking service for new Triage logic ---
+import { stripe } from './tourStripeService.js';
+import { cancelBooking } from './tourBookingService.js';
 
 export const createTour = async (tourData) => {
   const result = await pool.query(
@@ -163,18 +163,20 @@ export const generateTourInstances = async (scheduleId, startDate, endDate) => {
 // ========================================================================
 // === CANCELLATION & RE-INSTATEMENT ARCHITECTURE ("TRIAGE" MODEL) ===
 // ========================================================================
-// ... [CANCELLATION AND RE-INSTATEMENT DOCS AND FUNCTIONS OMITTED FOR BREVITY] ...
-// (All existing functions from operationalCancelInstance to batchCancelBlackout
-// remain unchanged)
 
+/**
+ * --- [REFACTORED] ---
+ * Implements the new Triage Model logic.
+ * 1. Moves 'seat_confirmed' bookings to 'triage'.
+ * 2. Auto-cancels 'seat_pending' bookings and their Payment Intents.
+ *
+ */
 export const operationalCancelInstance = async ({ tourId, date, time, reason, adminId, capacity }) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     // Step 1: Upsert the tour instance to 'cancelled'.
-    // This finds an existing row OR creates a new one (for virtual tours)
-    // and sets its status to 'cancelled', returning its ID.
     const instanceResult = await client.query(
       `INSERT INTO tour_instances 
         (tour_id, date, "time", capacity, booked_seats, status, 
@@ -189,51 +191,86 @@ export const operationalCancelInstance = async ({ tourId, date, time, reason, ad
         cancelled_by = $6,
         updated_at = NOW()
       WHERE
-        tour_instances.status <> 'cancelled' -- Avoid redundant updates
+        tour_instances.status <> 'cancelled'
       RETURNING id, tour_id`,
       [tourId, date, time, capacity, reason, adminId]
     );
 
     if (instanceResult.rows.length === 0) {
-      // This can happen if the tour was *already* cancelled by someone else.
-      // It's safe to just commit and return.
       await client.query('COMMIT');
       return { message: "Tour was already cancelled." };
     }
     
     const instanceId = instanceResult.rows[0].id;
-    const effectiveTourId = instanceResult.rows[0].tour_id; // Get ID from upsert
+    const effectiveTourId = instanceResult.rows[0].tour_id;
 
-    // Step 2: Move all 'confirmed' bookings for this instance to 'pending_triage'.
-    const bookingsResult = await client.query(
+    // --- [REFACTOR] Step 2: Auto-cancel 'seat_pending' bookings ---
+    //
+    const pendingBookingsResult = await client.query(
       `UPDATE tour_bookings
-       SET status = 'pending_triage',
+       SET seat_status = 'seat_cancelled',
+           payment_status = 'payment_none',
            cancellation_reason = $1,
            cancelled_at = NOW(),
            updated_at = NOW()
        WHERE tour_instance_id = $2
-         AND status = 'confirmed'
-       RETURNING *`, // Return all affected bookings
+         AND seat_status = 'seat_pending'
+       RETURNING id, payment_intent_id`,
+      [`Tour operationally cancelled: ${reason}`, instanceId]
+    );
+
+    const autoCancelledBookings = pendingBookingsResult.rows;
+    
+    // --- [NEW] Step 2b: Cancel Stripe PaymentIntents for pending bookings ---
+    for (const booking of autoCancelledBookings) {
+      if (booking.payment_intent_id) {
+        try {
+          await stripe.paymentIntents.cancel(booking.payment_intent_id);
+        } catch (stripeErr) {
+          console.error(`[Triage] Failed to cancel Stripe PI ${booking.payment_intent_id} for booking ${booking.id}:`, stripeErr.message);
+          // Don't stop the transaction, just log the error
+        }
+      }
+      // Log history
+      await client.query(
+        `INSERT INTO tour_booking_history 
+         (booking_id, previous_status, new_status, changed_by_admin, reason)
+         VALUES ($1, 'seat_pending', 'seat_cancelled', $2, $3)`,
+        [booking.id, adminId, `Tour auto-cancelled: ${reason}`]
+      );
+    }
+
+    // --- [REFACTOR] Step 3: Move 'seat_confirmed' bookings to 'triage' ---
+    //
+    const bookingsResult = await client.query(
+      `UPDATE tour_bookings
+       SET seat_status = 'triage',
+           cancellation_reason = $1,
+           cancelled_at = NOW(),
+           updated_at = NOW()
+       WHERE tour_instance_id = $2
+         AND seat_status = 'seat_confirmed'
+       RETURNING *`, 
       [reason, instanceId]
     );
 
     const affectedBookings = bookingsResult.rows;
 
-    // Step 3: Log history and send (stubbed) emails for each affected booking.
+    // Step 4: Log history and send emails for TRIAGED bookings.
     const tourNameResult = await client.query('SELECT name FROM tours WHERE id = $1', [effectiveTourId]);
     const tourName = tourNameResult.rows[0]?.name || 'Tour';
     
     for (const booking of affectedBookings) {
       // Add to history
+      // --- [REFACTOR] ---
       await client.query(
         `INSERT INTO tour_booking_history 
          (booking_id, previous_status, new_status, changed_by_admin, reason)
-         VALUES ($1, 'confirmed', 'pending_triage', $2, $3)`,
+         VALUES ($1, 'seat_confirmed', 'triage', $2, $3)`,
         [booking.id, adminId, `Operational cancellation: ${reason}`]
       );
 
       // STUB: Send "triage" email (we will be in touch)
-      // We need customer details for this.
       const custResult = await client.query('SELECT * FROM tour_customers WHERE id = $1', [booking.customer_id]);
       const customer = custResult.rows[0];
       
@@ -251,7 +288,8 @@ export const operationalCancelInstance = async ({ tourId, date, time, reason, ad
 
     return {
       cancelled_instance_id: instanceId,
-      affected_bookings: affectedBookings.length,
+      moved_to_triage: affectedBookings.length,
+      auto_cancelled_pending: autoCancelledBookings.length,
     };
 
   } catch (error) {
@@ -263,6 +301,12 @@ export const operationalCancelInstance = async ({ tourId, date, time, reason, ad
   }
 };
 
+/**
+ * --- [REFACTORED] ---
+ * Implements the new Triage Model logic.
+ * Moves 'triage' bookings back to 'seat_confirmed'.
+ *
+ */
 export const reInstateInstance = async ({ tourId, date, time, adminId }) => {
   const client = await pool.connect();
   try {
@@ -291,31 +335,33 @@ export const reInstateInstance = async ({ tourId, date, time, adminId }) => {
     const instanceId = instanceResult.rows[0].id;
     const effectiveTourId = instanceResult.rows[0].tour_id;
 
-    // Step 2: Find all bookings *still in triage* and move them back to 'confirmed'.
+    // --- [REFACTOR] Step 2: Find 'triage' bookings and move back to 'seat_confirmed' ---
+    //
     const bookingsResult = await client.query(
       `UPDATE tour_bookings
-       SET status = 'confirmed',
+       SET seat_status = 'seat_confirmed',
            cancellation_reason = NULL,
            cancelled_at = NULL,
            updated_at = NOW()
        WHERE tour_instance_id = $1
-         AND status = 'pending_triage'
-       RETURNING *`, // Return all re-instated bookings
+         AND seat_status = 'triage'
+       RETURNING *`, 
       [instanceId]
     );
 
     const reInstatedBookings = bookingsResult.rows;
 
-    // Step 3: Log history and send (stubbed) "you're back on!" emails.
+    // Step 3: Log history and send "you're back on!" emails.
     const tourNameResult = await client.query('SELECT name FROM tours WHERE id = $1', [effectiveTourId]);
     const tourName = tourNameResult.rows[0]?.name || 'Tour';
     
     for (const booking of reInstatedBookings) {
       // Add to history
+      // --- [REFACTOR] ---
       await client.query(
         `INSERT INTO tour_booking_history 
          (booking_id, previous_status, new_status, changed_by_admin, reason)
-         VALUES ($1, 'pending_triage', 'confirmed', $2, 'Tour re-instated by admin')`,
+         VALUES ($1, 'triage', 'seat_confirmed', $2, 'Tour re-instated by admin')`,
         [booking.id, adminId]
       );
 
@@ -348,12 +394,20 @@ export const reInstateInstance = async ({ tourId, date, time, adminId }) => {
   }
 };
 
+/**
+ * --- [REFACTORED] ---
+ * Implements the new Triage Model logic inside the batch loop.
+ * 1. Moves 'seat_confirmed' bookings to 'triage'.
+ * 2. Auto-cancels 'seat_pending' bookings and their Payment Intents.
+ *
+ */
 export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, adminId }) => {
   console.log(`[Service] Starting batch-cancel transaction for Tour ${tourId}...`);
   const client = await pool.connect();
   let updated_schedule_id = null;
   let cancelled_instances_count = 0;
   let affected_bookings_count = 0;
+  let auto_cancelled_count = 0; // --- [NEW] ---
 
   try {
     await client.query('BEGIN');
@@ -376,10 +430,14 @@ export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, 
     }
 
     const { default_capacity, schedule_id, schedule_config } = tourRulesResult.rows[0];
-    const scheduleRules = schedule_config.schedule;
+    
+    // --- [REFACTOR] Handle potentially missing 'schedule' key ---
+    const scheduleRules = schedule_config && schedule_config.schedule ? schedule_config.schedule : null;
 
     if (!scheduleRules || !scheduleRules.times || !scheduleRules.days_of_week) {
-      throw new Error(`Tour ${tourId} has invalid or missing schedule config.`);
+      // This is a data-integrity issue, but let's try to proceed by
+      // only updating the schedule config, as no virtual tours can be generated.
+       console.warn(`Tour ${tourId} has invalid or missing schedule config. Proceeding to update blackout range only.`);
     }
 
     // --- Step 2: Update the Tour Schedule Config (Add Blackout Range) ---
@@ -399,21 +457,24 @@ export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, 
 
     // --- Step 3: Generate list of all virtual tours to be cancelled ---
     const toursToCancel = [];
-    const start = new Date(`${startDate}T00:00:00Z`); // Explicitly UTC
-    const end = new Date(`${endDate}T00:00:00Z`);   // Explicitly UTC
+    // Only proceed if we have rules to check against
+    if (scheduleRules && scheduleRules.times && scheduleRules.days_of_week) {
+      const start = new Date(`${startDate}T00:00:00Z`); // Explicitly UTC
+      const end = new Date(`${endDate}T00:00:00Z`);   // Explicitly UTC
 
-    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-      const dayOfWeek = d.getUTCDay(); // 0 = Sunday
-      const dateString = d.toISOString().split('T')[0]; // YYYY-MM-DD
+      for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+        const dayOfWeek = d.getUTCDay(); // 0 = Sunday
+        const dateString = d.toISOString().split('T')[0]; // YYYY-MM-DD
 
-      // Check if this day is a scheduled day
-      if (scheduleRules.days_of_week.includes(dayOfWeek)) {
-        // Add all times for this day
-        for (const time of scheduleRules.times) {
-          toursToCancel.push({
-            date: dateString,
-            time: `${time}:00`
-          });
+        // Check if this day is a scheduled day
+        if (scheduleRules.days_of_week.includes(dayOfWeek)) {
+          // Add all times for this day
+          for (const time of scheduleRules.times) {
+            toursToCancel.push({
+              date: dateString,
+              time: `${time}:00`
+            });
+          }
         }
       }
     }
@@ -423,24 +484,15 @@ export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, 
     }
 
     // --- Step 4: Call operationalCancelInstance for EACH virtual tour ---
-    // This reuses our robust UPSERT and Triage logic in a loop.
     console.log(`[Service] Found ${toursToCancel.length} virtual tours to cancel...`);
     
+    const tourNameResult = await client.query('SELECT name FROM tours WHERE id = $1', [tourId]);
+    const tourName = tourNameResult.rows[0]?.name || 'Tour';
+        
     for (const tour of toursToCancel) {
       const { date, time } = tour;
       
-      // We pass 'client' to 'operationalCancelInstance' to keep it in the
-      // same transaction. This requires refactoring operationalCancelInstance
-      // to accept an optional client.
-      //
-      // FOR NOW: Let's just call the standalone function. This is *less*
-      // atomic (if one fails, the others won't roll back) but much simpler
-      // to implement without refactoring a working function.
-      //
-      // --- CORRECTED ATOMIC APPROACH ---
-      // We must refactor operationalCancelInstance to accept a client
-      // or duplicate its core logic here. Let's duplicate the logic
-      // for a true atomic batch operation.
+      // --- DUPLICATED LOGIC from operationalCancelInstance (as per file comments) ---
       
       const instanceResult = await client.query(
         `INSERT INTO tour_instances 
@@ -465,15 +517,49 @@ export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, 
         cancelled_instances_count++;
         const instanceId = instanceResult.rows[0].id;
         
-        // Now find bookings for this instance and move to triage
-        const bookingsResult = await client.query(
+        // --- [REFACTOR] Step 4a: Auto-cancel 'seat_pending' bookings ---
+        const pendingBookingsResult = await client.query(
           `UPDATE tour_bookings
-           SET status = 'pending_triage',
+           SET seat_status = 'seat_cancelled',
+               payment_status = 'payment_none',
                cancellation_reason = $1,
                cancelled_at = NOW(),
                updated_at = NOW()
            WHERE tour_instance_id = $2
-             AND status = 'confirmed'
+             AND seat_status = 'seat_pending'
+           RETURNING id, payment_intent_id`,
+          [`Tour operationally cancelled: ${reason}`, instanceId]
+        );
+
+        const autoCancelledBookings = pendingBookingsResult.rows;
+        auto_cancelled_count += autoCancelledBookings.length;
+
+        // --- [NEW] Step 4b: Cancel Stripe PIs ---
+        for (const booking of autoCancelledBookings) {
+          if (booking.payment_intent_id) {
+            try {
+              await stripe.paymentIntents.cancel(booking.payment_intent_id);
+            } catch (stripeErr) {
+              console.error(`[BatchTriage] Failed to cancel Stripe PI ${booking.payment_intent_id} for booking ${booking.id}:`, stripeErr.message);
+            }
+          }
+          await client.query(
+            `INSERT INTO tour_booking_history 
+             (booking_id, previous_status, new_status, changed_by_admin, reason)
+             VALUES ($1, 'seat_pending', 'seat_cancelled', $2, $3)`,
+            [booking.id, adminId, `Batch cancellation: ${reason}`]
+          );
+        }
+
+        // --- [REFACTOR] Step 4c: Move 'seat_confirmed' bookings to 'triage' ---
+        const bookingsResult = await client.query(
+          `UPDATE tour_bookings
+           SET seat_status = 'triage',
+               cancellation_reason = $1,
+               cancelled_at = NOW(),
+               updated_at = NOW()
+           WHERE tour_instance_id = $2
+             AND seat_status = 'seat_confirmed'
            RETURNING *`,
           [reason, instanceId]
         );
@@ -481,16 +567,12 @@ export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, 
         const affectedBookings = bookingsResult.rows;
         affected_bookings_count += affectedBookings.length;
         
-        // Get data for emails
-        const tourNameResult = await client.query('SELECT name FROM tours WHERE id = $1', [tourId]);
-        const tourName = tourNameResult.rows[0]?.name || 'Tour';
-        
-        // Log history and send emails
+        // --- [REFACTOR] Step 4d: Log history and send emails for TRIAGED bookings ---
         for (const booking of affectedBookings) {
           await client.query(
             `INSERT INTO tour_booking_history 
              (booking_id, previous_status, new_status, changed_by_admin, reason)
-             VALUES ($1, 'confirmed', 'pending_triage', $2, $3)`,
+             VALUES ($1, 'seat_confirmed', 'triage', $2, $3)`,
             [booking.id, adminId, `Batch cancellation: ${reason}`]
           );
 
@@ -516,6 +598,7 @@ export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, 
       updated_schedule_id: updated_schedule_id,
       cancelled_instances: cancelled_instances_count,
       affected_bookings: affected_bookings_count,
+      auto_cancelled_pending: auto_cancelled_count, // --- [NEW] ---
     };
 
   } catch (error) {
@@ -539,7 +622,7 @@ export const batchCancelBlackout = async ({ tourId, startDate, endDate, reason, 
  * This function is designed to be called within another transaction.
  * @param {object} client - The active database client from a transaction.
  * @param {object} data - { tourId, date, time, defaultCapacity }
- * @returns {Promise<number>} The ID of the found or created tour instance.
+ *Returns {Promise<number>} The ID of the found or created tour instance.
  */
 export const findOrCreateInstance = async (client, { tourId, date, time, defaultCapacity }) => {
   // We use ON CONFLICT... DO UPDATE to get the ID back whether it's an

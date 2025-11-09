@@ -13,6 +13,9 @@ export const generateBookingReference = () => {
 /**
  * Creates a booking using "on-demand" / "Just-in-Time" logic.
  * (For the OLD AvailabilityBookingWidget)
+ * * REFACTORED FOR NEW STATE ARCHITECTURE (Origin 1)
+ * This is the "Hostage" step.
+ * Sets the initial state for the "Janitor" to monitor.
  */
 export const createBooking = async (bookingData) => {
   const {
@@ -108,11 +111,14 @@ export const createBooking = async (bookingData) => {
     }
 
     // Step 6: Create booking
+    // --- [REFACTOR] ---
+    // Sets the initial "hostage" state for an online booking (Origin 1)
+    //
     const bookingResult = await client.query(
       `INSERT INTO tour_bookings 
        (booking_reference, tour_instance_id, customer_id, seats, total_amount, 
-        special_requests, status, payment_status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'pending')
+        special_requests, seat_status, payment_status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'seat_pending', 'payment_stripe_pending')
        RETURNING *`,
       [
         reference,
@@ -126,7 +132,7 @@ export const createBooking = async (bookingData) => {
 
     const newBooking = bookingResult.rows[0];
 
-    // Step 7: Update booked seats
+    // Step 7: Update booked seats (The "Hostage" act)
     await client.query(
       `UPDATE tour_instances 
        SET booked_seats = booked_seats + $1, updated_at = NOW()
@@ -135,9 +141,10 @@ export const createBooking = async (bookingData) => {
     );
 
     // Step 8: Create history record
+    // --- [REFACTOR] ---
     await client.query(
       `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
-       VALUES ($1, NULL, 'pending', 'Booking created')`,
+       VALUES ($1, NULL, 'seat_pending', 'Booking created')`,
       [newBooking.id]
     );
 
@@ -154,6 +161,10 @@ export const createBooking = async (bookingData) => {
 
 /**
  * Creates a complex booking from the new TicketBookingWidget.
+ *
+ * REFACTORED FOR NEW STATE ARCHITECTURE (Origin 1)
+ * This is the "Hostage" step.
+ * Sets the initial state for the "Janitor" to monitor.
  */
 export const createTicketBooking = async (bookingData) => {
   const {
@@ -165,10 +176,8 @@ export const createTicketBooking = async (bookingData) => {
     customer, // { email, firstName, lastName, phone }
     tickets, // [{ ticket_id, quantity }]
     passengers, // [{ firstName, lastName, ticket_type }]
-    customerNotes // --- [NEW] Destructure notes ---
+    customerNotes 
   } = bookingData;
-
-  // const ticketSummaryJson = JSON.stringify(tickets); // This isn't used, removing
 
   const client = await pool.connect();
 
@@ -250,12 +259,14 @@ export const createTicketBooking = async (bookingData) => {
     }
 
     // Step 6: Create booking
-    // --- [MODIFIED] Add customer_notes to query ---
+    // --- [REFACTOR] ---
+    // Sets the initial "hostage" state for an online booking (Origin 1)
+    //
     const bookingResult = await client.query(
       `INSERT INTO tour_bookings 
        (booking_reference, tour_instance_id, customer_id, seats, total_amount, 
-        status, payment_status, customer_notes)
-       VALUES ($1, $2, $3, $4, $5, 'pending', 'pending', $6)
+        seat_status, payment_status, customer_notes)
+       VALUES ($1, $2, $3, $4, $5, 'seat_pending', 'payment_stripe_pending', $6)
        RETURNING *`,
       [
         reference,
@@ -263,14 +274,14 @@ export const createTicketBooking = async (bookingData) => {
         customerId,
         totalSeats, 
         totalAmount,
-        customerNotes || null // --- [NEW] Add new parameter ---
+        customerNotes || null 
       ]
     );
 
     const newBooking = bookingResult.rows[0];
     const newBookingId = newBooking.id;
 
-    // Step 7: Update booked seats
+    // Step 7: Update booked seats (The "Hostage" act)
     await client.query(
       `UPDATE tour_instances 
        SET booked_seats = booked_seats + $1, updated_at = NOW()
@@ -279,9 +290,10 @@ export const createTicketBooking = async (bookingData) => {
     );
 
     // Step 8: Create history record
+    // --- [REFACTOR] ---
     await client.query(
       `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
-       VALUES ($1, NULL, 'pending', 'Booking created')`,
+       VALUES ($1, NULL, 'seat_pending', 'Booking created')`,
       [newBookingId]
     );
 
@@ -304,9 +316,6 @@ export const createTicketBooking = async (bookingData) => {
     client.release();
   }
 };
-
-// --- (Unchanged functions: getBookingByReference, updateBookingPaymentIntent, confirmBooking, cancelBooking, updateBookingPassengers, manualConfirmBooking, manualMarkAsPaid) ---
-// ... (Keep all existing functions from here down) ...
 
 export const getBookingByReference = async (reference) => {
   const result = await pool.query(
@@ -331,6 +340,10 @@ export const getBookingByReference = async (reference) => {
   return result.rows[0];
 };
 
+/**
+ * Updates a booking with the Stripe PaymentIntent ID.
+ * This is called *after* createTicketBooking.
+ */
 export const updateBookingPaymentIntent = async (bookingId, paymentIntentId) => {
   const result = await pool.query(
     `UPDATE tour_bookings 
@@ -342,23 +355,33 @@ export const updateBookingPaymentIntent = async (bookingId, paymentIntentId) => 
   return result.rows[0];
 };
 
+/**
+ * Confirms a booking, typically after a successful Stripe payment webhook.
+ * (Origin 1 - "Happy Path")
+ *
+ */
 export const confirmBooking = async (bookingId) => {
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
+    // --- [REFACTOR] ---
+    // Updates state to the correct "confirmed" values.
     const result = await client.query(
       `UPDATE tour_bookings 
-       SET status = 'confirmed', payment_status = 'paid', updated_at = NOW()
+       SET seat_status = 'seat_confirmed', 
+           payment_status = 'payment_stripe_success', 
+           updated_at = NOW()
        WHERE id = $1
        RETURNING *`,
       [bookingId]
     );
 
+    // --- [REFACTOR] ---
     await client.query(
       `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
-       VALUES ($1, 'pending', 'confirmed', 'Payment successful')`,
+       VALUES ($1, 'seat_pending', 'seat_confirmed', 'Payment successful')`,
       [bookingId]
     );
 
@@ -399,6 +422,11 @@ export const confirmBooking = async (bookingId) => {
   }
 };
 
+/**
+ * Cancels a booking, typically from a "Janitor" (webhook or cron).
+ * (Origin 1 - "Abandoned/Failed Path")
+ * This RELEASES "hostage" inventory.
+ */
 export const cancelBooking = async (bookingId, reason, adminId = null) => {
   const client = await pool.connect();
 
@@ -422,14 +450,19 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
 
     const booking = bookingResult.rows[0];
     
-    if (booking.status === 'cancelled') {
+    // --- [REFACTOR] ---
+    if (booking.seat_status === 'seat_cancelled') {
         client.release();
-        return booking;
+        return booking; // Already cancelled
     }
 
+    // --- [REFACTOR] ---
+    // A failed/abandoned online booking has no payment to refund.
+    // Set payment_status to 'payment_none'.
     const result = await client.query(
       `UPDATE tour_bookings 
-       SET status = 'cancelled', 
+       SET seat_status = 'seat_cancelled', 
+           payment_status = 'payment_none',
            cancelled_at = NOW(),
            cancellation_reason = $1,
            updated_at = NOW()
@@ -438,7 +471,10 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
       [reason, bookingId]
     );
 
-    if (booking.status === 'confirmed' || booking.status === 'pending') {
+    // --- [REFACTOR] ---
+    // Release inventory if the seat was 'seat_pending' (hostage)
+    // or 'seat_confirmed' (manual admin cancel)
+    if (booking.seat_status === 'seat_confirmed' || booking.seat_status === 'seat_pending') {
       await client.query(
         `UPDATE tour_instances 
          SET booked_seats = booked_seats - $1, updated_at = NOW()
@@ -447,16 +483,20 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
       );
     }
 
+    // --- [REFACTOR] ---
     await client.query(
       `INSERT INTO tour_booking_history 
        (booking_id, previous_status, new_status, changed_by_admin, reason)
-       VALUES ($1, $2, 'cancelled', $3, $4)`,
-      [bookingId, booking.status, adminId, reason]
+       VALUES ($1, $2, 'seat_cancelled', $3, $4)`,
+      [bookingId, booking.seat_status, adminId, reason]
     );
 
     await client.query('COMMIT');
 
-    if (booking.status === 'confirmed') {
+    // --- [REFACTOR] ---
+    // Only send cancellation email if booking was confirmed (paid)
+    // Janitor cancellations on 'seat_pending' should not email.
+    if (booking.seat_status === 'seat_confirmed') {
       sendBookingCancellation(
         booking,
         { first_name: booking.first_name, last_name: booking.last_name, email: booking.email },
@@ -513,6 +553,14 @@ export const updateBookingPassengers = async (bookingId, passengers) => {
   }
 };
 
+/**
+ * Manually confirms a booking's SEAT.
+ * This is an admin function. It's distinct from payment.
+ * This function is now ambiguous with Origin 2/3 flows and
+ * should be replaced by a dedicated admin service function
+ * that creates a booking with 'seat_confirmed' from the start.
+ * * For now, refactored to just update seat_status.
+ */
 export const manualConfirmBooking = async (bookingId, reason, adminId) => {
   const client = await pool.connect();
 
@@ -520,15 +568,17 @@ export const manualConfirmBooking = async (bookingId, reason, adminId) => {
     await client.query('BEGIN');
     
     const currentBooking = await client.query(
-      'SELECT status FROM tour_bookings WHERE id = $1', 
+      'SELECT seat_status FROM tour_bookings WHERE id = $1', 
       [bookingId]
     );
-    const previousStatus = currentBooking.rows[0]?.status || 'unknown';
+    // --- [REFACTOR] ---
+    const previousStatus = currentBooking.rows[0]?.seat_status || 'unknown';
 
+    // --- [REFACTOR] ---
     const result = await client.query(
       `UPDATE tour_bookings 
-       SET status = 'confirmed', updated_at = NOW()
-       WHERE id = $1 AND status != 'confirmed'
+       SET seat_status = 'seat_confirmed', updated_at = NOW()
+       WHERE id = $1 AND seat_status != 'seat_confirmed'
        RETURNING *`,
       [bookingId]
     );
@@ -537,10 +587,11 @@ export const manualConfirmBooking = async (bookingId, reason, adminId) => {
       throw new Error('Booking not found or already confirmed');
     }
 
+    // --- [REFACTOR] ---
     await client.query(
       `INSERT INTO tour_booking_history 
        (booking_id, previous_status, new_status, changed_by_admin, reason)
-       VALUES ($1, $2, 'confirmed', $3, $4)`,
+       VALUES ($1, $2, 'seat_confirmed', $3, $4)`,
       [bookingId, previousStatus, adminId, reason]
     );
 
@@ -578,6 +629,11 @@ export const manualConfirmBooking = async (bookingId, reason, adminId) => {
   }
 };
 
+/**
+ * Manually marks a booking as paid (e.g., cash).
+ * (Origin 2 - Path A)
+ *
+ */
 export const manualMarkAsPaid = async (bookingId, reason, adminId) => {
   const client = await pool.connect();
   
@@ -590,22 +646,25 @@ export const manualMarkAsPaid = async (bookingId, reason, adminId) => {
     );
     const previousPaymentStatus = currentBooking.rows[0]?.payment_status || 'unknown';
     
+    // --- [REFACTOR] ---
+    // Updates payment status to 'payment_manual_success'.
     const result = await client.query(
       `UPDATE tour_bookings 
-       SET payment_status = 'paid', updated_at = NOW()
-       WHERE id = $1 AND payment_status != 'paid'
+       SET payment_status = 'payment_manual_success', updated_at = NOW()
+       WHERE id = $1 AND payment_status != 'payment_manual_success'
        RETURNING *`,
       [bookingId]
     );
 
     if (result.rows.length === 0) {
-      throw new Error('Booking not found or already paid');
+      throw new Error('Booking not found or already marked as manually paid');
     }
     
+    // --- [REFACTOR] ---
     await client.query(
       `INSERT INTO tour_booking_history 
        (booking_id, previous_status, new_status, changed_by_admin, reason)
-       VALUES ($1, $2, 'paid', $3, $4)`,
+       VALUES ($1, $2, 'payment_manual_success', $3, $4)`,
       [bookingId, `payment: ${previousPaymentStatus}`, adminId, reason]
     );
     
@@ -614,6 +673,80 @@ export const manualMarkAsPaid = async (bookingId, reason, adminId) => {
     
   } catch (error) {
     await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * --- [NEW] ---
+ * Admin action to resolve a Triage item with a manual refund (e.g., cash).
+ *
+ */
+export const adminManualRefund = async ({ bookingId, reason, adminId }) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const bookingResult = await client.query(
+      'SELECT * FROM tour_bookings WHERE id = $1 FOR UPDATE',
+      [bookingId]
+    );
+    const booking = bookingResult.rows[0];
+
+    if (!booking) throw new Error('Booking not found');
+    if (booking.seat_status !== 'triage') {
+      throw new Error('Booking is not in triage state.');
+    }
+    if (booking.payment_status !== 'payment_manual_success' && booking.payment_status !== 'refund_stripe_failed') {
+      throw new Error(`Booking payment status (${booking.payment_status}) is not eligible for manual refund.`);
+    }
+
+    // Update states to resolved
+    const result = await client.query(
+      `UPDATE tour_bookings
+       SET seat_status = 'seat_cancelled',
+           payment_status = 'refund_manual_success',
+           refund_amount = $1,
+           refunded_at = NOW(),
+           cancellation_reason = $2,
+           admin_notes = COALESCE(admin_notes, '') || '\nManual refund processed by admin ${adminId}: ${reason}',
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [booking.total_amount, reason, bookingId]
+    );
+
+    // Release inventory
+    await client.query(
+      `UPDATE tour_instances
+       SET booked_seats = booked_seats - $1, updated_at = NOW()
+       WHERE id = $2`,
+      [booking.seats, booking.tour_instance_id]
+    );
+
+    // Log both state changes
+    await client.query(
+      `INSERT INTO tour_booking_history
+       (booking_id, previous_status, new_status, changed_by_admin, reason)
+       VALUES ($1, 'triage', 'seat_cancelled', $2, $3)`,
+      [bookingId, adminId, `Triage resolved: Manual Refund - ${reason}`]
+    );
+    await client.query(
+      `INSERT INTO tour_booking_history
+       (booking_id, previous_status, new_status, changed_by_admin, reason)
+       VALUES ($1, $2, 'refund_manual_success', $3, $4)`,
+      [bookingId, `payment: ${booking.payment_status}`, adminId, `Manual refund: ${reason}`]
+    );
+    
+    await client.query('COMMIT');
+    return result.rows[0];
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error in adminManualRefund:', error);
     throw error;
   } finally {
     client.release();

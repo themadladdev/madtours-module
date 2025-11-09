@@ -1,5 +1,4 @@
 // ==========================================
-// UPDATED FILE
 // server/src/utils/tourReminderCron.js
 // ==========================================
 
@@ -11,7 +10,7 @@ import { sendBookingReminder } from '../services/tourEmailService.js';
 import { stripe } from '../services/tourStripeService.js';
 import { cancelBooking } from '../services/tourBookingService.js';
 
-// --- 1. Existing Reminder Job (SQL Fixed) ---
+// --- 1. Existing Reminder Job (Refactored) ---
 
 export const startReminderCron = () => {
   // Run every day at 9 AM
@@ -24,7 +23,9 @@ export const startReminderCron = () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowDate = tomorrow.toISOString().split('T')[0];
 
-      // --- FIX: Corrected table name 'bookings' to 'tour_bookings' ---
+      // --- [REFACTOR] ---
+      // Updated query to use `seat_status = 'seat_confirmed'`
+      //
       const result = await pool.query(
         `SELECT 
           b.id, b.booking_reference, b.seats,
@@ -36,7 +37,7 @@ export const startReminderCron = () => {
         JOIN tour_instances ti ON b.tour_instance_id = ti.id
         JOIN tours t ON ti.tour_id = t.id
         WHERE ti.date = $1
-          AND b.status = 'confirmed'
+          AND b.seat_status = 'seat_confirmed'
           AND b.reminder_sent = false`,
         [tomorrowDate]
       );
@@ -52,7 +53,7 @@ export const startReminderCron = () => {
             { name: booking.tour_name, duration_minutes: booking.duration_minutes }
           );
 
-          // --- FIX: Corrected table name 'bookings' to 'tour_bookings' ---
+          // This query is correct
           await pool.query(
             'UPDATE tour_bookings SET reminder_sent = true WHERE id = $1',
             [booking.id]
@@ -73,7 +74,7 @@ export const startReminderCron = () => {
 };
 
 
-// --- 2. NEW: Abandoned Cart "Janitor" Job ---
+// --- 2. NEW: Abandoned Cart "Janitor" Job (Refactored) ---
 
 // Define the timeout (e.g., 60 minutes)
 const PENDING_TIMEOUT_MINUTES = 60;
@@ -89,12 +90,16 @@ export const startAbandonedCartCron = () => {
     try {
       client = await pool.connect();
       
-      // Find all bookings that are 'pending' and older than the timeout
+      // --- [REFACTOR] ---
+      // Updated query to target the *specific* "hostage" state:
+      // 'seat_pending' AND 'payment_stripe_pending'
+      //
       const { rows: abandonedBookings } = await client.query(
         `SELECT id, payment_intent_id 
          FROM tour_bookings 
-         WHERE status = 'pending' 
-         AND created_at < $1`,
+         WHERE seat_status = 'seat_pending'
+           AND payment_status = 'payment_stripe_pending' 
+           AND created_at < $1`,
         [timeout]
       );
 
@@ -114,7 +119,8 @@ export const startAbandonedCartCron = () => {
           }
 
           // 2. Call our local cancelBooking service
-          // This will decrement booked_seats and set status to 'cancelled'
+          // This will set seat_status='seat_cancelled', payment_status='payment_none',
+          // and release the inventory.
           await cancelBooking(booking.id, 'Abandoned cart timeout (Janitor)');
           
           console.log(`- Cleaned up booking ${booking.id}`);
@@ -123,9 +129,6 @@ export const startAbandonedCartCron = () => {
           // Log error but continue to the next booking
           console.error(`- Failed to clean up booking ${booking.id}:`, err.message);
           
-          // If Stripe cancellation failed (e.g., already succeeded), 
-          // we might still need to handle our local booking status.
-          // For now, we'll log and move on.
           if (err.code === 'payment_intent_unexpected_state') {
              console.warn(`  > Stripe PI ${booking.payment_intent_id} was in an unexpected state. Manual review may be needed.`);
           }
