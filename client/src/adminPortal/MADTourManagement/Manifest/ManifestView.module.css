@@ -13,6 +13,7 @@
 
 .noPrint {
   margin-bottom: 2rem;
+  display: flex;
 }
 
 /* Print button styles now use adminshared.module.css */
@@ -27,8 +28,8 @@
 
 .header {
   border-bottom: 2px solid var(--text);
-  padding-bottom: 1.5rem;
-  margin-bottom: 2rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .header h1 {
@@ -49,7 +50,7 @@
 .summary {
   display: flex;
   gap: 2rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   padding: 1rem 1.5rem;
   background: var(--grey-100);
   border-radius: 4px;

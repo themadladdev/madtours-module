@@ -2,7 +2,6 @@
 import React from 'react';
 import MarkdownEditor from '../../../admin/MarkdownEditor/MarkdownEditor.jsx';
 
-// --- [FIX] Import the correct CSS files ---
 import widgetStyles from '../../Widgets/AdminBookingWidget/AdminBookingWidget.module.css';
 import styles from './AdminCustomerDetails.module.css';
 
@@ -24,7 +23,6 @@ const AdminCustomerDetails = ({
     onPaymentOptionChange(e.target.value);
   };
 
-  // --- [FIX] ---
   // Determine the final amount to display on the button.
   // If FOC is selected, the price is always 0.
   //
