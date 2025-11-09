@@ -50,6 +50,35 @@
 
 /* --- UTILITY & COMPONENT STYLES --- */
 
+/* --- [NEW] Global Notification Badges --- */
+.notificationBadge,
+.notificationBadgeDestructive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 4px;
+  padding: 0 0.25rem;
+  opacity: 1;
+}
+
+/* Neutral/Informational (Grey) */
+.notificationBadge {
+  color: var(--background);
+  background-color: var(--grey-700);
+}
+
+/* Urgent/Actionable (Red) */
+.notificationBadgeDestructive {
+  color: var(--background);
+  background-color: var(--destructive);
+}
+/* --- [END] Global Notification Badges --- */
+
+
 .description {
   color: var(--grey-700);
   font-size: 0.9rem;

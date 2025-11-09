@@ -55,8 +55,7 @@ router.put('/:id/manual-confirm', adminBookingController.manualConfirmBooking);
 // PUT    /api/admin/bookings/:id/manual-pay
 router.put('/:id/manual-pay', adminBookingController.manualMarkAsPaid);
 
-// PUT    /api/admin/bookings/:id/manual-cancel
-router.put('/:id/manual-cancel', adminBookingController.manualCancelBooking);
+// --- [FIX] Removed the duplicate/broken manual-cancel route ---
 
 // --- Admin Notes ---
 // PUT    /api/admin/bookings/:id/notes

@@ -4,128 +4,23 @@
 
 import { pool } from '../db/db.js';
 import * as bookingService from '../services/tourBookingService.js';
+import * as adminBookingService from '../services/adminTourBookingService.js';
 import { processRefund, retryStripeRefund as retryStripeRefundService } from '../services/tourStripeService.js';
 import { sanitizeInput, sanitizeTicketBookingData } from '../utils/tourSanitize.js';
 
 /**
- * --- [NEW] createManualBooking (Origin 2) ---
- * Creates a booking with 'seat_confirmed' and 'payment_manual_pending'.
+ * --- [REFACTORED] createManualBooking (Origin 2) ---
+ * Now a thin controller that calls the admin booking service.
  */
 export const createManualBooking = async (req, res, next) => {
   try {
     const adminId = req.user.id;
     const sanitizedData = sanitizeTicketBookingData(req.body);
     
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    const newBooking = await adminBookingService.createManualBooking(sanitizedData, adminId);
+    
+    res.status(201).json(newBooking);
 
-      // Step 1: Get Tour Template
-      const tourResult = await client.query(
-        'SELECT capacity FROM tours WHERE id = $1',
-        [sanitizedData.tourId]
-      );
-      if (tourResult.rows.length === 0) throw new Error('Tour not found');
-      const defaultCapacity = tourResult.rows[0].capacity;
-
-      // Step 2: "Upsert" the Tour Instance
-      const instanceResult = await client.query(
-        `WITH upsert AS (
-           INSERT INTO tour_instances (tour_id, date, "time", capacity, booked_seats, status)
-           VALUES ($1, $2, $3, $4, 0, 'scheduled')
-           ON CONFLICT (tour_id, date, "time") DO NOTHING
-           RETURNING id
-         )
-         SELECT id FROM upsert
-         UNION ALL
-         SELECT id FROM tour_instances 
-         WHERE tour_id = $1 AND date = $2 AND "time" = $3`,
-        [sanitizedData.tourId, sanitizedData.date, sanitizedData.time, defaultCapacity]
-      );
-      const tourInstanceId = instanceResult.rows[0].id;
-
-      // Step 3: Lock instance row and check availability
-      const lockResult = await client.query(
-        'SELECT * FROM tour_instances WHERE id = $1 FOR UPDATE',
-        [tourInstanceId]
-      );
-      const instance = lockResult.rows[0];
-
-      if (instance.status !== 'scheduled') throw new Error('This tour is no longer scheduled');
-      
-      const availableSeats = instance.capacity - instance.booked_seats;
-      if (availableSeats < sanitizedData.totalSeats) throw new Error('Not enough seats available');
-
-      // Step 4: Create or get customer
-      const customerResult = await client.query(
-        `INSERT INTO tour_customers (email, first_name, last_name, phone)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (email) DO UPDATE SET
-           first_name = EXCLUDED.first_name,
-           last_name = EXCLUDED.last_name,
-           phone = EXCLUDED.phone,
-           updated_at = NOW()
-         RETURNING id`,
-        [sanitizedData.customer.email, sanitizedData.customer.firstName, sanitizedData.customer.lastName, sanitizedData.customer.phone]
-      );
-      const customerId = customerResult.rows[0].id;
-
-      // Step 5: Generate unique booking reference
-      const reference = bookingService.generateBookingReference(); 
-
-      // Step 6: Create booking with Origin 2 states
-      const bookingResult = await client.query(
-        `INSERT INTO tour_bookings 
-         (booking_reference, tour_instance_id, customer_id, seats, total_amount, 
-          seat_status, payment_status, customer_notes, admin_notes)
-         VALUES ($1, $2, $3, $4, $5, 'seat_confirmed', 'payment_manual_pending', $6, $7)
-         RETURNING *`,
-        [
-          reference,
-          tourInstanceId,
-          customerId,
-          sanitizedData.totalSeats, 
-          sanitizedData.totalAmount,
-          sanitizedData.customerNotes || null,
-          `Created by admin ${adminId}`
-        ]
-      );
-      const newBooking = bookingResult.rows[0];
-      const newBookingId = newBooking.id;
-
-      // Step 7: Update booked seats
-      await client.query(
-        `UPDATE tour_instances 
-         SET booked_seats = booked_seats + $1, updated_at = NOW()
-         WHERE id = $2`,
-        [sanitizedData.totalSeats, tourInstanceId]
-      );
-
-      // Step 8: Create history record
-      await client.query(
-        `INSERT INTO tour_booking_history (booking_id, new_status, changed_by_admin, reason)
-         VALUES ($1, 'seat_confirmed', $2, 'Manual booking created')`,
-        [newBookingId, adminId]
-      );
-
-      // Step 9: Create passenger records
-      for (const passenger of sanitizedData.passengers) {
-        await client.query(
-          `INSERT INTO tour_booking_passengers (booking_id, first_name, last_name, ticket_type)
-           VALUES ($1, $2, $3, $4)`,
-          [newBookingId, passenger.firstName, passenger.lastName, passenger.ticket_type]
-        );
-      }
-
-      await client.query('COMMIT');
-      res.status(201).json(newBooking);
-
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error; 
-    } finally {
-      client.release();
-    }
   } catch (error) {
     console.error('Error creating manual booking:', error);
     if (error.message.includes('seats available') || error.message.includes('tour is no longer scheduled')) {
@@ -136,113 +31,19 @@ export const createManualBooking = async (req, res, next) => {
 };
 
 /**
- * --- [NEW] createFocBooking (Origin 3) ---
- * Creates a booking with 'seat_confirmed' and 'payment_foc'.
+ * --- [REFACTORED] createFocBooking (Origin 3) ---
+ * Now a thin controller that calls the admin booking service.
  */
 export const createFocBooking = async (req, res, next) => {
   try {
     const adminId = req.user.id;
-    const sanitizedData = sanitizeTicketBookingData(req.body); // Re-use sanitizer
+    const sanitizedData = sanitizeTicketBookingData(req.body);
     const { adminNotes } = req.body; 
+    
+    const newBooking = await adminBookingService.createFocBooking(sanitizedData, adminNotes, adminId);
+    
+    res.status(201).json(newBooking);
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      
-      // Step 1: Get Tour Template
-      const tourResult = await client.query('SELECT capacity FROM tours WHERE id = $1', [sanitizedData.tourId]);
-      if (tourResult.rows.length === 0) throw new Error('Tour not found');
-      const defaultCapacity = tourResult.rows[0].capacity;
-
-      // Step 2: "Upsert" the Tour Instance
-      const instanceResult = await client.query(
-        `WITH upsert AS (
-           INSERT INTO tour_instances (tour_id, date, "time", capacity, booked_seats, status)
-           VALUES ($1, $2, $3, $4, 0, 'scheduled')
-           ON CONFLICT (tour_id, date, "time") DO NOTHING
-           RETURNING id
-         )
-         SELECT id FROM upsert
-         UNION ALL
-         SELECT id FROM tour_instances WHERE tour_id = $1 AND date = $2 AND "time" = $3`,
-        [sanitizedData.tourId, sanitizedData.date, sanitizedData.time, defaultCapacity]
-      );
-      const tourInstanceId = instanceResult.rows[0].id;
-
-      // Step 3: Lock instance row and check availability
-      const lockResult = await client.query('SELECT * FROM tour_instances WHERE id = $1 FOR UPDATE', [tourInstanceId]);
-      const instance = lockResult.rows[0];
-      if (instance.status !== 'scheduled') throw new Error('This tour is no longer scheduled');
-      const availableSeats = instance.capacity - instance.booked_seats;
-      if (availableSeats < sanitizedData.totalSeats) throw new Error('Not enough seats available');
-
-      // Step 4: Create or get customer
-      const customerResult = await client.query(
-        `INSERT INTO tour_customers (email, first_name, last_name, phone)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (email) DO UPDATE SET
-           first_name = EXCLUDED.first_name,
-           last_name = EXCLUDED.last_name,
-           phone = EXCLUDED.phone,
-           updated_at = NOW()
-         RETURNING id`,
-        [sanitizedData.customer.email, sanitizedData.customer.firstName, sanitizedData.customer.lastName, sanitizedData.customer.phone]
-      );
-      const customerId = customerResult.rows[0].id;
-
-      // Step 5: Generate unique booking reference
-      const reference = bookingService.generateBookingReference();
-
-      // Step 6: Create booking with Origin 3 states
-      const bookingResult = await client.query(
-        `INSERT INTO tour_bookings 
-         (booking_reference, tour_instance_id, customer_id, seats, total_amount, 
-          seat_status, payment_status, customer_notes, admin_notes)
-         VALUES ($1, $2, $3, $4, 0.00, 'seat_confirmed', 'payment_foc', $5, $6)
-         RETURNING *`,
-        [
-          reference,
-          tourInstanceId,
-          customerId,
-          sanitizedData.totalSeats,
-          sanitizedData.customerNotes || null,
-          `FOC Created by admin ${adminId}: ${sanitizeInput(adminNotes) || 'Complimentary'}`
-        ]
-      );
-      const newBooking = bookingResult.rows[0];
-      const newBookingId = newBooking.id;
-
-      // Step 7: Update booked seats
-      await client.query(
-        `UPDATE tour_instances SET booked_seats = booked_seats + $1, updated_at = NOW() WHERE id = $2`,
-        [sanitizedData.totalSeats, tourInstanceId]
-      );
-
-      // Step 8: Create history record
-      await client.query(
-        `INSERT INTO tour_booking_history (booking_id, new_status, changed_by_admin, reason)
-         VALUES ($1, 'seat_confirmed', $2, 'FOC booking created')`,
-        [newBookingId, adminId]
-      );
-
-      // Step 9: Create passenger records
-      for (const passenger of sanitizedData.passengers) {
-        await client.query(
-          `INSERT INTO tour_booking_passengers (booking_id, first_name, last_name, ticket_type)
-           VALUES ($1, $2, $3, $4)`,
-          [newBookingId, passenger.firstName, passenger.lastName, passenger.ticket_type]
-        );
-      }
-
-      await client.query('COMMIT');
-      res.status(201).json(newBooking);
-
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
   } catch (error) {
     console.error('Error creating FOC booking:', error);
     if (error.message.includes('seats available') || error.message.includes('tour is no longer scheduled')) {
@@ -253,7 +54,6 @@ export const createFocBooking = async (req, res, next) => {
 };
 
 /**
- * --- [REFACTORED] ---
  * Updated to handle new, complex 'special_filter' queries for the admin badges.
  */
 export const getAllBookings = async (req, res, next) => {
@@ -281,10 +81,8 @@ export const getAllBookings = async (req, res, next) => {
     const params = [];
     let paramCount = 1;
 
-    // --- [NEW] Logic for complex filters ---
     if (special_filter) {
       if (special_filter === 'action_required') {
-        // Find all "failure" states
         query += ` AND (
           b.seat_status = 'triage' OR
           b.payment_status = 'refund_stripe_failed' OR
@@ -302,11 +100,9 @@ export const getAllBookings = async (req, res, next) => {
          query += ` AND (b.payment_status = 'payment_manual_pending' AND ti.date < CURRENT_DATE)`;
       }
       else if (special_filter === 'pay_on_arrival_queue') {
-         // This is the informational queue: "Pay on Arrival" for *future* dates
          query += ` AND (b.payment_status = 'payment_manual_pending' AND ti.date >= CURRENT_DATE)`;
       }
     } else {
-      // Standard filters
       if (seat_status) {
         query += ` AND b.seat_status = $${paramCount++}`;
         params.push(seat_status);
@@ -316,7 +112,6 @@ export const getAllBookings = async (req, res, next) => {
         params.push(payment_status);
       }
     }
-    // --- [END NEW] ---
 
     if (startDate) {
       query += ` AND ti.date >= $${paramCount++}`;
@@ -461,9 +256,7 @@ export const refundBooking = async (req, res, next) => {
 };
 
 /**
- * --- [NEW] ---
  * Triage Action: Mark a manually-paid booking as manually-refunded.
- *
  */
 export const manualMarkRefunded = async (req, res, next) => {
   try {
@@ -474,8 +267,8 @@ export const manualMarkRefunded = async (req, res, next) => {
     if (!reason) {
       return res.status(400).json({ message: 'Refund reason is required' });
     }
-
-    const booking = await bookingService.adminManualRefund({
+    
+    const booking = await adminBookingService.adminManualRefund({
       bookingId: id,
       reason,
       adminId
@@ -489,9 +282,7 @@ export const manualMarkRefunded = async (req, res, next) => {
 };
 
 /**
- * --- [NEW] ---
  * Triage Action: Retry a failed Stripe refund.
- *
  */
 export const retryStripeRefund = async (req, res, next) => {
   try {
@@ -555,7 +346,7 @@ export const manualConfirmBooking = async (req, res, next) => {
     const { reason } = req.body;
     const adminId = req.user.id;
     
-    const updatedBooking = await bookingService.manualConfirmBooking(id, reason, adminId);
+    const updatedBooking = await adminBookingService.manualConfirmBooking(id, reason, adminId);
     res.json({ message: 'Booking manually confirmed', booking: updatedBooking });
     
   } catch (error) {
@@ -570,7 +361,7 @@ export const manualMarkAsPaid = async (req, res, next) => {
     const { reason } = req.body;
     const adminId = req.user.id;
     
-    const updatedBooking = await bookingService.manualMarkAsPaid(id, reason, adminId);
+    const updatedBooking = await adminBookingService.manualMarkAsPaid(id, reason, adminId);
     res.json({ message: 'Booking manually marked as paid', booking: updatedBooking });
 
   } catch (error) {
@@ -579,22 +370,5 @@ export const manualMarkAsPaid = async (req, res, next) => {
   }
 };
 
-export const manualCancelBooking = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const adminId = req.user.id;
-
-    if (!reason) {
-      return res.status(400).json({ message: 'Cancellation reason is required' });
-    }
-    
-    const cancelledBooking = await bookingService.cancelBooking(id, reason, adminId);
-    
-    res.json({ message: 'Booking cancelled successfully', booking: cancelledBooking });
-    
-  } catch (error) {
-    console.error(`Error manually cancelling booking ${req.params.id}:`, error);
-    next(error);
-  }
-};
+// --- [FIX] Removed duplicate manualCancelBooking ---
+// The `cancelBooking` function at the top already handles this.

@@ -5,49 +5,34 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   getAllBookings, 
-  refundBooking,  // This is for Stripe refunds
-  adminCancelBooking, // This is for unpaid cancellations
+  refundBooking,
+  adminCancelBooking,
   manualMarkAsPaid,
   manualMarkRefunded,
   retryStripeRefund
 } from '../../../services/admin/adminBookingService.js';
+
+// --- [NEW] Child component imports ---
+import BookingFilter from './BookingFilter.jsx';
+import BookingList from './BookingList.jsx';
+
 import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/ConfirmationDialog.jsx';
 import BookingActionModal from './BookingActionModal.jsx';
 import useDebounce from '../../../utils/useDebounce.js';
 import styles from './BookingManager.module.css';
 import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
-
-// --- [REFACTORED] Quick filters ---
-const quickFilters = [
-  { 
-    id: 'action_required', 
-    label: 'Action Required',
-    badge: 0 // Will be populated by fetchQueueCounts
-  },
-  { 
-    id: 'pay_on_arrival', 
-    label: 'Pay on Arrival',
-    badge: 0 // Will be populated by fetchQueueCounts
-  },
-  { id: 'seat_confirmed', label: 'Confirmed', badge: 0 },
-  { id: 'all', label: 'All Bookings', badge: 0 },
-  { id: 'seat_cancelled', label: 'Cancelled', badge: 0 },
-];
-
 const BookingManager = ({ defaultActionCount }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
-  // --- [NEW] State to hold counts for sub-tab badges ---
   const [queueCounts, setQueueCounts] = useState({
     action_required: 0,
     pay_on_arrival: 0,
   });
 
   const [activeQuickFilter, setActiveQuickFilter] = useState(
-    // --- [FIX] Default to the new 'action_required' tab if there's an action ---
     defaultActionCount > 0 ? 'action_required' : 'seat_confirmed'
   );
   
@@ -79,11 +64,8 @@ const BookingManager = ({ defaultActionCount }) => {
   
   const [payDialog, setPayDialog] = useState({ booking: null });
 
-
-  // --- [NEW] Function to fetch all queue counts for sub-tab badges ---
   const fetchQueueCounts = useCallback(async () => {
     try {
-      // Run all count queries in parallel
       const [actionData, payOnArrivalData] = await Promise.all([
         getAllBookings({ special_filter: 'action_required' }),
         getAllBookings({ special_filter: 'pay_on_arrival_queue' })
@@ -97,12 +79,8 @@ const BookingManager = ({ defaultActionCount }) => {
     } catch (error) {
       console.error('Error fetching queue counts:', error);
     }
-  }, []); // Empty dependency array, this is stable
+  }, []);
 
-  /**
-   * --- [REFACTORED] Main data loading function ---
-   * Now queries using the correct filter for the active tab.
-   */
   const loadBookings = useCallback(async () => {
     setLoading(true);
     setToast(null);
@@ -113,7 +91,6 @@ const BookingManager = ({ defaultActionCount }) => {
       searchTerm: debouncedSearchTerm,
     };
 
-    // --- [FIX] Logic for new tabs ---
     if (activeQuickFilter === 'action_required') {
       filters.special_filter = 'action_required';
     } else if (activeQuickFilter === 'pay_on_arrival') {
@@ -133,13 +110,10 @@ const BookingManager = ({ defaultActionCount }) => {
     }
   }, [activeQuickFilter, dateFilters, debouncedSearchTerm]); 
 
-  // --- [REFACTORED] Main useEffect ---
   useEffect(() => {
-    // Load counts for the badges first
     fetchQueueCounts();
-    // Then load the bookings for the active tab
     loadBookings();
-  }, [loadBookings, fetchQueueCounts]); // Both are stable callbacks
+  }, [loadBookings, fetchQueueCounts]);
 
   useEffect(() => {
     if (toast) {
@@ -166,7 +140,6 @@ const BookingManager = ({ defaultActionCount }) => {
     
     setTimeout(() => {
       switch (actionType) {
-        // --- Triage Actions ---
         case 'resolve_stripe_refund':
           setResolveStripeDialog({ booking: booking });
           setRefundAmount(booking.total_amount);
@@ -186,8 +159,6 @@ const BookingManager = ({ defaultActionCount }) => {
         case 'transfer':
           setTransferDialog({ booking: booking });
           break;
-
-        // --- Standard Actions ---
         case 'mark_as_paid':
           setPayDialog({ booking: booking }); 
           break;
@@ -206,12 +177,11 @@ const BookingManager = ({ defaultActionCount }) => {
     }, 50);
   };
   
-  // --- [NEW] This function now also re-fetches counts ---
   const handleQuickFilterChange = (newFilterId) => {
     setActiveQuickFilter(newFilterId);
     setSearchTerm('');
     setDateFilters({ startDate: '', endDate: '' });
-    fetchQueueCounts(); // Re-fetch counts on tab change
+    fetchQueueCounts();
   };
   
   const handleClearFilters = () => {
@@ -219,14 +189,12 @@ const BookingManager = ({ defaultActionCount }) => {
     setDateFilters({ startDate: '', endDate: '' });
   };
   
-  // --- [NEW] Helper to reload all data after an action ---
   const reloadAllData = () => {
     fetchQueueCounts();
     loadBookings();
   };
 
-  // --- Confirmation Handlers (REFACTORED) ---
-  // All handlers now call reloadAllData() on success.
+  // --- Confirmation Handlers ---
   
   const handleConfirmStripeRefund = async () => {
     const { booking } = resolveStripeDialog;
@@ -239,7 +207,7 @@ const BookingManager = ({ defaultActionCount }) => {
       await refundBooking(booking.id, amount, refundReason);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} refund is processing.` });
       handleCloseDialogs();
-      reloadAllData(); // --- [FIX] ---
+      reloadAllData();
     } catch (error) {
       console.error('Error processing Stripe refund:', error);
       setToast({ type: 'error', message: `Refund failed: ${error.message}` });
@@ -261,7 +229,7 @@ const BookingManager = ({ defaultActionCount }) => {
       await manualMarkRefunded(booking.id, manualRefundReason);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} marked as manually refunded.` });
       handleCloseDialogs();
-      reloadAllData(); // --- [FIX] ---
+      reloadAllData();
     } catch (error) {
       console.error('Error marking manual refund:', error);
       setToast({ type: 'error', message: `Failed: ${error.message}` });
@@ -274,7 +242,7 @@ const BookingManager = ({ defaultActionCount }) => {
       await retryStripeRefund(booking.id);
       setToast({ type: 'success', message: `Retrying refund for ${booking.booking_reference}.` });
       handleCloseDialogs();
-      reloadAllData(); // --- [FIX] ---
+      reloadAllData();
     } catch (error) {
       console.error('Error retrying refund:', error);
       setToast({ type: 'error', message: `Failed: ${error.message}` });
@@ -291,7 +259,7 @@ const BookingManager = ({ defaultActionCount }) => {
       await adminCancelBooking(booking.id, cancelReason);
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} has been cancelled.` });
       handleCloseDialogs();
-      reloadAllData(); // --- [FIX] ---
+      reloadAllData();
     } catch (error) {
       console.error('Error manually cancelling booking:', error);
       setToast({ type: 'error', message: `Cancellation failed: ${error.message}` });
@@ -304,26 +272,25 @@ const BookingManager = ({ defaultActionCount }) => {
       await manualMarkAsPaid(booking.id, 'Manual admin payment received');
       setToast({ type: 'success', message: `Booking ${booking.booking_reference} marked as paid.` });
       handleCloseDialogs();
-      reloadAllData(); // --- [FIX] ---
+      reloadAllData();
     } catch (error) {
       console.error('Error marking booking as paid:', error);
       setToast({ type: 'error', message: `Payment update failed: ${error.message}` });
     }
   };
 
-  // --- [NEW] Dynamically define quick filters with badges ---
   const populatedQuickFilters = [
     { 
       id: 'action_required', 
       label: 'Action Required',
       badge: queueCounts.action_required,
-      badgeType: 'destructive' // Use red badge
+      badgeType: 'destructive'
     },
     { 
       id: 'pay_on_arrival', 
       label: 'Pay on Arrival',
       badge: queueCounts.pay_on_arrival,
-      badgeType: 'informational' // Use grey badge
+      badgeType: 'informational'
     },
     { id: 'seat_confirmed', label: 'Confirmed', badge: 0, badgeType: 'informational' },
     { id: 'all', label: 'All Bookings', badge: 0, badgeType: 'informational' },
@@ -347,260 +314,39 @@ const BookingManager = ({ defaultActionCount }) => {
         </div>
       )}
 
-      {/* --- Desktop Quick Filter Nav (REFACTORED) --- */}
-      <div className={`${styles.quickFilterNav} ${styles.desktopNav}`}>
-        {populatedQuickFilters.map(filter => (
-          <button
-            key={filter.id}
-            className={`${styles.navButton} ${activeQuickFilter === filter.id ? styles.active : ''}`}
-            onClick={() => handleQuickFilterChange(filter.id)}
-          >
-            <span>{filter.label}</span>
-            {/* --- [FIX] Conditional badge styling --- */}
-            {filter.badge > 0 && (
-              <span className={
-                filter.badgeType === 'destructive'
-                  ? styles.badgeDestructive
-                  : styles.badgeInformational
-              }>
-                {filter.badge}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      {/* --- [NEW] Render the extracted Filter Bar --- */}
+      <BookingFilter
+        activeQuickFilter={activeQuickFilter}
+        populatedQuickFilters={populatedQuickFilters}
+        dateFilters={dateFilters}
+        onDateFiltersChange={setDateFilters}
+        searchTerm={searchTerm}
+        onSearchTermChange={setSearchTerm}
+        isSearchOpen={isSearchOpen}
+        onIsSearchOpenChange={setIsSearchOpen}
+        onQuickFilterChange={handleQuickFilterChange}
+        onClearFilters={handleClearFilters}
+      />
       
-      {/* --- Mobile Quick Filter Select (REFACTORED) --- */}
-      <div className={styles.mobileNav}>
-        <select
-          className={styles.mobileQuickFilter}
-          value={activeQuickFilter}
-          onChange={(e) => handleQuickFilterChange(e.target.value)}
-        >
-          {populatedQuickFilters.map(filter => (
-            <option key={filter.id} value={filter.id}>
-              {filter.label} {filter.badge > 0 ? `(${filter.badge})` : ''}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* --- [NEW] Render the extracted Results List --- */}
+      <BookingList
+        loading={loading}
+        bookings={bookings}
+        isActionView={isActionView}
+        onBookingSelect={setModalBooking}
+      />
 
-      {/* --- Collapsible Filter Box --- */}
-      <div className={sharedStyles.filterBox} style={{ marginBottom: '1.5rem', gap: '0' }}>
-        
-        <div className={styles.filterRow}>
-          <div className={styles.filterItem}>
-            <label htmlFor="filter-start-date">
-              <span className={styles.desktopLabel}>Date </span>From:
-            </label>
-            <input
-              id="filter-start-date"
-              type="date"
-              className={sharedStyles.input}
-              value={dateFilters.startDate}
-              onChange={(e) => setDateFilters({ ...dateFilters, startDate: e.target.value })}
-              onClick={(e) => e.target.showPicker()}
-              onMouseDown={(e) => e.preventDefault()}
-            />
-          </div>
-          <div className={styles.filterItem}>
-            <label htmlFor="filter-end-date">
-              <span className={styles.desktopLabel}>Date </span>To:
-            </label>
-            <input
-              id="filter-end-date"
-              type="date"
-              className={sharedStyles.input}
-              value={dateFilters.endDate}
-              onChange={(e) => setDateFilters({ ...dateFilters, endDate: e.target.value })}
-              onClick={(e) => e.target.showPicker()}
-              onMouseDown={(e) => e.preventDefault()}
-            />
-          </div>
-          
-          <div className={styles.toggleItem}>
-            <button 
-              className={styles.advancedSearchToggle} 
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              title={isSearchOpen ? 'Hide Search' : 'Show Advanced Search'}
-            >
-              {isSearchOpen ? '▲' : '▼'}
-            </button>
-          </div>
-        </div>
-        
-        <div className={`${styles.collapsibleSearch} ${isSearchOpen ? styles.open : ''}`}>
-          <div className={styles.searchActionRow}>
-            <div className={styles.filterItem}>
-              <label htmlFor="search-term">Search:</label>
-              <input
-                id="search-term"
-                type="text"
-                className={sharedStyles.input}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Name or Booking Ref..."
-              />
-            </div>
-            <div className={styles.filterPanelActions}>
-              <button 
-                className={sharedStyles.secondaryButton}
-                onClick={handleClearFilters}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      
-      {/* --- Responsive Content Area (REFACTORED) --- */}
-      <div className={sharedStyles.contentBox}>
-        
-        <table className={`${sharedStyles.table} ${styles.desktopTable}`}>
-          <thead>
-            <tr>
-              <th className={styles.textLeft}>Customer</th>
-              {/* --- [TYPO FIX] --- */}
-              <th className={styles.textLeft}>Tour Details</th>
-              <th className={styles.textCenter}>Seats</th>
-              <th className={styles.textCenter}>Amount</th>
-              <th className={styles.textCenter}>Booking</th>
-              <th className={styles.textCenter}>Payment</th>
-              {isActionView && <th className={styles.textCenter}>Action</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={isActionView ? 7 : 6}>
-                  <div className={sharedStyles.loadingContainer}>
-                    <div className={sharedStyles.spinner}></div>
-                  </div>
-                </td>
-              </tr>
-            ) : bookings.length === 0 ? (
-              <tr>
-                <td colSpan={isActionView ? 7 : 6} style={{ textAlign: 'center', padding: '2rem' }}>
-                  No bookings found for this view.
-                </td>
-              </tr>
-            ) : (
-              bookings.map(booking => (
-                <tr 
-                  key={booking.id} 
-                  className={styles.clickableRow}
-                  onClick={() => setModalBooking(booking)}
-                >
-                  <td>
-                    <div>{booking.first_name} {booking.last_name}</div>
-                    <div className={styles.subText}>{booking.email}</div>
-                  </td>
-                  <td>
-                    <div className={styles.reference}>{booking.booking_reference}</div>
-                    <div>{booking.tour_name}</div>
-                    <div className={styles.subText}>
-                      {new Date(booking.date).toLocaleDateString()} @ {booking.time.substring(0, 5)}
-                    </div>
-                  </td>
-                  <td className={styles.textCenter}>{booking.seats}</td>
-                  <td className={`${styles.amount} ${styles.textCenter}`}>${booking.total_amount}</td>
-                  
-                  <td className={styles.textCenter}>
-                    <span className={`${styles.badge} ${styles[booking.seat_status]}`}>
-                      {booking.seat_status}
-                    </span>
-                  </td>
-                  <td className={styles.textCenter}>
-                    <span className={`${styles.badge} ${styles[booking.payment_status]}`}>
-                      {booking.payment_status}
-                    </span>
-                  </td>
-                  
-                  {isActionView && (
-                    <td className={`${styles.reason} ${styles.textCenter}`}>
-                      {/* --- [NEW] Show the admin what to do --- */}
-                      {booking.seat_status === 'triage' && "Triage"}
-                      {booking.payment_status === 'refund_stripe_failed' && "Refund Failed"}
-                      {booking.seat_status === 'seat_pending' && "Stuck Hostage"}
-                      {booking.payment_status === 'payment_manual_pending' && "Missed Payment"}
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        
-        {/* --- Mobile Card List (REFACTORED) --- */}
-        <div className={styles.mobileCardList}>
-          {loading ? (
-            <div className={sharedStyles.loadingContainer}>
-              <div className={sharedStyles.spinner}></div>
-            </div>
-          ) : bookings.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              No bookings found for this view.
-            </div>
-          ) : (
-            bookings.map(booking => (
-              <div 
-                key={booking.id} 
-                className={styles.bookingCard}
-                onClick={() => setModalBooking(booking)}
-              >
-                <div className={styles.cardHeader}>
-                  <span className={styles.cardRef}>{booking.booking_reference}</span>
-                  <span className={styles.cardSeats}>{booking.seats} Seat(s)</span>
-                </div>
-                <div className={styles.cardName}>{booking.first_name} {booking.last_name}</div>
-                <div className={styles.cardTour}>
-                  {booking.tour_name} - {new Date(booking.date).toLocaleDateString()}
-                </div>
-                
-                <div className={styles.cardStatusGrid}>
-                  <div className={styles.cardStatusItem}>
-                    <label>Booking</label>
-                    <span className={`${styles.badge} ${styles[booking.seat_status]}`}>
-                      {booking.seat_status}
-                    </span>
-                  </div>
-                  <div className={styles.cardStatusItem}>
-                    <label>Payment</label>
-                    <span className={`${styles.badge} ${styles[booking.payment_status]}`}>
-                      {booking.payment_status}
-                    </span>
-                  </div>
-                </div>
-
-                {isActionView && (
-                  <div className={styles.cardReason}>
-                    <strong>Action:</strong> 
-                    {booking.seat_status === 'triage' && " Triage"}
-                    {booking.payment_status === 'refund_stripe_failed' && " Refund Failed"}
-                    {booking.seat_status === 'seat_pending' && " Stuck Hostage"}
-                    {booking.payment_status === 'payment_manual_pending' && " Missed Payment"}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* --- Render the Action Modal (REFACTORED) --- */}
+      {/* --- Render the Action Modal --- */}
       {modalBooking && (
         <BookingActionModal
           booking={modalBooking}
           onClose={() => setModalBooking(null)}
           onTriggerAction={handleActionClick}
-          // --- [FIX] Pass the correct view flag ---
           isActionView={isActionView} 
         />
       )}
 
-      {/* --- ALL CONFIRMATION DIALOGS (REFACTORED & NEW) --- */}
+      {/* --- ALL CONFIRMATION DIALOGS --- */}
       
       <ConfirmationDialog
         isOpen={!!resolveStripeDialog.booking}
@@ -616,7 +362,7 @@ const BookingManager = ({ defaultActionCount }) => {
         cancelText="Cancel"
         isDestructive={true}
       >
-        <div className={styles.refundForm}>
+        <div className={styles.dialogForm}>
           <div className={sharedStyles.formGroup}>
             <label htmlFor="refund-amount">Refund Amount:</label>
             <input
@@ -656,7 +402,7 @@ const BookingManager = ({ defaultActionCount }) => {
         cancelText="Cancel"
         isDestructive={true}
       >
-         <div className={styles.refundForm}>
+         <div className={styles.dialogForm}>
           <div className={sharedStyles.formGroup}>
             <label htmlFor="manual-refund-reason">Reason (required):</label>
             <textarea
@@ -704,7 +450,7 @@ const BookingManager = ({ defaultActionCount }) => {
         cancelText="Back"
         isDestructive={true}
       >
-        <div className={styles.refundForm}>
+        <div className={styles.dialogForm}>
           <div className={sharedStyles.formGroup}>
             <label htmlFor="cancel-reason">Reason (required):</label>
             <textarea

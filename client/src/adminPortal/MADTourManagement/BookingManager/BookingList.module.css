@@ -1,0 +1,201 @@
+/* ==========================================
+ * client/src/adminPortal/MADTourManagement/BookingManager/components/BookingList/BookingList.module.css
+ * ==========================================
+*/
+
+/* --- Table & Cell Styles --- */
+.textLeft   { text-align: left; }
+.textCenter { text-align: center; }
+.textRight  { text-align: right; }
+
+.reference {
+    font-family: monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--grey-700);
+}
+
+.subText {
+    font-size: 0.85rem;
+    color: var(--grey-500);
+}
+
+.amount {
+    font-weight: 600;
+}
+
+/* --- Badge Base Style --- */
+.badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: var(--grey-200);
+    color: var(--grey-700);
+    margin: 0.1rem;
+    display: inline-block; 
+    white-space: nowrap;
+}
+
+/* --- Badge Statuses --- */
+.seat_confirmed,
+.payment_success {
+    background-color: var(--grey-900);
+    color: var(--background);
+}
+
+.seat_pending,
+.payment_pending {
+    background-color: var(--grey-200);
+    color: var(--grey-700);
+}
+
+.seat_cancelled,
+.refund_success,
+.payment_none,
+.seat_noshow {
+    background-color: var(--grey-100);
+    color: var(--grey-500);
+    text-decoration: line-through;
+}
+
+.payment_foc {
+    background-color: var(--grey-500);
+    color: var(--background);
+}
+
+.triage,
+.refund_failed {
+    background-color: var(--destructive);
+    color: var(--background);
+    animation: pulse 1.5s infinite;
+}
+
+.refund_pending {
+    background-color: var(--grey-700);
+    color: var(--background);
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+
+.reason {
+    font-style: italic;
+    font-weight: 600;
+    color: var(--destructive);
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* --- Responsive Styles --- */
+.mobileCardList {
+  display: none;
+}
+.desktopTable {
+  display: table;
+  width: 100%;
+}
+
+@container (max-width: 768px) {
+  .desktopTable {
+    display: none;
+  }
+  .mobileCardList {
+    display: block;
+  }
+}
+
+/* --- Desktop Clickable Row --- */
+.clickableRow {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.clickableRow:hover {
+    background-color: var(--grey-100);
+}
+
+/* --- Mobile "Ship Captain" Card Styles --- */
+.bookingCard {
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.bookingCard:last-child {
+    border-bottom: none;
+}
+.bookingCard:hover {
+    background-color: var(--grey-100);
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.1rem;
+}
+
+.cardRef {
+    font-family: monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.cardSeats {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--grey-700);
+}
+
+.cardName {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.cardTour {
+    font-size: 0.85rem;
+    color: var(--grey-700);
+    margin-bottom: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cardStatusGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    text-align: center;
+}
+
+.cardStatusItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.cardStatusItem label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--grey-500);
+    text-transform: uppercase;
+}
+
+.cardReason {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--border-color);
+    font-size: 0.9rem;
+    color: var(--destructive);
+    font-weight: 500;
+}

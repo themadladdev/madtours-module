@@ -155,8 +155,12 @@ export const adminCancelBooking = async (bookingId, reason) => {
   if (!reason) {
     reason = 'Manual admin cancellation';
   }
-  return await adminApiFetch(`${API_PREFIX}/${bookingId}/manual-cancel`, {
-    method: 'PUT',
+  
+  // --- [FIX] ---
+  // Changed from PUT .../manual-cancel to POST .../cancel
+  // This now points to the correct, existing server route.
+  return await adminApiFetch(`${API_PREFIX}/${bookingId}/cancel`, {
+    method: 'POST',
     body: JSON.stringify({ reason })
   });
 };

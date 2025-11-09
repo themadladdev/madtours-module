@@ -175,8 +175,11 @@ const MADTourManagement = () => {
                         >
                             {tab.icon}
                             <span>{tab.label}</span>
+                            {/* --- [FIX] Using sharedStyles now --- */}
                             {tab.badge && (
-                                <span className={styles.resolutionBadge}>{tab.badge}</span>
+                                <span className={sharedStyles.notificationBadgeDestructive}>
+                                    {tab.badge}
+                                </span>
                             )}
                         </button>
                     ))}

@@ -1,0 +1,256 @@
+/* ==========================================
+ * client/src/adminPortal/MADTourManagement/BookingManager/components/BookingFilter/BookingFilter.module.css
+ * ==========================================
+*/
+
+/* --- Quick Filter Navigation --- */
+.quickFilterNav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.navButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--grey-700);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.navButton:hover {
+    background-color: var(--grey-100);
+    color: var(--text);
+    border-color: var(--grey-300);
+}
+
+.navButton.active {
+    background-color: var(--grey-900);
+    color: var(--background);
+    border-color: var(--grey-900);
+}
+
+/* --- Mobile Nav --- */
+.mobileNav {
+  display: none;
+}
+.desktopNav {
+  display: flex;
+}
+
+/* --- Mobile "Ship Captain" Select Menu --- */
+.mobileQuickFilter {
+    width: 100%;
+    padding: 0.75rem 0.8rem; 
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text);
+    font-size: 1rem; 
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%Bxmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2Bwidth%3D%22292.4%22%2Bheight%3D%22292.4%22%3E%3Cpath%2Bfill%3D%22%23333333%22%2Bd%3D%22M287%2B69.4a17.6%2B17.6%2B0%2B0%2B0-13-5.4H18.4c-5%2B0-9.3%2B1.8-13%2B5.4A17.6%2B17.6%2B0%2B0%2B0%2B0%2B82.2c0%2B5%2B1.8%2B9.3%2B5.4%2B13l128%2B128c3.6%2B3.6%2B7.8%2B5.4%2B13%2B5.4s9.4-1.8%2B13-5.4l128-128c3.6-3.6%2B5.4-7.8%2B5.4-13%2B0-5-1.8-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 0.65em auto;
+}
+.mobileQuickFilter:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+/* --- Filter Layout Styles --- */
+.filterRow,
+.searchToggleRow,
+.collapsibleSearch {
+    flex-basis: 100%;
+    width: 100%;
+}
+
+.filterRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.desktopLabel {
+  display: none;
+}
+
+.filterItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-grow: 1;
+    flex-basis: 200px;
+}
+.filterItem label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.filterItem input[type="date"] {
+    flex-grow: 1;
+    min-width: 100px;
+    width: auto;
+    cursor: pointer;
+}
+.filterItem input[type="text"] {
+    flex-grow: 1;
+    min-width: 100px;
+    width: auto;
+}
+
+.toggleItem {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-grow: 0;
+    flex-basis: auto;
+}
+
+.advancedSearchToggle {
+    background: var(--grey-100);
+    border: 1px solid var(--border-color);
+    color: var(--grey-700);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    line-height: 1;
+    transition: background-color 0.2s ease;
+}
+.advancedSearchToggle:hover {
+    background: var(--grey-200);
+    color: var(--text);
+}
+
+.collapsibleSearch {
+    display: grid;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    transition: grid-template-rows 0.3s ease-in-out, 
+                padding-top 0.3s ease-in-out, 
+                border-color 0.3s ease-in-out;
+    padding-top: 0;
+    margin-top: 0;
+    border-top: 1px solid transparent;
+}
+
+.collapsibleSearch > .searchActionRow {
+    min-height: 0;
+}
+
+.collapsibleSearch.open {
+    grid-template-rows: 1fr;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.searchActionRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.filterPanelActions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
+}
+
+/* --- Mobile Switch --- */
+@container (max-width: 768px) {
+  .desktopNav {
+    display: none;
+  }
+  .mobileNav {
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .filterRow .filterItem {
+    flex-basis: 100%;
+    flex-direction: row;
+    align-items: center;
+  }
+  .filterRow .filterItem label {
+    min-width: 40px;
+    white-space: nowrap; 
+    text-align: left; 
+    margin-bottom: 0;
+  }
+  .filterRow .filterItem input[type="date"] {
+    width: 100%;
+    cursor: pointer;
+  }
+  
+  .searchActionRow {
+    align-items: stretch;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .searchActionRow .filterItem {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .searchActionRow .filterItem label {
+    text-align: left;
+    min-width: 0;
+  }
+  
+  .searchActionRow .filterItem input[type="text"] {
+    width: 100%;
+  }
+
+  .filterPanelActions {
+    flex-direction: row;
+    align-items: stretch; 
+    flex-basis: 100%;
+    gap: 0.75rem;
+  }
+  
+  .filterPanelActions button {
+      width: 100%;
+  }
+  
+  .toggleItem {
+    flex-basis: 100%;
+    justify-content: center;
+  }
+  .advancedSearchToggle {
+    width: 100%;
+  }
+}
+
+@container (min-width: 769px) {
+  .desktopLabel {
+    display: inline;
+  }
+}
