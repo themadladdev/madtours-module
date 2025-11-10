@@ -1,5 +1,4 @@
 // ==========================================
-// UTILITIES: Manifest Generator
 // server/src/utils/tourManifestGenerator.js
 // ==========================================
 
@@ -7,10 +6,11 @@ import { pool } from '../db/db.js';
 
 export const generateManifest = async (tourInstanceId) => {
   
-  // --- [REFACTORED QUERY] ---
-  const result = await pool.query(
+  // --- Query 1: Get Confirmed Bookings (Existing Query) ---
+  const manifestResult = await pool.query(
     `SELECT 
       ti.id,
+      ti.tour_id, -- [NEW] Added tour_id for the manual booking modal
       ti.date,
       ti.time,
       ti.capacity,
@@ -19,7 +19,6 @@ export const generateManifest = async (tourInstanceId) => {
       t.duration_minutes,
       t.description,
       
-      -- Aggregate all CONFIRMED bookings for this instance
       json_agg(
         json_build_object(
           'booking_id', b.id,
@@ -27,7 +26,7 @@ export const generateManifest = async (tourInstanceId) => {
           'seats_total', b.seats,
           'special_requests', b.special_requests,
           'payment_status', b.payment_status,
-          'seat_status', b.seat_status, -- Use new column
+          'seat_status', b.seat_status,
           
           'passengers', (
             SELECT json_agg(
@@ -49,9 +48,6 @@ export const generateManifest = async (tourInstanceId) => {
           )
         ) ORDER BY b.created_at
       ) 
-      -- Filter for 'seat_confirmed' ONLY. 
-      -- 'triage' bookings are not on the manifest.
-      --
       FILTER (WHERE b.seat_status = 'seat_confirmed') as confirmed_bookings 
 
     FROM tour_instances ti
@@ -62,26 +58,37 @@ export const generateManifest = async (tourInstanceId) => {
     GROUP BY ti.id, t.id`,
     [tourInstanceId]
   );
-  // --- END REFACTORED QUERY ---
 
-  if (result.rows.length === 0) {
+  if (manifestResult.rows.length === 0) {
     throw new Error('Tour instance not found');
   }
 
-  const manifest = result.rows[0];
+  // --- [NEW] Query 2: Get Pending Inventory Count ---
+  // Get the SUM of seats for bookings that are "stuck hostage"
+  const pendingInventoryResult = await pool.query(
+    `SELECT COALESCE(SUM(seats), 0) as seats_held
+     FROM tour_bookings
+     WHERE tour_instance_id = $1
+       AND seat_status = 'seat_pending'
+       AND payment_status = 'payment_stripe_pending'`,
+    [tourInstanceId]
+  );
   
-  // --- [REFACTORED LOGIC] ---
-  // The database now *only* returns confirmed bookings.
+  const pending_inventory_seats = parseInt(pendingInventoryResult.rows[0].seats_held, 10) || 0;
+  // --- [END NEW] ---
+
+  const manifest = manifestResult.rows[0];
+  
   const confirmedBookings = manifest.confirmed_bookings || [];
   
-  // Calculate total seats from CONFIRMED bookings
   const totalSeats = confirmedBookings.reduce((sum, b) => sum + b.seats_total, 0);
 
   return {
     ...manifest,
-    // 'bookings' is deprecated, just return 'confirmed_bookings'
     confirmed_bookings: confirmedBookings,
     total_confirmed_seats: totalSeats,
-    available_seats: manifest.capacity - manifest.booked_seats
+    available_seats: manifest.capacity - manifest.booked_seats,
+    // --- [NEW] Add the pending count to the response ---
+    pending_inventory_seats: pending_inventory_seats 
   };
 };

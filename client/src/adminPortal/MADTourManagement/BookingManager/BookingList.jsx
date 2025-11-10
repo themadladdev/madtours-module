@@ -1,5 +1,4 @@
 // ==========================================
-// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/BookingManager/BookingList.jsx
 // ==========================================
 import React from 'react';

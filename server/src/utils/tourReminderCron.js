@@ -1,4 +1,5 @@
 // ==========================================
+// UPDATED FILE
 // server/src/utils/tourReminderCron.js
 // ==========================================
 
@@ -147,4 +148,67 @@ export const startAbandonedCartCron = () => {
   });
 
   console.log('✅ Abandoned cart "Janitor" scheduled (every 15 mins)');
+};
+
+// --- [NEW] 3. Daily Counter Reconciliation "Accountant" Job ---
+
+export const startReconciliationCron = () => {
+  // Run once per day at 3:00 AM
+  cron.schedule('0 3 * * *', async () => {
+    console.log('🧾 Running counter reconciliation "Accountant" job...');
+    
+    let client;
+    try {
+      client = await pool.connect();
+      
+      // 1. Create a Common Table Expression (CTE) that calculates the
+      //    *correct* booked_seats sum for EVERY instance.
+      //    We count all seats that are NOT 'seat_cancelled'.
+      const { rows: updatedRows } = await client.query(`
+        WITH CorrectCounts AS (
+          SELECT
+            tour_instance_id,
+            COALESCE(SUM(seats), 0) AS actual_booked_seats
+          FROM tour_bookings
+          WHERE seat_status != 'seat_cancelled'
+          GROUP BY tour_instance_id
+        ),
+        -- [Self-Healing] Also fix instances with NO bookings
+        -- that might still have a non-zero count
+        AllBookedInstances AS (
+          SELECT id, COALESCE(cc.actual_booked_seats, 0) as correct_seats
+          FROM tour_instances ti
+          LEFT JOIN CorrectCounts cc ON ti.id = cc.tour_instance_id
+        )
+        -- 2. Update ONLY the instances where the count is out of sync
+        UPDATE tour_instances ti
+        SET booked_seats = ab.correct_seats,
+            updated_at = NOW()
+        FROM AllBookedInstances ab
+        WHERE ti.id = ab.id
+          AND ti.booked_seats != ab.correct_seats
+        RETURNING ti.id, ti.booked_seats;
+      `);
+
+      if (updatedRows.length > 0) {
+        console.log(`🧾 Accountant job fixed ${updatedRows.length} out-of-sync tour(s).`);
+        updatedRows.forEach(row => {
+          console.log(`   - Instance ${row.id} count reset to ${row.booked_seats}`);
+        });
+      } else {
+        console.log('🧾 All tour instance counters are in sync.');
+      }
+
+      console.log('✅ Counter reconciliation job completed.');
+
+    } catch (err) {
+      console.error('❌ Error in counter reconciliation cron job:', err);
+    } finally {
+      if (client) {
+        client.release();
+      }
+    }
+  });
+
+  console.log('✅ Counter reconciliation "Accountant" scheduled (daily at 3 AM)');
 };

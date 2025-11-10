@@ -33,17 +33,15 @@ const BookingManager = ({ defaultActionCount }) => {
     pending_inventory: 0,
   });
 
-  // This function now *only* runs on the very first load
+  // --- [MODIFIED] Simplified initial filter logic ---
+  // This *only* sets the initial default state.
+  // The useEffect hook will handle navigation overrides.
   const getInitialFilter = () => {
-    const presetFilter = sessionStorage.getItem('admin_preset_filter');
-    if (presetFilter) {
-      sessionStorage.removeItem('admin_preset_filter');
-      return presetFilter;
-    }
     return defaultActionCount > 0 ? 'action_required' : 'seat_confirmed';
   };
 
   const [activeQuickFilter, setActiveQuickFilter] = useState(getInitialFilter);
+  // --- [END MODIFICATION] ---
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,17 +71,21 @@ const BookingManager = ({ defaultActionCount }) => {
   
   const [payDialog, setPayDialog] = useState({ booking: null });
 
-  // --- [NEW] This effect listens for dashboard navigation ---
+  // --- [MODIFIED] This effect now correctly handles navigation ---
   useEffect(() => {
     const checkPresetFilter = () => {
       const presetFilter = sessionStorage.getItem('admin_preset_filter');
       if (presetFilter) {
-        sessionStorage.removeItem('admin_preset_filter');
-        setActiveQuickFilter(presetFilter); // Set the active filter state
+        sessionStorage.removeItem('admin_preset_filter'); // Clear the key
+        // This state update will trigger the main loadBookings effect
+        setActiveQuickFilter(presetFilter); 
       }
     };
     
-    // Listen for the same event the dashboard fires
+    // Check session storage *once* on mount, in case we just landed
+    checkPresetFilter(); 
+    
+    // Listen for *subsequent* navigation events
     window.addEventListener('route-change', checkPresetFilter);
     
     return () => {
@@ -213,7 +215,6 @@ const BookingManager = ({ defaultActionCount }) => {
     setActiveQuickFilter(newFilterId);
     setSearchTerm('');
     setDateFilters({ startDate: '', endDate: '' });
-    // fetchQueueCounts(); // This is now handled by the main useEffect
   };
   
   const handleClearFilters = () => {

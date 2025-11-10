@@ -9,10 +9,11 @@ import cors from 'cors';
 import { config } from './config/environment.js';
 import { pool } from './db/db.js';
 
-// --- UPDATED: Import both cron jobs ---
+// --- UPDATED: Import all three cron jobs ---
 import { 
   startReminderCron, 
-  startAbandonedCartCron // 1. IMPORT THE NEW JANITOR
+  startAbandonedCartCron,
+  startReconciliationCron // 1. IMPORT THE NEW ACCOUNTANT
 } from './utils/tourReminderCron.js';
 
 // --- Import MADTours Routes (FIXED) ---
@@ -77,9 +78,6 @@ const startServer = async () => {
     // Test DB connection
     await pool.query('SELECT NOW()');
     
-    // --- MODIFIED: Added '0.0.0.0' ---
-    // This tells Express to listen on all network interfaces,
-    // not just 'localhost', allowing network connections.
     app.listen(config.port, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${config.port} in ${config.nodeEnv} mode`);
       console.log(`[Network] Listening on all interfaces (0.0.0.0)`);
@@ -88,7 +86,8 @@ const startServer = async () => {
       if (config.nodeEnv === 'production' || config.nodeEnv === 'development') {
          console.log('Starting cron jobs for development/production...');
          startReminderCron();
-         startAbandonedCartCron(); // 2. CALL THE NEW JANITOR
+         startAbandonedCartCron();
+         startReconciliationCron(); // 2. CALL THE NEW ACCOUNTANT
       } else {
          console.log('Cron jobs are disabled for this environment.');
       }
@@ -99,5 +98,4 @@ const startServer = async () => {
   }
 };
 
-// Removed duplicate cron job start
 startServer();

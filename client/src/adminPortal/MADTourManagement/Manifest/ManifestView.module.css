@@ -6,7 +6,6 @@
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-  /* This component is standalone, so it needs its own background */
   background: var(--background);
   min-height: 100vh;
 }
@@ -15,8 +14,6 @@
   margin-bottom: 2rem;
   display: flex;
 }
-
-/* Print button styles now use adminshared.module.css */
 
 .manifest {
   background: var(--background);
@@ -49,7 +46,8 @@
 
 .summary {
   display: flex;
-  gap: 2rem;
+  flex-wrap: wrap; /* [MODIFIED] Allow wrapping */
+  gap: 1.5rem 2rem; /* [MODIFIED] Added gap */
   margin-bottom: 1rem;
   padding: 1rem 1.5rem;
   background: var(--grey-100);
@@ -60,8 +58,6 @@
 .summaryItem {
   font-size: 1.1rem;
 }
-
-/* Table styles now use adminshared.module.css */
 
 .reference {
   font-family: monospace;
@@ -119,9 +115,6 @@
   vertical-align: top;
 }
 
-/* --- NEW/MODIFIED STYLES --- */
-
-/* Add cursor feedback and hover effect */
 .editableRow {
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -132,16 +125,13 @@
 }
 
 .passengerRow:not(:first-child) td {
-  /* For multi-passenger bookings, add a border for clarity */
   border-top: 1px dashed var(--grey-300);
 }
 
-/* All rows in a multi-passenger booking (except the first) */
 .passengerRow:nth-child(n+2) {
   background-color: var(--grey-100);
 }
 
-/* The first row of a multi-passenger booking */
 .passengerRow:first-child td {
   padding-top: 1rem;
 }
@@ -158,8 +148,6 @@
   color: var(--destructive);
   margin-top: 0.25rem;
 }
-/* --- END NEW/MODIFIED STYLES --- */
-
 
 .footer {
   border-top: 2px solid var(--text);
@@ -175,10 +163,31 @@
   color: var(--destructive);
 }
 
+/* --- [NEW] Styles for Pending Inventory Link --- */
+.pendingWarning {
+  color: var(--destructive);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.pendingLink {
+  color: var(--destructive);
+  font-weight: 600;
+  text-decoration: underline;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+.pendingLink:hover {
+  color: var(--text);
+}
+/* --- [END NEW] --- */
+
+
 /* Print styles */
 @media print {
   body {
-    /* --- FIX: Use CSS Variables --- */
     background-color: var(--background);
     color: var(--text);
   }
@@ -189,7 +198,6 @@
 
   .manifestContainer {
     padding: 0;
-    /* --- FIX: Use CSS Variable --- */
     background: var(--background);
   }
 
@@ -217,18 +225,20 @@
   }
 
   .fallbackRow {
-    /* --- FIX: Use CSS Variable --- */
     background-color: var(--background) !important;
     border-left: none;
   }
 
   .fallbackLabel {
-    /* --- FIX: Use CSS Variable --- */
     color: var(--grey-700);
   }
 
   .passengerRow:nth-child(n+2) {
-    /* --- FIX: Use CSS Variable --- */
     background-color: var(--background) !important;
+  }
+  
+  /* --- [NEW] Hide pending link on print --- */
+  .pendingWarning {
+    display: none;
   }
 }
