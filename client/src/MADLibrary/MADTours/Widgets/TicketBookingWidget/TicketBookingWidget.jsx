@@ -1,18 +1,26 @@
-// ==========================================
 // client/src/MADLibrary/MADTours/Widgets/TicketBookingWidget/TicketBookingWidget.jsx
-// ==========================================
-
 import React, { useState, useEffect } from 'react';
 import * as tourBookingService from '../../../../services/public/tourBookingService.js';
 import { useToast } from '../../../admin/toast/useToast.js';
 import styles from './TicketBookingWidget.module.css';
+
+// --- [NEW] Import Stripe Libraries ---
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 
 // --- Import Reusable Widget Components ---
 import BookingCalendar from '../../WidgetComponents/BookingCalendar/BookingCalendar.jsx';
 import TimeSlotSelector from '../../WidgetComponents/TimeSlotSelector/TimeSlotSelector.jsx';
 import TicketSelector from '../../WidgetComponents/TicketSelector/TicketSelector.jsx';
 import CustomerDetailsForm from '../../WidgetComponents/CustomerDetailsForm/CustomerDetailsForm.jsx';
+
+// --- [NEW] Import the component we just created ---
+import StripePaymentForm from '../../WidgetComponents/StripePaymentForm/StripePaymentForm.jsx';
 // ---
+
+// --- [NEW] Load Stripe outside of the component render ---
+// Get the publishable key from the .env file
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const TicketBookingWidget = () => {
   // --- State for hooks ---
@@ -44,9 +52,15 @@ const TicketBookingWidget = () => {
   // Customer (payer) details
   const [customer, setCustomer] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [isPayerAPassenger, setIsPayerAPassenger] = useState(true);
-
-  // --- [NEW] State for customer notes ---
   const [customerNotes, setCustomerNotes] = useState('');
+
+  // --- State for payment handoff ---
+  const [paymentState, setPaymentState] = useState({
+    clientSecret: null,
+    bookingId: null,
+    bookingRef: null,
+    error: null
+  });
 
   // --- Calculated values (Unchanged) ---
 
@@ -130,7 +144,8 @@ const TicketBookingWidget = () => {
     setSelectedTimeFull(null);
     setTicketSelection([]);
     setPricing([]);
-    setCustomerNotes(''); // --- [NEW] Reset notes
+    setCustomerNotes('');
+    setPaymentState({ clientSecret: null, bookingId: null, bookingRef: null, error: null });
   };
 
   const handleTourChange = (e) => {
@@ -138,6 +153,7 @@ const TicketBookingWidget = () => {
     resetSelections();
   };
 
+  // ... (handleMonthChange, handleDateClick, handleTimeClick, handleTicketChange, handleCustomerChange are all unchanged) ...
   const handleMonthChange = (delta) => {
     const newDate = new Date(currentYear, currentMonth + delta, 1);
     setCurrentMonth(newDate.getMonth());
@@ -201,8 +217,10 @@ const TicketBookingWidget = () => {
     const { name, value } = e.target;
     setCustomer(p => ({ ...p, [name]: value }));
   };
+  // ... (end of unchanged handlers) ...
 
-  // --- [MODIFIED] Booking Submission ---
+
+  // --- Booking Submission (Unchanged from Phase 1) ---
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     setLoading(p => ({ ...p, booking: true }));
@@ -222,25 +240,50 @@ const TicketBookingWidget = () => {
       time: selectedTime, // Send HH:MM
       customer: customer,
       tickets: ticketSelection,
-      passengers: passengerList, 
+      passengers: passengerList,
       totalAmount: totalAmount,
       totalSeats: totalSelectedSeats,
-      customerNotes: customerNotes // --- [NEW] Add notes to payload ---
+      customerNotes: customerNotes
     };
 
     console.log('--- DEBUG [CLIENT WIDGET]: Submitting bookingData ---', bookingData);
 
     try {
       const result = await tourBookingService.createTicketBooking(bookingData);
-      console.log("Booking STUB success:", result);
-      showToast('Booking submitted! (STUB)', 'success');
-      resetSelections();
+      
+      console.log("--- DEBUG [CLIENT WIDGET]: Received server response ---", result);
+
+      if (!result.payment || !result.payment.clientSecret) {
+        throw new Error('PaymentIntent was not created successfully.');
+      }
+      
+      setPaymentState({
+        clientSecret: result.payment.clientSecret,
+        bookingId: result.booking.id,
+        bookingRef: result.booking.reference,
+        error: null
+      });
       
     } catch (err) {
       showToast(err.message, 'error');
-    } finally {
       setLoading(p => ({ ...p, booking: false }));
-    }
+    } 
+  };
+  
+  // --- [NEW] Handlers for payment results ---
+  const handlePaymentSuccess = () => {
+    // This will be called by StripePaymentForm on success
+    showToast('Payment successful! Your booking is confirmed.', 'success');
+    // We can now reset the entire widget
+    resetSelections();
+    // In a real app, you might redirect to a "thank you" page here
+  };
+  
+  const handlePaymentError = (errorMessage) => {
+    // This is for immediate client-side errors (e.g., validation)
+    showToast(errorMessage, 'error');
+    // We could also allow the user to go back and fix details
+    // For now, we'll just show the error.
   };
 
   return (
@@ -249,81 +292,106 @@ const TicketBookingWidget = () => {
         <h3 className={styles.widgetTitle}>Book Your Tour</h3>
       </div>
 
-      <div className={styles.tourSelectorGroup}>
-        <label htmlFor="tour-select">Select a Tour</label>
-        <select
-          id="tour-select"
-          className={styles.input}
-          value={selectedTourId}
-          onChange={handleTourChange}
-          disabled={loading.tours}
-        >
-          <option value="">-- Please select a tour --</option>
-          {loading.tours ? (
-            <option>Loading tours...</option>
-          ) : (
-            tours.map(tour => (
-              <option key={tour.id} value={tour.id}>
-                {tour.name}
-              </option>
-            ))
-          )}
-        </select>
-      </div>
-
-      {selectedTourId && (
+      {/* --- Conditional Rendering (Unchanged from Phase 1) --- */}
+      {!paymentState.clientSecret ? (
         <>
-          <BookingCalendar
-            currentMonth={currentMonth}
-            currentYear={currentYear}
-            availability={availability}
-            selectedDate={selectedDate}
-            onDateClick={handleDateClick}
-            onMonthChange={handleMonthChange}
-          />
-          
-          {loading.availability && <div className={styles.spinnerSmall}></div>}
-          
-          {selectedDate && (
-            <TimeSlotSelector
-              slots={availability[selectedDate]}
-              selectedTime={selectedTime}
-              onTimeClick={handleTimeClick}
-            />
-          )}
-          
-          {step >= 2 && loading.pricing && (
-            <div className={styles.stepContent}>
-              <div className={styles.spinnerSmall}></div>
-            </div>
-          )}
+          <div className={styles.tourSelectorGroup}>
+            <label htmlFor="tour-select">Select a Tour</label>
+            <select
+              id="tour-select"
+              className={styles.input}
+              value={selectedTourId}
+              onChange={handleTourChange}
+              disabled={loading.tours}
+            >
+              <option value="">-- Please select a tour --</option>
+              {loading.tours ? (
+                <option>Loading tours...</option>
+              ) : (
+                tours.map(tour => (
+                  <option key={tour.id} value={tour.id}>
+                    {tour.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
 
-          {step >= 2 && !loading.pricing && (
-            <TicketSelector
-              pricing={pricing}
-              ticketSelection={ticketSelection}
-              onTicketChange={handleTicketChange}
-              onContinue={() => setStep(3)}
-              totalSelectedSeats={totalSelectedSeats}
-              availableSeats={selectedSlot ? selectedSlot.availableSeats : 0}
-              totalAmount={totalAmount}
-            />
-          )}
+          {selectedTourId && (
+            <>
+              <BookingCalendar
+                currentMonth={currentMonth}
+                currentYear={currentYear}
+                availability={availability}
+                selectedDate={selectedDate}
+                onDateClick={handleDateClick}
+                onMonthChange={handleMonthChange}
+              />
+              
+              {loading.availability && <div className={styles.spinnerSmall}></div>}
+              
+              {selectedDate && (
+                <TimeSlotSelector
+                  slots={availability[selectedDate]}
+                  selectedTime={selectedTime}
+                  onTimeClick={handleTimeClick}
+                />
+              )}
+              
+              {step >= 2 && loading.pricing && (
+                <div className={styles.stepContent}>
+                  <div className={styles.spinnerSmall}></div>
+                </div>
+              )}
 
-          {/* --- [MODIFIED] Pass new props to form --- */}
-          {step >= 3 && (
-            <CustomerDetailsForm
-              customer={customer}
-              onCustomerChange={handleCustomerChange}
-              isPayerAPassenger={isPayerAPassenger}
-              onPayerToggle={(e) => setIsPayerAPassenger(e.target.checked)}
-              customerNotes={customerNotes}
-              onCustomerNotesChange={setCustomerNotes}
-              onSubmit={handleBookingSubmit}
-              totalAmount={totalAmount}
-              isLoading={loading.booking}
-            />
+              {step >= 2 && !loading.pricing && (
+                <TicketSelector
+                  pricing={pricing}
+                  ticketSelection={ticketSelection}
+                  onTicketChange={handleTicketChange}
+                  onContinue={() => setStep(3)}
+                  totalSelectedSeats={totalSelectedSeats}
+                  availableSeats={selectedSlot ? selectedSlot.availableSeats : 0}
+                  totalAmount={totalAmount}
+                />
+              )}
+
+              {step >= 3 && (
+                <CustomerDetailsForm
+                  customer={customer}
+                  onCustomerChange={handleCustomerChange}
+                  isPayerAPassenger={isPayerAPassenger}
+                  onPayerToggle={(e) => setIsPayerAPassenger(e.target.checked)}
+                  customerNotes={customerNotes}
+                  onCustomerNotesChange={setCustomerNotes}
+                  onSubmit={handleBookingSubmit}
+                  totalAmount={totalAmount}
+                  isLoading={loading.booking}
+                />
+              )}
+            </>
           )}
+        </>
+      ) : (
+        <>
+          {/* --- [MODIFIED] --- */}
+          {/* Now we wrap the new component in Stripe's <Elements> provider */}
+          <div className={styles.stepContent}>
+            <h4 className={styles.stepTitle}>Step 4: Secure Payment</h4>
+            
+            <Elements 
+              options={{ clientSecret: paymentState.clientSecret }} 
+              stripe={stripePromise}
+            >
+              <StripePaymentForm 
+                bookingRef={paymentState.bookingRef}
+                totalAmount={totalAmount}
+                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentError={handlePaymentError}
+              />
+            </Elements>
+            
+          </div>
         </>
       )}
     </div>

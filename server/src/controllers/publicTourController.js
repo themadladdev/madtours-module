@@ -1,15 +1,12 @@
-// ==========================================
 // server/src/controllers/publicTourController.js
-// ==========================================
-
 import * as tourService from '../services/tourService.js';
 import * as bookingService from '../services/tourBookingService.js';
 import * as stripeService from '../services/tourStripeService.js';
 import * as availabilityCalculator from '../utils/tourAvailabilityCalculator.js';
-// --- UPDATED: Import the new sanitizer ---
+// --- Import the sanitizer ---
 import { sanitizeBookingData, sanitizeTicketBookingData } from '../utils/tourSanitize.js';
 
-// --- NEW: Import public ticket service ---
+// --- Import public ticket service ---
 import * as publicTicketService from '../services/publicTicketService.js';
 
 
@@ -166,7 +163,7 @@ export const getResolvedInstancePricing = async (req, res, next) => {
  */
 export const createBooking = async (req, res, next) => {
   try {
-    // === REFACTORED: Sanitize new "on-demand" fields ===
+    // === Sanitize data ===
     const sanitizedData = sanitizeBookingData({
       tourId: req.body.tourId,
       date: req.body.date,
@@ -180,28 +177,26 @@ export const createBooking = async (req, res, next) => {
       specialRequests: req.body.specialRequests
     });
 
-    // === REFACTORED: Pass new fields to the booking service ===
-    const bookingData = {
-      tour_id: sanitizedData.tourId,
-      date: sanitizedData.date,
-      time: sanitizedData.time,
-      email: sanitizedData.email,
-      first_name: sanitizedData.firstName,
-      last_name: sanitizedData.lastName,
-      phone: sanitizedData.phone,
-      seats: sanitizedData.seats,
-      total_amount: sanitizedData.totalAmount,
-      special_requests: sanitizedData.specialRequests
-    };
-
-    // This now creates the booking with 'seat_pending' and 'payment_stripe_pending'
-    const booking = await bookingService.createBooking(bookingData);
+    // === [FIX] Re-ordered flow to solve constraint violation ===
     
-    // This creates the Stripe PI and saves the ID to the booking
-    const paymentIntent = await stripeService.createPaymentIntent(booking);
+    // 1. Create PaymentIntent FIRST with minimal data
+    const paymentIntent = await stripeService.createPaymentIntent(
+      sanitizedData.totalAmount,
+      {
+        // Add minimal metadata for logging, in case booking fails
+        customer_email: sanitizedData.email,
+        tour_id: sanitizedData.tourId
+      }
+    );
 
-    // --- [REFACTOR] ---
-    // Return the new 'seat_status' instead of the old 'status'
+    // 2. Create booking, passing in the new PaymentIntent ID
+    const booking = await bookingService.createBooking(sanitizedData, paymentIntent.id);
+    
+    // 3. Update the PaymentIntent metadata with the new booking ID
+    // This is critical for the webhook to find the booking
+    await stripeService.updatePaymentIntentMetadata(paymentIntent.id, booking.id);
+
+    // 4. Send the client secret back to the user
     res.status(201).json({
       booking: {
         id: booking.id,
@@ -209,7 +204,7 @@ export const createBooking = async (req, res, next) => {
         seat_status: booking.seat_status 
       },
       payment: {
-        clientSecret: paymentIntent.clientSecret
+        clientSecret: paymentIntent.client_secret
       }
     });
   } catch (error) {
@@ -232,15 +227,26 @@ export const createTicketBooking = async (req, res, next) => {
     // 1. Sanitize the complex data
     const sanitizedData = sanitizeTicketBookingData(req.body);
 
-    // 2. Call the new, real booking service
-    // This now creates the booking with 'seat_pending' and 'payment_stripe_pending'
-    const booking = await bookingService.createTicketBooking(sanitizedData);
+    // === [FIX] Re-ordered flow to solve constraint violation ===
 
-    // 3. Create a payment intent for the new booking
-    const paymentIntent = await stripeService.createPaymentIntent(booking);
+    // 2. Create PaymentIntent FIRST with minimal data
+    const paymentIntent = await stripeService.createPaymentIntent(
+      sanitizedData.totalAmount,
+      {
+        customer_email: sanitizedData.customer.email,
+        tour_id: sanitizedData.tourId,
+        total_seats: sanitizedData.totalSeats
+      }
+    );
+
+    // 3. Create booking, passing in the new PaymentIntent ID
+    const booking = await bookingService.createTicketBooking(sanitizedData, paymentIntent.id);
+
+    // 4. Update the PaymentIntent metadata with the new booking ID
+    // This is critical for the webhook to find the booking
+    await stripeService.updatePaymentIntentMetadata(paymentIntent.id, booking.id);
     
-    // --- [REFACTOR] ---
-    // Return the new 'seat_status' instead of the old 'status'
+    // 5. Send the client secret back to the user
     res.status(201).json({
       booking: {
         id: booking.id,
@@ -248,10 +254,10 @@ export const createTicketBooking = async (req, res, next) => {
         seat_status: booking.seat_status
       },
       payment: {
-        clientSecret: paymentIntent.clientSecret
+        clientSecret: paymentIntent.client_secret
       }
     });
-    // --- END REAL CODE ---
+    // --- END FIX ---
 
   } catch (error) {
     console.error('Error creating ticket booking:', error);

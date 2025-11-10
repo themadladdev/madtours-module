@@ -1,11 +1,7 @@
-// ==========================================
 // server/src/services/tourStripeService.js
-// ==========================================
-
 import Stripe from 'stripe';
 import { config } from '../config/environment.js';
 import { 
-  updateBookingPaymentIntent, 
   confirmBooking,
   cancelBooking 
 } from './tourBookingService.js';
@@ -17,26 +13,55 @@ export const stripe = new Stripe(
     : config.stripeSecretKey
 );
 
-export const createPaymentIntent = async (booking) => {
+/**
+ * --- [REFACTOR] ---
+ * Creates a PaymentIntent *before* a booking exists.
+ * It only needs the total amount and minimal metadata.
+ * It NO LONGER updates the database.
+ */
+export const createPaymentIntent = async (totalAmount, metadata = {}) => {
   const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(booking.total_amount * 100), // Convert to cents
+    amount: Math.round(totalAmount * 100), // Convert to cents
     currency: 'aud',
-    metadata: {
-      booking_id: booking.id.toString(),
-      booking_reference: booking.booking_reference
-    },
+    metadata: metadata, // Pass in minimal metadata
     automatic_payment_methods: {
       enabled: true
     }
   });
 
-  await updateBookingPaymentIntent(booking.id, paymentIntent.id);
-
-  return {
-    clientSecret: paymentIntent.client_secret,
-    paymentIntentId: paymentIntent.id
-  };
+  return paymentIntent; // Return the full PI object
 };
+
+/**
+ * --- [NEW] ---
+ * Updates an existing PaymentIntent with new metadata.
+ * This is called *after* the booking is successfully created.
+ */
+export const updatePaymentIntentMetadata = async (paymentIntentId, bookingId) => {
+  try {
+    // Retrieve the PI to get its existing metadata
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    // Create new metadata object, preserving old and adding new
+    const newMetadata = {
+      ...paymentIntent.metadata,
+      booking_id: bookingId.toString()
+    };
+
+    // Update the PI with the new, merged metadata
+    const updatedPaymentIntent = await stripe.paymentIntents.update(
+      paymentIntentId,
+      { metadata: newMetadata }
+    );
+    
+    return updatedPaymentIntent;
+  } catch (error) {
+    console.error(`Failed to update metadata for PI ${paymentIntentId}:`, error);
+    // We don't throw here, as the PI is created. Log and continue.
+    // This is a critical logging event.
+  }
+};
+
 
 /**
  * Initiates a refund via Stripe for a Triage item.
@@ -204,26 +229,34 @@ export const retryStripeRefund = async (bookingId, adminId) => {
 };
 
 
-export const handleWebhook = async (rawBody, signature) => {
-  const webhookSecret = config.nodeEnv === 'production'
-    ? process.env.STRIPE_WEBHOOK_SECRET_PROD
-    : config.stripeWebhookSecret;
+/**
+ * --- [FIX] ---
+ * This function is now called by the controller and receives
+ * the *already verified* event object.
+ * We are REMOVING the redundant signature verification.
+ */
+export const handleWebhook = async (event) => {
+  // const webhookSecret = ...
+  // let event;
+  // try {
+  //   event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+  // } catch (error) {
+  //   throw new Error(`Webhook signature verification failed: ${error.message}`);
+  // }
+  // --- [END FIX: Removed redundant verification] ---
 
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-  } catch (error) {
-    throw new Error(`Webhook signature verification failed: ${error.message}`);
-  }
 
   // Handle the event
   switch (event.type) {
     case 'payment_intent.succeeded':
+      // This is the correct log you saw in your last test
+      console.log(`[Stripe Webhook] ✅ Payment Succeeded for: ${event.data.object.id}`);
       await handlePaymentSuccess(event.data.object);
       break;
 
     case 'payment_intent.payment_failed':
+      // This is the correct log you saw in your last test
+      console.log(`[Stripe Webhook] ❌ Payment Failed for: ${event.data.object.id}`);
       await handlePaymentFailure(event.data.object);
       break;
 
@@ -238,20 +271,29 @@ export const handleWebhook = async (rawBody, signature) => {
       break;
 
     default:
-      console.log(`Unhandled event type: ${event.type}`);
+      // This is the correct log you saw in your last test
+      console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
   }
 
   return { received: true };
 };
 
 const handlePaymentSuccess = async (paymentIntent) => {
+  // --- [FIX] ---
+  // Webhook now finds the booking ID from the metadata
+  const bookingId = paymentIntent.metadata.booking_id;
+  if (!bookingId) {
+    console.error(`Webhook Error: No booking_id in metadata for PI: ${paymentIntent.id}`);
+    return; // Cannot proceed
+  }
+  
   const bookingResult = await pool.query(
-    'SELECT id, seat_status FROM tour_bookings WHERE payment_intent_id = $1',
-    [paymentIntent.id]
+    'SELECT id, seat_status FROM tour_bookings WHERE id = $1',
+    [bookingId]
   );
 
   if (bookingResult.rows.length === 0) {
-     console.error(`Webhook Error: No booking found for PI: ${paymentIntent.id}`);
+     console.error(`Webhook Error: No booking found for Booking ID: ${bookingId}`);
      return;
   }
   
@@ -265,13 +307,21 @@ const handlePaymentSuccess = async (paymentIntent) => {
 };
 
 const handlePaymentFailure = async (paymentIntent) => {
+  // --- [FIX] ---
+  // Webhook now finds the booking ID from the metadata
+  const bookingId = paymentIntent.metadata.booking_id;
+  if (!bookingId) {
+    console.error(`Webhook Error: No booking_id in metadata for failed PI: ${paymentIntent.id}`);
+    return; // Cannot proceed
+  }
+
   const bookingResult = await pool.query(
-    'SELECT id, seat_status FROM tour_bookings WHERE payment_intent_id = $1',
-    [paymentIntent.id]
+    'SELECT id, seat_status FROM tour_bookings WHERE id = $1',
+    [bookingId]
   );
 
   if (bookingResult.rows.length === 0) {
-     console.error(`Webhook Error: No booking found for failed PI: ${paymentIntent.id}`);
+     console.error(`Webhook Error: No booking found for failed Booking ID: ${bookingId}`);
      return;
   }
   
@@ -285,13 +335,21 @@ const handlePaymentFailure = async (paymentIntent) => {
 };
 
 const handleRefundSuccess = async (refund) => {
-    const bookingResult = await pool.query(
-    'SELECT id, payment_status FROM tour_bookings WHERE payment_intent_id = $1',
-    [refund.payment_intent]
+  // --- [FIX] ---
+  // Refund webhooks find the booking via metadata
+  const bookingId = refund.metadata.booking_id;
+  if (!bookingId) {
+    console.error(`Webhook Error: No booking_id in metadata for refund: ${refund.id}`);
+    return; // Cannot proceed
+  }
+
+  const bookingResult = await pool.query(
+    'SELECT id, payment_status FROM tour_bookings WHERE id = $1',
+    [bookingId]
   );
   
   if (bookingResult.rows.length === 0) {
-     console.error(`Webhook Error: No booking found for refunded PI: ${refund.payment_intent}`);
+     console.error(`Webhook Error: No booking found for refunded Booking ID: ${bookingId}`);
      return;
   }
   
@@ -324,13 +382,21 @@ const handleRefundSuccess = async (refund) => {
  * This puts the failed refund back in the admin's Triage queue.
  */
 const handleRefundFailure = async (refund) => {
-    const bookingResult = await pool.query(
-    'SELECT id, seat_status, payment_status FROM tour_bookings WHERE payment_intent_id = $1',
-    [refund.payment_intent]
+  // --- [FIX] ---
+  // Refund webhooks find the booking via metadata
+  const bookingId = refund.metadata.booking_id;
+  if (!bookingId) {
+    console.error(`Webhook Error: No booking_id in metadata for failed refund: ${refund.id}`);
+    return; // Cannot proceed
+  }
+    
+  const bookingResult = await pool.query(
+    'SELECT id, seat_status, payment_status FROM tour_bookings WHERE id = $1',
+    [bookingId]
   );
   
   if (bookingResult.rows.length === 0) {
-     console.error(`Webhook Error: No booking found for failed refund PI: ${refund.payment_intent}`);
+     console.error(`Webhook Error: No booking found for failed refund Booking ID: ${bookingId}`);
      return;
   }
   

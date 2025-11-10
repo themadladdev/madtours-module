@@ -9,23 +9,21 @@ import cors from 'cors';
 import { config } from './config/environment.js';
 import { pool } from './db/db.js';
 
-// --- UPDATED: Import all three cron jobs ---
+// --- Cron Jobs ---
 import { 
   startReminderCron, 
   startAbandonedCartCron,
-  startReconciliationCron // 1. IMPORT THE NEW ACCOUNTANT
+  startReconciliationCron 
 } from './utils/tourReminderCron.js';
 
-// --- Import MADTours Routes (FIXED) ---
+// --- Import MADTours Routes ---
 import adminTourRoutes from './routes/adminTourRoutes.js';
 import adminBookingRoutes from './routes/adminBookingRoutes.js';
 import publicTourRoutes from './routes/publicTourRoutes.js';
-
-// --- NEW: Import Ticket Library Routes ---
 import adminTicketRoutes from './routes/adminTicketRoutes.js';
 
-// We need the controller for the webhook
-import { handleStripeWebhook } from './controllers/publicTourController.js';
+// --- Import the NEW webhook routes ---
+import stripeWebhookRoutes from './routes/stripeWebhookRoutes.js'; 
 
 const app = express();
 
@@ -39,14 +37,20 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// --- Stripe Webhook (FIXED) ---
-// Must come BEFORE express.json()
-app.post('/api/webhooks/stripe',
-  express.raw({ type: 'application/json' }),
-  handleStripeWebhook
+// --- [MODIFIED] Stripe Webhook Parser ---
+// Now listening at /api/stripe/webhook
+app.use('/api/stripe', 
+  express.raw({ type: 'application/json' }), 
+  (req, res, next) => {
+    // Attach the raw body to the request object for the controller
+    req.rawBody = req.body;
+    next();
+  }
 );
+// --- [END MODIFIED] ---
 
-// JSON Parser
+
+// JSON Parser (applies to all routes *except* the webhook)
 app.use(express.json());
 
 // --- Routes ---
@@ -54,12 +58,13 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', environment: config.nodeEnv });
 });
 
-// --- Add your MADTours routes here (FIXED) ---
+// --- [MODIFIED] Add the new Stripe webhook route (no /v1) ---
+app.use('/api/stripe', stripeWebhookRoutes);
+
+// --- [MODIFIED] Standard MADTours routes (no /v1) ---
 app.use('/api/admin/tours', adminTourRoutes);
 app.use('/api/admin/bookings', adminBookingRoutes);
-app.use('/api/tours', publicTourRoutes); // Corrected from app.set to app.use
-
-// --- NEW: Add Ticket Library routes ---
+app.use('/api/tours', publicTourRoutes);
 app.use('/api/admin/tickets', adminTicketRoutes);
 
 
@@ -82,12 +87,12 @@ const startServer = async () => {
       console.log(`🚀 Server running on port ${config.port} in ${config.nodeEnv} mode`);
       console.log(`[Network] Listening on all interfaces (0.0.0.0)`);
       
-      // --- [MODIFIED] Start cron jobs in prod OR dev ---
+      // --- Start cron jobs ---
       if (config.nodeEnv === 'production' || config.nodeEnv === 'development') {
          console.log('Starting cron jobs for development/production...');
          startReminderCron();
          startAbandonedCartCron();
-         startReconciliationCron(); // 2. CALL THE NEW ACCOUNTANT
+         startReconciliationCron();
       } else {
          console.log('Cron jobs are disabled for this environment.');
       }

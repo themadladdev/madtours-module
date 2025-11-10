@@ -1,7 +1,4 @@
-// ==========================================
 // server/src/services/tourBookingService.js
-// ==========================================
-
 import { pool } from '../db/db.js';
 import { randomBytes } from 'crypto';
 import { sendBookingConfirmation, sendBookingCancellation } from './tourEmailService.js';
@@ -13,11 +10,10 @@ export const generateBookingReference = () => {
 /**
  * Creates a booking using "on-demand" / "Just-in-Time" logic.
  * (For the OLD AvailabilityBookingWidget)
- * * REFACTORED FOR NEW STATE ARCHITECTURE (Origin 1)
- * This is the "Hostage" step.
- * Sets the initial state for the "Janitor" to monitor.
+ * --- [FIX] ---
+ * Now accepts paymentIntentId to satisfy DB constraints on INSERT
  */
-export const createBooking = async (bookingData) => {
+export const createBooking = async (bookingData, paymentIntentId) => {
   const {
     tour_id,
     date,
@@ -111,14 +107,14 @@ export const createBooking = async (bookingData) => {
     }
 
     // Step 6: Create booking
-    // --- [REFACTOR] ---
-    // Sets the initial "hostage" state for an online booking (Origin 1)
+    // --- [FIX] ---
+    // Inserts all required states at once to satisfy all constraints
     //
     const bookingResult = await client.query(
       `INSERT INTO tour_bookings 
        (booking_reference, tour_instance_id, customer_id, seats, total_amount, 
-        special_requests, seat_status, payment_status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'seat_pending', 'payment_stripe_pending')
+        special_requests, seat_status, payment_status, payment_intent_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'seat_pending', 'payment_stripe_pending', $7)
        RETURNING *`,
       [
         reference,
@@ -126,7 +122,8 @@ export const createBooking = async (bookingData) => {
         customerId,
         seats,
         total_amount,
-        special_requests || null
+        special_requests || null,
+        paymentIntentId // Pass in the PI_ID
       ]
     );
 
@@ -141,12 +138,17 @@ export const createBooking = async (bookingData) => {
     );
 
     // Step 8: Create history record
-    // --- [REFACTOR] ---
     await client.query(
       `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
        VALUES ($1, NULL, 'seat_pending', 'Booking created')`,
       [newBooking.id]
     );
+    await client.query(
+      `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
+       VALUES ($1, NULL, 'payment_stripe_pending', 'Booking created')`,
+      [newBooking.id]
+    );
+
 
     await client.query('COMMIT');
     return newBooking;
@@ -162,11 +164,10 @@ export const createBooking = async (bookingData) => {
 /**
  * Creates a complex booking from the new TicketBookingWidget.
  *
- * REFACTORED FOR NEW STATE ARCHITECTURE (Origin 1)
- * This is the "Hostage" step.
- * Sets the initial state for the "Janitor" to monitor.
+ * --- [FIX] ---
+ * Now accepts paymentIntentId to satisfy DB constraints on INSERT
  */
-export const createTicketBooking = async (bookingData) => {
+export const createTicketBooking = async (bookingData, paymentIntentId) => {
   const {
     tourId,
     date,
@@ -259,14 +260,14 @@ export const createTicketBooking = async (bookingData) => {
     }
 
     // Step 6: Create booking
-    // --- [REFACTOR] ---
-    // Sets the initial "hostage" state for an online booking (Origin 1)
+    // --- [FIX] ---
+    // Inserts all required states at once to satisfy all constraints
     //
     const bookingResult = await client.query(
       `INSERT INTO tour_bookings 
        (booking_reference, tour_instance_id, customer_id, seats, total_amount, 
-        seat_status, payment_status, customer_notes)
-       VALUES ($1, $2, $3, $4, $5, 'seat_pending', 'payment_stripe_pending', $6)
+        seat_status, payment_status, customer_notes, payment_intent_id)
+       VALUES ($1, $2, $3, $4, $5, 'seat_pending', 'payment_stripe_pending', $6, $7)
        RETURNING *`,
       [
         reference,
@@ -274,7 +275,8 @@ export const createTicketBooking = async (bookingData) => {
         customerId,
         totalSeats, 
         totalAmount,
-        customerNotes || null 
+        customerNotes || null,
+        paymentIntentId // Pass in the PI_ID
       ]
     );
 
@@ -290,10 +292,14 @@ export const createTicketBooking = async (bookingData) => {
     );
 
     // Step 8: Create history record
-    // --- [REFACTOR] ---
     await client.query(
       `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
        VALUES ($1, NULL, 'seat_pending', 'Booking created')`,
+      [newBookingId]
+    );
+    await client.query(
+      `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
+       VALUES ($1, NULL, 'payment_stripe_pending', 'Booking created')`,
       [newBookingId]
     );
 
@@ -341,19 +347,12 @@ export const getBookingByReference = async (reference) => {
 };
 
 /**
- * Updates a booking with the Stripe PaymentIntent ID.
- * This is called *after* createTicketBooking.
+ * --- [REMOVED] ---
+ * This function is now obsolete.
+ * The booking is created with the payment_intent_id from the start.
  */
-export const updateBookingPaymentIntent = async (bookingId, paymentIntentId) => {
-  const result = await pool.query(
-    `UPDATE tour_bookings 
-     SET payment_intent_id = $1, updated_at = NOW()
-     WHERE id = $2
-     RETURNING *`,
-    [paymentIntentId, bookingId]
-  );
-  return result.rows[0];
-};
+// export const updateBookingPaymentIntent = async (bookingId, paymentIntentId) => { ... }
+
 
 /**
  * Confirms a booking, typically after a successful Stripe payment webhook.
@@ -377,11 +376,22 @@ export const confirmBooking = async (bookingId) => {
        RETURNING *`,
       [bookingId]
     );
+    
+    const booking = result.rows[0];
+    if (!booking) {
+      throw new Error(`Booking not found for ID: ${bookingId}`);
+    }
 
     // --- [REFACTOR] ---
+    // Log both state changes
     await client.query(
       `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
        VALUES ($1, 'seat_pending', 'seat_confirmed', 'Payment successful')`,
+      [bookingId]
+    );
+    await client.query(
+      `INSERT INTO tour_booking_history (booking_id, previous_status, new_status, reason)
+       VALUES ($1, 'payment_stripe_pending', 'payment_stripe_success', 'Payment successful')`,
       [bookingId]
     );
 
@@ -402,17 +412,17 @@ export const confirmBooking = async (bookingId) => {
       [bookingId]
     );
 
-    const booking = bookingDetails.rows[0];
+    const fullBooking = bookingDetails.rows[0];
 
     // Send confirmation email (don't await, let it run async)
     sendBookingConfirmation(
-      booking,
-      { first_name: booking.first_name, last_name: booking.last_name, email: booking.email },
-      { date: booking.date, time: booking.time },
-      { name: booking.tour_name, duration_minutes: booking.duration_minutes }
+      fullBooking,
+      { first_name: fullBooking.first_name, last_name: fullBooking.last_name, email: fullBooking.email },
+      { date: fullBooking.date, time: fullBooking.time },
+      { name: fullBooking.tour_name, duration_minutes: fullBooking.duration_minutes }
     ).catch(err => console.error('Failed to send confirmation email:', err));
 
-    return result.rows[0];
+    return booking;
 
   } catch (error) {
     await client.query('ROLLBACK');
@@ -484,11 +494,19 @@ export const cancelBooking = async (bookingId, reason, adminId = null) => {
     }
 
     // --- [REFACTOR] ---
+    // Log both state changes
     await client.query(
       `INSERT INTO tour_booking_history 
        (booking_id, previous_status, new_status, changed_by_admin, reason)
        VALUES ($1, $2, 'seat_cancelled', $3, $4)`,
       [bookingId, booking.seat_status, adminId, reason]
+    );
+    // Log the payment status change
+    await client.query(
+      `INSERT INTO tour_booking_history 
+       (booking_id, previous_status, new_status, changed_by_admin, reason)
+       VALUES ($1, $2, 'payment_none', $3, $4)`,
+      [bookingId, booking.payment_status, adminId, reason]
     );
 
     await client.query('COMMIT');
