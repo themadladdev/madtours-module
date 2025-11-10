@@ -151,7 +151,6 @@ const TourDashboard = () => {
           <div className={styles.cardSection}>
             <h3 className={styles.columnSubTitle}>Triage Queue</h3>
             <div className={styles.triageGroup}>
-              {/* --- [MODIFIED] filterKey --- */}
               <TriageLink
                 label="Bookings Pending Triage"
                 count={data?.triage?.pending_triage || 0}
@@ -164,10 +163,9 @@ const TourDashboard = () => {
                 label="Pending Bookings (> 1hr)"
                 count={data?.triage?.pending_bookings || 0}
                 path="/admin/tours/bookings"
-                filterKey="action_required"
+                filterKey="pending_inventory"
                 isLoading={loading}
               />
-              {/* --- [MODIFIED] filterKey --- */}
               <TriageLink
                 label="Failed Payments"
                 count={data?.triage?.failed_payments || 0}

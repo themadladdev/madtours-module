@@ -82,26 +82,26 @@ export const getAllBookings = async (req, res, next) => {
     let paramCount = 1;
 
     if (special_filter) {
+      // --- [MODIFIED] "Action Required" is now only Triage, Failed Refunds, and Missed Payments ---
       if (special_filter === 'action_required') {
         query += ` AND (
           b.seat_status = 'triage' OR
           b.payment_status = 'refund_stripe_failed' OR
-          (b.seat_status = 'seat_pending' AND b.created_at < (NOW() - INTERVAL '1 hour')) OR
           (b.payment_status = 'payment_manual_pending' AND ti.date < CURRENT_DATE)
         )`;
       } 
-      else if (special_filter === 'triage_queue') {
-         query += ` AND (b.seat_status = 'triage' OR b.payment_status = 'refund_stripe_failed')`;
-      }
-      else if (special_filter === 'stuck_pending_queue') {
+      // --- [NEW] "Pending Inventory" is *only* stuck "seat_pending" bookings ---
+      else if (special_filter === 'pending_inventory') {
          query += ` AND (b.seat_status = 'seat_pending' AND b.created_at < (NOW() - INTERVAL '1 hour'))`;
-      }
-      else if (special_filter === 'missed_payment_queue') {
-         query += ` AND (b.payment_status = 'payment_manual_pending' AND ti.date < CURRENT_DATE)`;
       }
       else if (special_filter === 'pay_on_arrival_queue') {
          query += ` AND (b.payment_status = 'payment_manual_pending' AND ti.date >= CURRENT_DATE)`;
       }
+      // --- [DEPRECATED] Removed old granular filters ---
+      // else if (special_filter === 'triage_queue') { ... }
+      // else if (special_filter === 'stuck_pending_queue') { ... }
+      // else if (special_filter === 'missed_payment_queue') { ... }
+
     } else {
       if (seat_status) {
         query += ` AND b.seat_status = $${paramCount++}`;
@@ -369,6 +369,3 @@ export const manualMarkAsPaid = async (req, res, next) => {
     next(error);
   }
 };
-
-// --- [FIX] Removed duplicate manualCancelBooking ---
-// The `cancelBooking` function at the top already handles this.

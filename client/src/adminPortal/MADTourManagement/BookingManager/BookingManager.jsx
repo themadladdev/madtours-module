@@ -30,21 +30,20 @@ const BookingManager = ({ defaultActionCount }) => {
   const [queueCounts, setQueueCounts] = useState({
     action_required: 0,
     pay_on_arrival: 0,
+    pending_inventory: 0,
   });
 
-  // --- [MODIFIED] Check session storage for a preset filter first ---
+  // This function now *only* runs on the very first load
   const getInitialFilter = () => {
     const presetFilter = sessionStorage.getItem('admin_preset_filter');
     if (presetFilter) {
-      sessionStorage.removeItem('admin_preset_filter'); // Clear the key
-      return presetFilter; // Use the key from the dashboard link
+      sessionStorage.removeItem('admin_preset_filter');
+      return presetFilter;
     }
-    // Fallback to default logic
     return defaultActionCount > 0 ? 'action_required' : 'seat_confirmed';
   };
 
   const [activeQuickFilter, setActiveQuickFilter] = useState(getInitialFilter);
-  // --- [END MODIFICATION] ---
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,16 +73,36 @@ const BookingManager = ({ defaultActionCount }) => {
   
   const [payDialog, setPayDialog] = useState({ booking: null });
 
+  // --- [NEW] This effect listens for dashboard navigation ---
+  useEffect(() => {
+    const checkPresetFilter = () => {
+      const presetFilter = sessionStorage.getItem('admin_preset_filter');
+      if (presetFilter) {
+        sessionStorage.removeItem('admin_preset_filter');
+        setActiveQuickFilter(presetFilter); // Set the active filter state
+      }
+    };
+    
+    // Listen for the same event the dashboard fires
+    window.addEventListener('route-change', checkPresetFilter);
+    
+    return () => {
+      window.removeEventListener('route-change', checkPresetFilter);
+    };
+  }, []); // Empty array ensures this runs once to set up the listener
+
   const fetchQueueCounts = useCallback(async () => {
     try {
-      const [actionData, payOnArrivalData] = await Promise.all([
+      const [actionData, payOnArrivalData, pendingInvData] = await Promise.all([
         getAllBookings({ special_filter: 'action_required' }),
-        getAllBookings({ special_filter: 'pay_on_arrival_queue' })
+        getAllBookings({ special_filter: 'pay_on_arrival_queue' }),
+        getAllBookings({ special_filter: 'pending_inventory' })
       ]);
       
       setQueueCounts({
         action_required: actionData.length || 0,
         pay_on_arrival: payOnArrivalData.length || 0,
+        pending_inventory: pendingInvData.length || 0,
       });
       
     } catch (error) {
@@ -105,6 +124,8 @@ const BookingManager = ({ defaultActionCount }) => {
       filters.special_filter = 'action_required';
     } else if (activeQuickFilter === 'pay_on_arrival') {
       filters.special_filter = 'pay_on_arrival_queue';
+    } else if (activeQuickFilter === 'pending_inventory') {
+      filters.special_filter = 'pending_inventory';
     } else if (activeQuickFilter !== 'all') {
       filters.seat_status = activeQuickFilter;
     }
@@ -120,10 +141,11 @@ const BookingManager = ({ defaultActionCount }) => {
     }
   }, [activeQuickFilter, dateFilters, debouncedSearchTerm]); 
 
+  // --- [MODIFIED] This hook now re-runs when activeQuickFilter changes ---
   useEffect(() => {
     fetchQueueCounts();
     loadBookings();
-  }, [loadBookings, fetchQueueCounts]);
+  }, [loadBookings, fetchQueueCounts, activeQuickFilter]); // Added activeQuickFilter
 
   useEffect(() => {
     if (toast) {
@@ -191,7 +213,7 @@ const BookingManager = ({ defaultActionCount }) => {
     setActiveQuickFilter(newFilterId);
     setSearchTerm('');
     setDateFilters({ startDate: '', endDate: '' });
-    fetchQueueCounts();
+    // fetchQueueCounts(); // This is now handled by the main useEffect
   };
   
   const handleClearFilters = () => {
@@ -204,7 +226,7 @@ const BookingManager = ({ defaultActionCount }) => {
     loadBookings();
   };
 
-  // --- Confirmation Handlers ---
+  // --- Confirmation Handlers (Unchanged) ---
   
   const handleConfirmStripeRefund = async () => {
     const { booking } = resolveStripeDialog;
@@ -297,6 +319,12 @@ const BookingManager = ({ defaultActionCount }) => {
       badgeType: 'destructive'
     },
     { 
+      id: 'pending_inventory', 
+      label: 'Pending Inventory',
+      badge: queueCounts.pending_inventory,
+      badgeType: 'destructive'
+    },
+    { 
       id: 'pay_on_arrival', 
       label: 'Pay on Arrival',
       badge: queueCounts.pay_on_arrival,
@@ -307,7 +335,7 @@ const BookingManager = ({ defaultActionCount }) => {
     { id: 'seat_cancelled', label: 'Cancelled', badge: 0, badgeType: 'informational' },
   ];
   
-  const isActionView = activeQuickFilter === 'action_required';
+  const isActionView = activeQuickFilter === 'action_required' || activeQuickFilter === 'pending_inventory';
 
   return (
     <div className={styles.bookingManager}>
