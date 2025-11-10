@@ -24,15 +24,18 @@ const StripePaymentForm = ({ bookingRef, totalAmount, onPaymentSuccess, onPaymen
 
     setIsLoading(true);
 
+    // --- [FIX] ---
+    // Updated the return_url to point to your new /payment-result page.
+    // We also add the 'handler' query param so the page knows
+    // which bolt-on logic to run (the "madtours-verify" handler).
+    const returnUrl = `${window.location.origin}/payment-result?handler=madtours-verify`;
+    // --- [END FIX] ---
+
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // --- THIS IS CRITICAL ---
-        // This is the page your customer will be redirected to *after* payment.
-        // For testing, we can just point it back to a generic page,
-        // but in production, this would be a "Thank You" or "Booking Confirmed" page.
-        // The webhook confirms the booking *before* this redirect.
-        return_url: `${window.location.origin}/booking-result`,
+        // Use the new, correct return_url
+        return_url: returnUrl,
       },
       // We are redirecting, so the result is handled on the return_url
       // *unless* there's an immediate error.

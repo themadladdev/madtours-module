@@ -289,22 +289,63 @@ export const getBookingByReference = async (req, res, next) => {
   }
 };
 
+// --- [NEW] VERIFICATION ENDPOINT ---
+/**
+ * Verifies a payment intent *after* client-side redirect.
+ * This is the "pull" mechanism that backs up the "push" (webhook).
+ * POST /api/tours/bookings/verify-payment
+ */
+export const verifyPayment = async (req, res, next) => {
+  try {
+    const { paymentIntentId } = req.body;
+    if (!paymentIntentId) {
+      return res.status(400).json({ message: 'Payment Intent ID is required.' });
+    }
+    
+    // 1. Securely retrieve the PI from Stripe
+    const paymentIntent = await stripeService.stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    // 2. Check its status
+    if (paymentIntent.status === 'succeeded') {
+      const bookingId = paymentIntent.metadata.booking_id;
+      if (!bookingId) {
+        throw new Error('Payment Intent is missing booking_id in metadata.');
+      }
+      
+      // 3. Re-use the *exact same* confirmation logic as the webhook
+      // This is idempotent - it will only confirm a 'seat_pending' booking
+      const booking = await bookingService.confirmBooking(bookingId);
+      
+      res.json({
+        status: 'succeeded',
+        message: 'Your booking is confirmed!',
+        bookingReference: booking.booking_reference
+      });
+
+    } else {
+      // Handle other statuses (e.g., 'processing', 'failed')
+      res.json({
+        status: paymentIntent.status,
+        message: 'Your payment was not successful. Please contact support.'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error verifying payment intent:', error);
+    next(error);
+  }
+};
+// --- [END NEW] ---
+
+
 /**
  * Handle incoming Stripe webhooks
  * POST /api/webhooks/stripe
  */
 export const handleStripeWebhook = async (req, res, next) => {
-  const sig = req.headers['stripe-signature'];
-  
-  // Use req.rawBody provided by the server.js middleware
-  const rawBody = req.rawBody; 
-
-  try {
-    await stripeService.handleWebhook(rawBody, sig);
-    res.json({ received: true });
-  } catch (error) {
-    console.error('Webhook error:', error);
-    // Send 400 status for webhook errors as per Stripe docs
-    res.status(400).json({ message: error.message });
-  }
+  // This controller's logic is now in server/src/controllers/stripeWebhookController.js
+  // This stub is left to prevent old imports from breaking, but
+  // server.js should no longer be pointing here.
+  // This function should be removed once all imports are updated.
+  res.status(500).json({ message: "Deprecated webhook handler called." });
 };

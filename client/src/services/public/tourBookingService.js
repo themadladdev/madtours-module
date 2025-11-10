@@ -91,3 +91,19 @@ export const getResolvedInstancePricing = (tourId, date, time) => {
   // We use the full HH:MM:SS time from the instance to match the DB
   return publicApiFetch(`/tours/${tourId}/pricing/instance?${params}`);
 };
+
+
+// --- [NEW] PAYMENT VERIFICATION FUNCTION ---
+/**
+ * Asks the server to verify a payment intent after a redirect.
+ * This is the "pull" mechanism.
+ * Corresponds to: POST /api/tours/bookings/verify-payment
+ * @param {string} paymentIntentId - The 'pi_...' ID from the URL
+ */
+export const verifyBookingPayment = (paymentIntentId) => {
+  return publicApiFetch('/tours/bookings/verify-payment', {
+    method: 'POST',
+    body: JSON.stringify({ paymentIntentId }),
+  });
+};
+// --- [END NEW] ---

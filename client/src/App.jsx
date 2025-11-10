@@ -21,6 +21,8 @@ const PrototypeShowcase = lazy(() => import('./prototypeshowcase/PrototypeShowca
 const TourCollectionPage = lazy(() => import('./modules/MADTours/TourCollectionPage/TourCollectionPage.jsx'));
 const TourDetailPage = lazy(() => import('./modules/MADTours/TourDetailPage/TourDetailPage.jsx'));
 
+// --- [NEW] Import the Payment Result Page ---
+const PaymentResult = lazy(() => import('./modules/PaymentResult/PaymentResult.jsx'));
 
 
 // A simple loading component
@@ -67,6 +69,13 @@ function App() {
       return <AdminDashboard />;
     }
 
+    // --- [NEW] Payment Result Page ---
+    // This is a full-screen page, not a widget
+    if (path === '/payment-result') {
+      return <PaymentResult />;
+    }
+    // --- [END NEW] ---
+
     // --- PROTOTYPE SHOWCASE ---
     if (path === '/home') {
       return <PrototypeShowcase />;
@@ -110,10 +119,14 @@ function App() {
   // These are the two paths that render the showcase, which has its own controls.
   const isShowcasePage = (path === '/home' || path === '/');
 
+  // --- [NEW] Check for other full-page routes ---
+  // These routes should NOT be wrapped in the sandbox controls
+  const isFullPageRoute = isShowcasePage || path === '/payment-result' || path.startsWith('/admin');
+
   return (
     <Suspense fallback={<PageLoader />}>
-      {isShowcasePage ? (
-        // Just render the component, it has its own controls
+      {isFullPageRoute ? (
+        // Just render the component, it has its own controls or is full-screen
         renderComponent()
       ) : (
         // Render all other pages with the global controls

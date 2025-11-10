@@ -20,6 +20,11 @@ router.post('/bookings', bookingRateLimit, publicTourController.createBooking);
 router.post('/ticket-bookings', bookingRateLimit, publicTourController.createTicketBooking);
 // --- END NEW ROUTE ---
 
+// --- [NEW] PAYMENT VERIFICATION ROUTE ---
+// POST   /api/tours/bookings/verify-payment
+router.post('/bookings/verify-payment', publicTourController.verifyPayment);
+// --- [END NEW] ---
+
 // GET    /api/tours/bookings/:reference
 router.get('/bookings/:reference', publicTourController.getBookingByReference);
 
@@ -29,7 +34,7 @@ router.get('/:id/pricing/instance', publicTourController.getResolvedInstancePric
 // === END NEW ROUTE ===
 
 // === Public Pricing (Dynamic route) ===
-// GET    /api/tours/:id/pricing
+// GET    /api/tGours/:id/pricing
 router.get('/:id/pricing', publicTourController.getTourPricing);
 
 // === NEW: Availability Indicator (Dynamic route) ===
