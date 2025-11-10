@@ -1,3 +1,8 @@
+// ==========================================
+// UPDATED FILE
+// client/src/adminPortal/MADTourManagement/MADTourManagement.jsx
+// ==========================================
+
 import React, { useState, useEffect } from 'react';
 import styles from './MADTourManagement.module.css';
 import sharedStyles from '../../MADLibrary/admin/styles/adminshared.module.css';
@@ -26,28 +31,39 @@ const MADTourManagement = () => {
     // --- [NEW] State for the manual booking modal ---
     const [isManualBookingModalOpen, setIsManualBookingModalOpen] = useState(false);
 
-    // Read the path to set the initial tab
+    // --- [MODIFIED] This effect now handles initial load AND navigation ---
     useEffect(() => {
-        const path = window.location.pathname;
-        if (path.includes('/operations')) {
-            setActiveSubTab('operations');
-        } else if (path.includes('/bookings')) {
-            setActiveSubTab('bookings');
-        } else if (path.includes('/manage')) {
-            setActiveSubTab('tours');
-        } else if (path.includes('/tickets')) {
-            setActiveSubTab('tickets');
-        } else if (path.includes('/statistics')) { 
-            setActiveSubTab('statistics');
-        } else {
-            setActiveSubTab('dashboard'); // Default
-        }
-        
-        // Fetch count for the badge
-        fetchResolutionCount();
-    }, []);
+        const updateActiveTab = () => {
+            const path = window.location.pathname;
+            if (path.includes('/operations')) {
+                setActiveSubTab('operations');
+            } else if (path.includes('/bookings')) {
+                setActiveSubTab('bookings');
+            } else if (path.includes('/manage')) {
+                setActiveSubTab('tours');
+            } else if (path.includes('/tickets')) {
+                setActiveSubTab('tickets');
+            } else if (path.includes('/statistics')) { 
+                setActiveSubTab('statistics');
+            } else {
+                setActiveSubTab('dashboard'); // Default
+            }
+        };
 
-    // Custom navigation handler
+        // Run once on initial load
+        updateActiveTab();
+        fetchResolutionCount();
+        
+        // Add event listener to re-run when our custom router navigates
+        window.addEventListener('route-change', updateActiveTab);
+
+        // Cleanup listener
+        return () => {
+            window.removeEventListener('route-change', updateActiveTab);
+        };
+    }, []); // Empty array is correct, as we are managing the listener manually
+
+    // Custom navigation handler for *this component's* tabs
     const handleNavigate = (event, path, tabId) => {
         // Check if event is from a DOM click or select onChange
         const isSelectEvent = event.target.tagName === 'SELECT';
@@ -59,7 +75,10 @@ const MADTourManagement = () => {
         // Refresh count on any navigation
         fetchResolutionCount();
         
-        setActiveSubTab(tabId);
+        // This component doesn't need to set its own active tab here,
+        // because the 'route-change' event listener above will handle it.
+        // setActiveSubTab(tabId); // <-- This is now handled by the useEffect
+        
         window.history.pushState({}, '', path);
         const navigationEvent = new CustomEvent('route-change');
         window.dispatchEvent(navigationEvent);
@@ -74,13 +93,10 @@ const MADTourManagement = () => {
     };
 
     /**
-     * --- [REFACTORED] ---
      * Fetches the count of ALL "actionable items" for the admin.
-     * This includes Triage, Failed Refunds, Stuck Hostage, and Missed Payments.
      */
     const fetchResolutionCount = async () => {
         try {
-            // --- [FIX] Use the new special_filter to get the *true* count ---
             const data = await getAllBookings({ 
               special_filter: 'action_required' 
             });
@@ -99,7 +115,8 @@ const MADTourManagement = () => {
             label: 'Dashboard', 
             path: '/admin/tours/dashboard',
             icon: <IconPlaceholder />,
-            component: <TourDashboard /> 
+            // --- [NEW] Pass navigation handler to dashboard ---
+            component: <TourDashboard onNavigate={handleNavigate} /> 
         },
         { 
             id: 'operations', 
@@ -113,7 +130,6 @@ const MADTourManagement = () => {
             label: 'Bookings', 
             path: '/admin/tours/bookings',
             icon: <IconPlaceholder />,
-            // --- [FIX] Pass the true count down ---
             component: <BookingManager defaultActionCount={resolutionCount} />,
             badge: resolutionCount > 0 ? resolutionCount : null
         },
@@ -155,11 +171,10 @@ const MADTourManagement = () => {
                         Manage tour schedules, view bookings, and see manifests.
                     </p>
                  </div>
-                 {/* --- [NEW] Global Action Button --- */}
+                 {/* --- Global Action Button --- */}
                  <div className={styles.headerActions}>
                     <button 
                         className={sharedStyles.primaryButton}
-                        // --- [NEW] Wire up the modal ---
                         onClick={() => setIsManualBookingModalOpen(true)}
                     >
                         Create New Booking
@@ -178,7 +193,6 @@ const MADTourManagement = () => {
                         >
                             {tab.icon}
                             <span>{tab.label}</span>
-                            {/* --- [FIX] Using sharedStyles now --- */}
                             {tab.badge && (
                                 <span className={sharedStyles.notificationBadgeDestructive}>
                                     {tab.badge}
@@ -208,8 +222,7 @@ const MADTourManagement = () => {
                  {renderSubComponent()}
             </div>
 
-            {/* --- [NEW] Render the modal --- */}
-            {/* This entry point passes no initial props, so the form is blank */}
+            {/* --- Render the modal --- */}
             <ManualBookingModal
                 isOpen={isManualBookingModalOpen}
                 onClose={() => setIsManualBookingModalOpen(false)}

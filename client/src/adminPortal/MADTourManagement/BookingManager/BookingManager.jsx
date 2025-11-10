@@ -12,7 +12,7 @@ import {
   retryStripeRefund
 } from '../../../services/admin/adminBookingService.js';
 
-// --- [NEW] Child component imports ---
+// --- Child component imports ---
 import BookingFilter from './BookingFilter.jsx';
 import BookingList from './BookingList.jsx';
 
@@ -32,9 +32,19 @@ const BookingManager = ({ defaultActionCount }) => {
     pay_on_arrival: 0,
   });
 
-  const [activeQuickFilter, setActiveQuickFilter] = useState(
-    defaultActionCount > 0 ? 'action_required' : 'seat_confirmed'
-  );
+  // --- [MODIFIED] Check session storage for a preset filter first ---
+  const getInitialFilter = () => {
+    const presetFilter = sessionStorage.getItem('admin_preset_filter');
+    if (presetFilter) {
+      sessionStorage.removeItem('admin_preset_filter'); // Clear the key
+      return presetFilter; // Use the key from the dashboard link
+    }
+    // Fallback to default logic
+    return defaultActionCount > 0 ? 'action_required' : 'seat_confirmed';
+  };
+
+  const [activeQuickFilter, setActiveQuickFilter] = useState(getInitialFilter);
+  // --- [END MODIFICATION] ---
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -314,7 +324,7 @@ const BookingManager = ({ defaultActionCount }) => {
         </div>
       )}
 
-      {/* --- [NEW] Render the extracted Filter Bar --- */}
+      {/* --- Render the extracted Filter Bar --- */}
       <BookingFilter
         activeQuickFilter={activeQuickFilter}
         populatedQuickFilters={populatedQuickFilters}
@@ -328,7 +338,7 @@ const BookingManager = ({ defaultActionCount }) => {
         onClearFilters={handleClearFilters}
       />
       
-      {/* --- [NEW] Render the extracted Results List --- */}
+      {/* --- Render the extracted Results List --- */}
       <BookingList
         loading={loading}
         bookings={bookings}

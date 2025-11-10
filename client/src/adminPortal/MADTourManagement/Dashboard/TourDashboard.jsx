@@ -1,3 +1,7 @@
+// ==========================================
+// client/src/adminPortal/MADTourManagement/Dashboard/TourDashboard.jsx
+// ==========================================
+
 import React, { useState, useEffect } from 'react';
 import { getDirectionalDashboard } from '../../../services/admin/adminBookingService.js';
 import { getTourInstances } from '../../../services/admin/adminTourService.js';
@@ -50,7 +54,7 @@ const TriageLink = ({ label, count, path, filterKey, isLoading }) => {
   );
 };
 
-// --- [MODIFIED] Added 'subtextIcon' prop ---
+// Reusable component for DenseStatRow
 const DenseStatRow = ({ label, value, subtext, subtextIcon, sparklineData, isLoading }) => (
   <div className={styles.denseStatRow}>
     <span className={styles.denseStatLabel}>{label}</span>
@@ -59,28 +63,21 @@ const DenseStatRow = ({ label, value, subtext, subtextIcon, sparklineData, isLoa
     ) : (
       <span className={styles.denseStatValue}>
         {value}
-        {/* Render sparkline if data exists */}
         {sparklineData && sparklineData.length > 0 && (
           <span className={styles.sparklineWrapper}>
             <Sparkline data={sparklineData} width={60} height={16} />
           </span>
         )}
         
-        {/* --- MODIFICATION HERE --- */}
-        {/* This is the outer pill container */}
         <span className={styles.denseStatSubtext}>
-          {/* 1. The Value/Number (reversed order) */}
           <span className={styles.denseStatSubtextValue}>
             {subtext}
           </span>
-          {/* 2. The Icon with its own background */}
           <span className={styles.denseStatSubtextIcon}>
             {subtextIcon === 'user' && <UserIcon />}
             {subtextIcon === 'ticket' && <TicketIcon />}
           </span>
         </span>
-        {/* --- END MODIFICATION --- */}
-
       </span>
     )}
   </div>
@@ -109,7 +106,6 @@ const TourDashboard = () => {
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      // Fetch all data in parallel
       const [statsData, instancesData] = await Promise.all([
         getDirectionalDashboard(),
         getTourInstances({ 
@@ -128,15 +124,11 @@ const TourDashboard = () => {
   };
   
   const handleManifestNavigate = (e, instanceId) => {
-    // Stop event from bubbling if it came from the button
     e.stopPropagation(); 
-    
-    // We don't need to pre-fetch here; the ManifestView component handles that.
     handleNavigate(new Event('click'), `/admin/tours/manifest/${instanceId}`);
   };
 
   const handleRowClick = (e, tour) => {
-    // Only navigate if the tour is NOT virtual (i.e., it has an ID)
     if (tour.id) {
         handleNavigate(e, `/admin/tours/manifest/${tour.id}`);
     }
@@ -159,25 +151,28 @@ const TourDashboard = () => {
           <div className={styles.cardSection}>
             <h3 className={styles.columnSubTitle}>Triage Queue</h3>
             <div className={styles.triageGroup}>
+              {/* --- [MODIFIED] filterKey --- */}
               <TriageLink
                 label="Bookings Pending Triage"
                 count={data?.triage?.pending_triage || 0}
                 path="/admin/tours/bookings"
-                filterKey="pending_triage"
+                filterKey="action_required"
                 isLoading={loading}
               />
+              {/* --- [MODIFIED] filterKey --- */}
               <TriageLink
                 label="Pending Bookings (> 1hr)"
                 count={data?.triage?.pending_bookings || 0}
                 path="/admin/tours/bookings"
-                filterKey="pending"
+                filterKey="action_required"
                 isLoading={loading}
               />
+              {/* --- [MODIFIED] filterKey --- */}
               <TriageLink
                 label="Failed Payments"
                 count={data?.triage?.failed_payments || 0}
                 path="/admin/tours/bookings"
-                filterKey="payment_failed"
+                filterKey="action_required"
                 isLoading={loading}
               />
             </div>

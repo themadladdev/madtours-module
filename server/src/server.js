@@ -1,4 +1,7 @@
+// ==========================================
+// UPDATED FILE
 // server/src/server.js
+// ==========================================
 // This is the minimal server entry point. It wires up CORS, Stripe's raw body parser, and the MADTours routes.
 
 import express from 'express';
@@ -81,10 +84,13 @@ const startServer = async () => {
       console.log(`🚀 Server running on port ${config.port} in ${config.nodeEnv} mode`);
       console.log(`[Network] Listening on all interfaces (0.0.0.0)`);
       
-      // Start cron jobs
-      if (config.nodeEnv === 'production') { // Corrected logic location
+      // --- [MODIFIED] Start cron jobs in prod OR dev ---
+      if (config.nodeEnv === 'production' || config.nodeEnv === 'development') {
+         console.log('Starting cron jobs for development/production...');
          startReminderCron();
          startAbandonedCartCron(); // 2. CALL THE NEW JANITOR
+      } else {
+         console.log('Cron jobs are disabled for this environment.');
       }
     });
   } catch (err) {

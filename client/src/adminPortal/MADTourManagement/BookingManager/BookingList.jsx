@@ -1,4 +1,5 @@
 // ==========================================
+// UPDATED FILE
 // client/src/adminPortal/MADTourManagement/BookingManager/BookingList.jsx
 // ==========================================
 import React from 'react';
@@ -52,7 +53,8 @@ const BookingList = ({ loading, bookings, isActionView, onBookingSelect }) => {
   const getActionReason = (booking) => {
     if (booking.seat_status === 'triage') return "Triage";
     if (booking.payment_status === 'refund_stripe_failed') return "Refund Failed";
-    if (booking.seat_status === 'seat_pending') return "Stuck Hostage";
+    // --- [MODIFIED] Renamed "Stuck Hostage" ---
+    if (booking.seat_status === 'seat_pending') return "Inventory Held";
     if (booking.payment_status === 'payment_manual_pending') return "Missed Payment";
     return "N/A";
   };
