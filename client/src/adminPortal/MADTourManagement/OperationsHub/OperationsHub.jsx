@@ -1,5 +1,5 @@
 // ==========================================
-// client/src/adminPortal/MADTourManagement/InstanceManager/InstanceManager.jsx
+// client/src/adminPortal/MADTourManagement/OperationsHub/OperationsHub.jsx
 // ==========================================
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +13,7 @@ import ConfirmationDialog from '../../../MADLibrary/admin/dialogbox/Confirmation
 import BlackoutManagerModal from './BlackoutManagerModal.jsx';
 import PriceManagerModal from './MacroPriceEditorModal.jsx'; 
 import MicroPriceEditorModal from './MicroPriceEditorModal.jsx';
-import styles from './InstanceManager.module.css';
+import styles from './OperationsHub.module.css';
 import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.css';
 
 const InstanceManager = () => {

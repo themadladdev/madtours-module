@@ -10,7 +10,7 @@ import { getAllBookings } from '../../services/admin/adminBookingService.js';
 
 // Import sub-page components
 import TourDashboard from './Dashboard/TourDashboard.jsx';
-import InstanceManager from './InstanceManager/InstanceManager.jsx';
+import InstanceManager from './OperationsHub/OperationsHub.jsx';
 import BookingManager from './BookingManager/BookingManager.jsx';
 import TourManager from './TourManager/TourManager.jsx';
 import TicketManager from './TicketManager/TicketManager.jsx';
