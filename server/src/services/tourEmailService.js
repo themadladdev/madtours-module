@@ -1,26 +1,17 @@
-// ==========================================
-// EMAIL SERVICE: Tour Email Templates
 // server/src/services/tourEmailService.js
-// ==========================================
 
-import { config } from '../config/environment.js';
-import nodemailer from 'nodemailer';
+// --- [FIX] ---
+// Import the generic 'sendEmail' function from the Vanilla foundation file
+// (which you are "borrowing" into the sandbox)
+import { sendEmail } from './emailService.js';
+// We no longer import 'config' or 'nodemailer'
+// --- [END FIX] ---
 
-// Create reusable transporter (use existing emailService if you have one)
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
-
-const FROM_EMAIL = process.env.FROM_EMAIL || 'bookings@yourdomain.com';
+// We can still read from process.env for simple string display names
 const COMPANY_NAME = process.env.COMPANY_NAME || 'Your Tour Company';
 
 // Email template generator
+// This local function is fine, as it's just for template building
 const generateEmailHTML = (content) => {
   return `
     <!DOCTYPE html>
@@ -46,9 +37,9 @@ const generateEmailHTML = (content) => {
     <body>
       <div class="container">
         ${content}
-        <div class="footer">
+        <div class.footer">
           <p>${COMPANY_NAME}</p>
-          <p>Questions? Contact us at ${FROM_EMAIL}</p>
+          <p>Questions? Contact us (the 'from' address is now set by emailService.js)</p>
         </div>
       </div>
     </body>
@@ -125,12 +116,14 @@ export const sendBookingConfirmation = async (booking, customer, tourInstance, t
     </div>
   `;
 
-  await transporter.sendMail({
-    from: FROM_EMAIL,
-    to: customer.email,
-    subject: subject,
-    html: generateEmailHTML(content)
-  });
+  // --- [FIX] ---
+  // Call the generic sendEmail function from the Vanilla service
+  await sendEmail(
+    customer.email, 
+    subject, 
+    generateEmailHTML(content)
+  );
+  // --- [END FIX] ---
 
   console.log(`✅ Confirmation email sent to ${customer.email}`);
 };
@@ -181,12 +174,14 @@ export const sendBookingCancellation = async (booking, customer, tourInstance, t
     </div>
   `;
 
-  await transporter.sendMail({
-    from: FROM_EMAIL,
-    to: customer.email,
-    subject: subject,
-    html: generateEmailHTML(content)
-  });
+  // --- [FIX] ---
+  // Call the generic sendEmail function from the Vanilla service
+  await sendEmail(
+    customer.email,
+    subject,
+    generateEmailHTML(content)
+  );
+  // --- [END FIX] ---
 
   console.log(`✅ Cancellation email sent to ${customer.email}`);
 };
@@ -212,7 +207,7 @@ export const sendTourCancellationNotice = async (booking, customer, tourInstance
           <strong>Tour:</strong>
           <span>${tour.name}</span>
         </div>
-        <div class="detail-row">
+        <div class.detail-row">
           <strong>Date:</strong>
           <span>${new Date(tourInstance.date).toLocaleDateString('en-US', { 
             weekday: 'long', 
@@ -245,12 +240,14 @@ export const sendTourCancellationNotice = async (booking, customer, tourInstance
     </div>
   `;
 
-  await transporter.sendMail({
-    from: FROM_EMAIL,
-    to: customer.email,
-    subject: subject,
-    html: generateEmailHTML(content)
-  });
+  // --- [FIX] ---
+  // Call the generic sendEmail function from the Vanilla service
+  await sendEmail(
+    customer.email,
+    subject,
+    generateEmailHTML(content)
+  );
+  // --- [END FIX] ---
 
   console.log(`✅ Tour cancellation notice sent to ${customer.email}`);
 };
@@ -259,7 +256,7 @@ export const sendBookingReminder = async (booking, customer, tourInstance, tour)
   const subject = `Reminder: Your tour tomorrow - ${tour.name}`;
   
   const content = `
-    <div class="header">
+    <div class.header">
       <h1>Tour Reminder</h1>
     </div>
     <div class="content">
@@ -311,12 +308,14 @@ export const sendBookingReminder = async (booking, customer, tourInstance, tour)
     </div>
   `;
 
-  await transporter.sendMail({
-    from: FROM_EMAIL,
-    to: customer.email,
-    subject: subject,
-    html: generateEmailHTML(content)
-  });
+  // --- [FIX] ---
+  // Call the generic sendEmail function from the Vanilla service
+  await sendEmail(
+    customer.email,
+    subject,
+    generateEmailHTML(content)
+  );
+  // --- [END FIX] ---
 
   console.log(`✅ Reminder email sent to ${customer.email}`);
 };
@@ -327,9 +326,6 @@ export const sendBookingReminder = async (booking, customer, tourInstance, tour)
 
 /**
  * NEW: Sends "Tour Cancelled - Action Required" email.
- * This informs the customer their tour was cancelled and that they will
- * be contacted about rebooking or refund options.
- * It intentionally DOES NOT promise an automatic refund.
  */
 export const sendTourCancellationTriageNotice = async (customer, booking, tour, reason) => {
   const subject = `Tour Cancelled - Action Required for ${tour.name}`;
@@ -380,20 +376,20 @@ export const sendTourCancellationTriageNotice = async (customer, booking, tour, 
     </div>
   `;
 
-  await transporter.sendMail({
-    from: FROM_EMAIL,
-    to: customer.email,
-    subject: subject,
-    html: generateEmailHTML(content)
-  });
+  // --- [FIX] ---
+  // Call the generic sendEmail function from the Vanilla service
+  await sendEmail(
+    customer.email,
+    subject,
+    generateEmailHTML(content)
+  );
+  // --- [END FIX] ---
 
   console.log(`✅ Tour cancellation TRIAGE notice sent to ${customer.email}`);
 };
 
 /**
  * NEW: Sends "Tour Re-instated" email.
- * This informs the customer that their previously cancelled tour is
- * back on and their booking is re-confirmed.
  */
 export const sendTourReinstatementNotice = async (customer, booking, tour) => {
   const subject = `Tour Re-instated: Your Booking is Confirmed!`;
@@ -442,12 +438,14 @@ export const sendTourReinstatementNotice = async (customer, booking, tour) => {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: FROM_EMAIL,
-    to: customer.email,
-    subject: subject,
-    html: generateEmailHTML(content)
-  });
+  // --- [FIX] ---
+  // Call the generic sendEmail function from the Vanilla service
+  await sendEmail(
+    customer.email,
+    subject,
+    generateEmailHTML(content)
+  );
+  // --- [END FIX] ---
 
   console.log(`✅ Tour re-instatement notice sent to ${customer.email}`);
 };
