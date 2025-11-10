@@ -2,6 +2,10 @@
  * client/src/adminPortal/MADTourManagement/Manifest/ManifestView.module.css
  * ========================================== */
 
+.textLeft   { text-align: left; }
+.textCenter { text-align: center; }
+.textRight  { text-align: right; }
+
 .manifestContainer {
   padding: 2rem;
   max-width: 1200px;
@@ -24,10 +28,18 @@
 }
 
 .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   border-bottom: 2px solid var(--text);
   padding-bottom: 0.5rem;
   margin-bottom: 1rem;
 }
+
+.headerContent {
+  flex: 1; /* Allows it to take remaining space */
+}
+
 
 .header h1 {
   margin: 0 0 1rem 0;
@@ -44,10 +56,28 @@
   font-size: 1rem;
 }
 
+/* --- [MODIFIED] Logo Placeholder Styles --- */
+.logoPlaceholder {
+  flex-shrink: 0;
+  margin-left: 2rem;
+  text-align: center;
+  width: 100px; /* This just constrains the container */
+}
+
+/* --- [REMOVED] .logoComponent rule removed --- */
+
+.logoPlaceholder span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--grey-700);
+  margin-top: 0.25rem;
+}
+/* --- [END MODIFIED] --- */
+
 .summary {
   display: flex;
-  flex-wrap: wrap; /* [MODIFIED] Allow wrapping */
-  gap: 1.5rem 2rem; /* [MODIFIED] Added gap */
+  flex-wrap: wrap; 
+  gap: 1.5rem 2rem; 
   margin-bottom: 1rem;
   padding: 1rem 1.5rem;
   background: var(--grey-100);
@@ -163,7 +193,6 @@
   color: var(--destructive);
 }
 
-/* --- [NEW] Styles for Pending Inventory Link --- */
 .pendingWarning {
   color: var(--destructive);
   font-weight: 600;
@@ -182,7 +211,6 @@
 .pendingLink:hover {
   color: var(--text);
 }
-/* --- [END NEW] --- */
 
 
 /* Print styles */
@@ -237,8 +265,11 @@
     background-color: var(--background) !important;
   }
   
-  /* --- [NEW] Hide pending link on print --- */
   .pendingWarning {
+    display: none;
+  }
+
+  .logoPlaceholder {
     display: none;
   }
 }

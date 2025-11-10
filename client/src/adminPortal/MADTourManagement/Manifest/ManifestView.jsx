@@ -1,7 +1,4 @@
-// ==========================================
 // client/src/adminPortal/MADTourManagement/Manifest/ManifestView.jsx
-// ==========================================
-
 import React, { useState, useEffect } from 'react';
 import { getManifest } from '../../../services/admin/adminTourService.js';
 import styles from './ManifestView.module.css';
@@ -9,6 +6,7 @@ import sharedStyles from '../../../MADLibrary/admin/styles/adminshared.module.cs
 
 import ManifestEditorModal from './ManifestEditorModal.jsx';
 import ManualBookingModal from '../BookingManager/ManualBookingModal.jsx';
+import VanillaProjectLogo from '../../../MADLibrary/admin/icons/VanillaProjectLogo.jsx';
 
 const ManifestView = ({ instanceId }) => {
   const [manifest, setManifest] = useState(null);
@@ -89,7 +87,7 @@ const ManifestView = ({ instanceId }) => {
             <div className={styles.email}>{booking.customer.email}</div>
           </td>
           <td rowSpan={totalPassengers} className={styles.seats}>{booking.seats_total}</td>
-          <td rowSpan={totalPassengers}>
+          <td rowSpan={totalPassengers} className={styles.textCenter}>
             <span className={`${styles.paymentStatus} ${styles[booking.payment_status]}`}>
               {booking.payment_status}
             </span>
@@ -132,7 +130,7 @@ const ManifestView = ({ instanceId }) => {
             <div className={styles.email}>{booking.customer.email}</div>
           </td>
           <td className={styles.seats}>{booking.seats_total}</td>
-          <td>
+          <td className={styles.textCenter}>
             <span className={`${styles.paymentStatus} ${styles[booking.payment_status]}`}>
               {booking.payment_status}
             </span>
@@ -159,7 +157,7 @@ const ManifestView = ({ instanceId }) => {
   if (!manifest) {
     return (
        <div className={styles.manifestContainer}>
-          <div className={sharedStyles.emptyState}>
+          <div className_={sharedStyles.emptyState}>
             <p className={sharedStyles.errorText}>Error loading manifest.</p>
             <p>It may not exist, or an error occurred.</p>
             <br />
@@ -222,16 +220,24 @@ const ManifestView = ({ instanceId }) => {
 
         <div className={styles.manifest}>
           <div className={styles.header}>
-            <h1>Tour Manifest</h1>
-            <div className={styles.tourInfo}>
-              <h2>{manifest.tour_name}</h2>
-              <p><strong>Date:</strong> {new Date(manifest.date).toLocaleDateString()}</p>
-              <p><strong>Time:</strong> {manifest.time}</p>
-              <p><strong>Duration:</strong> {manifest.duration_minutes} minutes</p>
+            <div className={styles.headerContent}>
+              <h1>Tour Manifest</h1>
+              <div className={styles.tourInfo}>
+                <h2>{manifest.tour_name}</h2>
+                <p><strong>Date:</strong> {new Date(manifest.date).toLocaleDateString()}</p>
+                <p><strong>Time:</strong> {manifest.time}</p>
+                <p><strong>Duration:</strong> {manifest.duration_minutes} minutes</p>
+              </div>
             </div>
+
+            {/* --- [MODIFIED] Using size prop --- */}
+            <div className={styles.logoPlaceholder}>
+              <VanillaProjectLogo size="10rem" />
+            </div>
+            {/* --- [END MODIFIED] --- */}
+
           </div>
 
-          {/* --- [MODIFIED] Summary Section --- */}
           <div className={styles.summary}>
             <div className={styles.summaryItem}>
               <strong>Total Passengers:</strong> {totalPax}
@@ -243,7 +249,6 @@ const ManifestView = ({ instanceId }) => {
               <strong>Available:</strong> {manifest.available_seats}
             </div>
             
-            {/* --- [NEW] Pending Inventory Link --- */}
             {manifest.pending_inventory_seats > 0 && (
               <div className={`${styles.summaryItem} ${styles.pendingWarning}`}>
                 <strong>Seats Pending:</strong> {manifest.pending_inventory_seats}
@@ -257,21 +262,19 @@ const ManifestView = ({ instanceId }) => {
                 </a>
               </div>
             )}
-            {/* --- [END NEW] --- */}
           </div>
-          {/* --- [END MODIFIED] --- */}
 
 
           <div className={sharedStyles.contentBox}>
             <table className={sharedStyles.table}>
               <thead>
                 <tr>
-                  <th>Ref</th>
-                  <th>Name</th>
-                  <th>Contact</th>
-                  <th>Pax</th>
-                  <th>Payment</th>
-                  <th>Special Requests</th>
+                  <th className={styles.textLeft}>Ref</th>
+                  <th className={styles.textLeft}>Name</th>
+                  <th className={styles.textLeft}>Contact</th>
+                  <th className={styles.textCenter}>Pax</th>
+                  <th className={styles.textCenter}>Payment</th>
+                  <th className={styles.textCenter}>Special Requests</th>
                 </tr>
               </thead>
               <tbody>
